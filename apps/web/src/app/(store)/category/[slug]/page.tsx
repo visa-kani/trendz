@@ -29,7 +29,7 @@ export async function generateMetadata({ params }: { params: Promise<{ slug: str
   const c = await load((await params).slug);
   return {
     title: c.seoTitle ?? c.name,
-    description: c.seoDescription ?? c.description ?? `Shop ${c.name} at Drift.`,
+    description: c.seoDescription ?? c.description ?? `Shop ${c.name} at Trendz.`,
     keywords: c.seoKeywords ?? undefined,
     alternates: { canonical: `/category/${c.slug}` },
     openGraph: { title: c.seoTitle ?? c.name, url: `/category/${c.slug}` },

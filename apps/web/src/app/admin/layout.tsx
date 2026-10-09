@@ -37,7 +37,7 @@ function Shell({ children }: { children: React.ReactNode }) {
     <nav aria-label="Admin" className="flex h-full flex-col">
       <Link href="/admin" className="flex items-center gap-2 px-5 py-5">
         <LogoMark />
-        <span className="text-sm font-semibold tracking-[0.25em]">DRIFT</span>
+        <span className="text-sm font-semibold tracking-[0.25em]">TRENDZ</span>
         <span className="ml-1 rounded-full bg-ink px-2 py-0.5 text-[10px] font-semibold text-white">Admin</span>
       </Link>
       <div className="flex-1 space-y-5 overflow-y-auto px-3 pb-6">

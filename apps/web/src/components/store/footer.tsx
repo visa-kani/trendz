@@ -9,7 +9,7 @@ export function Footer({ categories }: { categories: CategoryNode[] }) {
         <div className="md:col-span-2">
           <div className="flex items-center gap-2">
             <LogoMark />
-            <span className="text-sm font-semibold tracking-[0.25em]">DRIFT</span>
+            <span className="text-sm font-semibold tracking-[0.25em]">TRENDZ</span>
           </div>
           <p className="mt-4 max-w-sm text-sm text-white/60">Bold looks. Clean fits. Built to stand out anywhere. Designed and shipped from India.</p>
         </div>
@@ -53,7 +53,7 @@ export function Footer({ categories }: { categories: CategoryNode[] }) {
       </div>
       <div className="border-t border-white/10">
         <div className="container-x flex flex-col gap-2 py-6 text-xs text-white/45 sm:flex-row sm:justify-between">
-          <p>© {new Date().getFullYear()} Drift. All prices in INR.</p>
+          <p>© {new Date().getFullYear()} Trendz. All prices in INR.</p>
           <p>Secure payments by Razorpay</p>
         </div>
       </div>

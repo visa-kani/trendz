@@ -3,8 +3,8 @@ import jwt from "jsonwebtoken";
 import { env } from "../../config/env";
 import { randomToken } from "../../common/utils/crypto";
 
-const ISSUER = "drift-api";
-const AUDIENCE = "drift";
+const ISSUER = "trendz-api";
+const AUDIENCE = "trendz";
 
 export const ACCESS_COOKIE = "access_token";
 export const REFRESH_COOKIE = "refresh_token";

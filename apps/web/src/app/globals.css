@@ -1,6 +1,6 @@
 @import "tailwindcss";
 
-/* Drift design tokens (carried over from the original storefront). */
+/* Trendz design tokens (carried over from the original storefront). */
 @theme {
   --color-ink: #111111;
   --color-offwhite: #f5f5f3;

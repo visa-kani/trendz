@@ -347,7 +347,7 @@ export function toCsv(r: Report): string {
 
 export async function toXlsx(r: Report): Promise<Buffer> {
   const wb = new ExcelJS.Workbook();
-  wb.creator = "Drift Commerce";
+  wb.creator = "Trendz";
   const ws = wb.addWorksheet(r.title.slice(0, 31));
   ws.columns = r.columns.map((c) => ({ header: c.label, key: c.key, width: Math.max(12, c.label.length + 4), style: c.type === "money" ? { numFmt: "₹#,##0.00" } : {} }));
   for (const row of r.rows) {

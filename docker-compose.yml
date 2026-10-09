@@ -4,23 +4,29 @@
 #
 # Ports are deliberately non-default so this stack can run next to other
 # projects on the same machine.
-name: drift-commerce
+#
+# PostgreSQL: by default the app uses the PostgreSQL server installed on this
+# machine (the one pgAdmin manages, port 5432; see infra/postgres/local-setup.sql).
+# To use a throwaway Docker database instead: `docker compose --profile docker-db up -d`
+# and point DATABASE_URL at port 5544.
+name: trendz
 
 services:
   postgres:
+    profiles: ["docker-db"]
     image: postgres:16-alpine
     restart: unless-stopped
     environment:
-      POSTGRES_USER: drift
-      POSTGRES_PASSWORD: drift_local_pw
-      POSTGRES_DB: drift
+      POSTGRES_USER: trendz
+      POSTGRES_PASSWORD: trendz_local_pw
+      POSTGRES_DB: trendz
     ports:
       - "5544:5432"
     volumes:
       - pgdata:/var/lib/postgresql/data
       - ./infra/postgres/init.sql:/docker-entrypoint-initdb.d/init.sql:ro
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U drift -d drift"]
+      test: ["CMD-SHELL", "pg_isready -U trendz -d trendz"]
       interval: 5s
       timeout: 5s
       retries: 20
@@ -45,8 +51,8 @@ services:
     restart: unless-stopped
     command: server /data --console-address ":9001"
     environment:
-      MINIO_ROOT_USER: drift_minio
-      MINIO_ROOT_PASSWORD: drift_minio_secret
+      MINIO_ROOT_USER: trendz_minio
+      MINIO_ROOT_PASSWORD: trendz_minio_secret
     ports:
       - "9100:9000"
       - "9101:9001"

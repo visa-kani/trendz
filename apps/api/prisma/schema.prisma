@@ -1,5 +1,5 @@
 // =============================================================================
-// Drift Commerce — PostgreSQL schema
+// Trendz — PostgreSQL schema
 //
 // Conventions
 //   * Tables and columns are snake_case in PostgreSQL (@@map / @map).

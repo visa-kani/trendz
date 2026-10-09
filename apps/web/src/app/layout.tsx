@@ -7,7 +7,7 @@ const inter = Inter({ subsets: ["latin"], variable: "--font-inter", display: "sw
 const playfair = Playfair_Display({ subsets: ["latin"], variable: "--font-playfair", display: "swap" });
 
 const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL ?? "http://localhost:3100";
-const STORE = process.env.NEXT_PUBLIC_STORE_NAME ?? "Drift";
+const STORE = process.env.NEXT_PUBLIC_STORE_NAME ?? "Trendz";
 
 export const metadata: Metadata = {
   metadataBase: new URL(SITE_URL),

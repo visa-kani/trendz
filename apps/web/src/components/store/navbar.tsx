@@ -110,9 +110,9 @@ export function Navbar({ categories }: { categories: CategoryNode[] }) {
         <button className="-ml-2 rounded-full p-2 lg:hidden" aria-label="Open menu" onClick={() => setMobile(true)}>
           <Menu size={20} />
         </button>
-        <Link href="/" className="flex items-center gap-2 text-ink" aria-label="Drift home">
+        <Link href="/" className="flex items-center gap-2 text-ink" aria-label="Trendz home">
           <LogoMark />
-          <span className="text-sm font-semibold tracking-[0.25em]">DRIFT</span>
+          <span className="text-sm font-semibold tracking-[0.25em]">TRENDZ</span>
         </Link>
         <nav aria-label="Main" className="ml-6 hidden items-center gap-7 text-sm font-medium text-ink/65 lg:flex">
           {links.map((l) => (
@@ -145,7 +145,7 @@ export function Navbar({ categories }: { categories: CategoryNode[] }) {
         <div className="fixed inset-0 z-50 bg-black/40 lg:hidden" onMouseDown={(e) => e.target === e.currentTarget && setMobile(false)}>
           <div ref={menuRef} className="h-full w-80 max-w-[85vw] animate-rise overflow-y-auto bg-offwhite p-5">
             <div className="mb-6 flex items-center justify-between">
-              <span className="text-sm font-semibold tracking-[0.25em]">DRIFT</span>
+              <span className="text-sm font-semibold tracking-[0.25em]">TRENDZ</span>
               <button aria-label="Close menu" onClick={() => setMobile(false)} className="rounded-full p-2 hover:bg-black/5">
                 <X size={20} />
               </button>

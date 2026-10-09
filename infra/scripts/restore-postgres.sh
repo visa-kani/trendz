@@ -3,8 +3,8 @@
 # Restores a backup into a NEW database. It never overwrites an existing one.
 #     restore-postgres.sh <file.dump | s3-key> [target_db]
 #
-#   restore-postgres.sh /srv/drift/backups/drift-20261009T023000Z-nightly.dump
-#   restore-postgres.sh postgres/2026/10/drift-20261009T023000Z-nightly.dump drift_restore
+#   restore-postgres.sh /srv/trendz/backups/trendz-20261009T023000Z-nightly.dump
+#   restore-postgres.sh postgres/2026/10/trendz-20261009T023000Z-nightly.dump trendz_restore
 #
 # After checking the restored data, switching the app to it is a deliberate,
 # manual step (see DEPLOYMENT.md → "Restore"): stop the app, rename databases,
@@ -12,12 +12,12 @@
 # =============================================================================
 set -Eeuo pipefail
 
-CONFIG="${BACKUP_CONFIG:-/srv/drift/shared/backup.env}"
+CONFIG="${BACKUP_CONFIG:-/srv/trendz/shared/backup.env}"
 # shellcheck disable=SC1090
 [[ -f "$CONFIG" ]] && set -a && source "$CONFIG" && set +a
 
 SRC="${1:?usage: restore-postgres.sh <file.dump | s3-key> [target_db]}"
-TARGET="${2:-drift_restore_$(date -u +%Y%m%d%H%M)}"
+TARGET="${2:-trendz_restore_$(date -u +%Y%m%d%H%M)}"
 : "${DATABASE_URL:?DATABASE_URL is not set (see $CONFIG)}"
 DB_URL="${DATABASE_URL%%\?*}"
 # Connection to the maintenance database on the same server.

@@ -1,4 +1,4 @@
-# Drift Commerce
+# Trendz
 
 E-commerce storefront, admin panel, POS billing, inventory and GST invoicing in one TypeScript monorepo. It is designed to run on a single AWS Lightsail instance.
 
@@ -35,7 +35,8 @@ Documentation:
 ### Prerequisites
 
 - **Node.js 22** (≥ 20.11) and npm 10
-- **Docker** (Desktop on Windows/macOS) for Postgres, Redis, MinIO (R2 stand-in) and Mailpit
+- **PostgreSQL 16+** installed locally, for example with the Windows installer, which includes **pgAdmin 4**. The app is developed against PostgreSQL 18 on port 5432.
+- **Docker** (Desktop on Windows/macOS) for Redis, MinIO (R2 stand-in) and Mailpit
 
 The local stack uses non-default ports so it can run beside other projects:
 
@@ -43,24 +44,41 @@ The local stack uses non-default ports so it can run beside other projects:
 | --- | --- |
 | Web | http://localhost:3100 |
 | API | http://127.0.0.1:4100/api |
-| PostgreSQL | `127.0.0.1:5544` (user `drift`, password `drift_local_pw`, databases `drift` and `drift_test`) |
+| PostgreSQL (local server, pgAdmin) | `127.0.0.1:5432` (user `trendz`, password `trendz_local_pw`, databases `trendz` and `trendz_test`) |
 | Redis | `127.0.0.1:6390` |
-| MinIO (S3 / R2 stand-in) | API http://localhost:9100 · console http://localhost:9101 (`drift_minio` / `drift_minio_secret`) |
+| MinIO (S3 / R2 stand-in) | API http://localhost:9100 · console http://localhost:9101 (`trendz_minio` / `trendz_minio_secret`) |
 | Mailpit (catches all email) | SMTP `1125` · inbox http://localhost:8125 |
 
 ### First run
 
 ```bash
 npm install                                  # installs both workspaces
-npm run infra:up                             # docker compose: postgres, redis, minio, mailpit
+npm run infra:up                             # docker compose: redis, minio, mailpit
 
 cp apps/api/.env.example apps/api/.env       # local defaults work as-is; set JWT_SECRET / OTP_SECRET
 cp apps/web/.env.example apps/web/.env.local
 
+# once: create the trendz role and databases in your local PostgreSQL (see "Database in pgAdmin")
 npm run db:migrate                           # prisma migrate dev (creates the schema + extensions)
 npm run storage:init --workspace apps/api    # creates the MinIO bucket, public/ read policy, CORS
 npm run db:seed                              # roles, permissions, warehouses, tax classes, admin + demo catalogue
 ```
+
+### Database in pgAdmin
+
+The app uses the PostgreSQL server installed on this machine, so you can browse and query its data in pgAdmin.
+
+1. **Create the role and databases** (once). In pgAdmin, right-click your PostgreSQL server, choose **PSQL Tool**, and run:
+   ```
+   \i 'C:/Projects/e-commerce/trendz/infra/postgres/local-setup.sql'
+   ```
+   This creates the `trendz` login (password `trendz_local_pw`, local only) and the `trendz` and `trendz_test` databases. It is safe to run again.
+2. **Create the tables and data**: `npm run db:migrate`, then `npm run db:seed`.
+3. **View it in pgAdmin**: the `trendz` database appears under your existing server. You can also register a separate connection: host `127.0.0.1`, port `5432`, user `trendz`. Tables are under *trendz → Schemas → public → Tables*.
+
+The local `trendz` role is a superuser, because the test suite suspends triggers while it resets `trendz_test`. Production uses a normal role.
+
+To use a throwaway Docker database instead, run `docker compose --profile docker-db up -d` and change `DATABASE_URL` to port `5544`.
 
 Generate the two secrets with:
 
@@ -82,7 +100,7 @@ On a slow machine, skip watch mode: `npx tsx src/server.ts` and `npx tsx src/wor
 
 | Who | How |
 | --- | --- |
-| Super admin | `admin@drift.local` / `ChangeMe!2026` (from `SEED_ADMIN_*` in `apps/api/.env`, **local only**) → http://localhost:3100/admin |
+| Super admin | `admin@trendz.local` / `ChangeMe!2026` (from `SEED_ADMIN_*` in `apps/api/.env`, **local only**) → http://localhost:3100/admin |
 | Cashier / staff | Create them in Admin → Users, with the `CASHIER`, `MANAGER`, `INVENTORY_MANAGER`, `SALES_MANAGER` or `SUPPORT` role |
 | Customer | Register at `/register`. The verification email lands in Mailpit. For phone OTP sign-in, the code is printed in the API console (console SMS adapter) |
 
@@ -136,7 +154,7 @@ ARCHITECTURE.md §7 lists every configurable rule and its default.
 ## Testing
 
 ```bash
-npm run test --workspace apps/api     # vitest + supertest against the drift_test DB, Redis DB 1 and MinIO
+npm run test --workspace apps/api     # vitest + supertest against the trendz_test DB, Redis DB 1 and MinIO
 npm run lint
 npm run typecheck
 ```
@@ -184,7 +202,7 @@ infra/   nginx, pm2, provisioning / deploy / backup scripts
 
 | Problem | Fix |
 | --- | --- |
-| `Can't reach database server` on Windows | Use `127.0.0.1` rather than `localhost` (already in `.env.example`). Make sure `docker compose ps` shows Postgres as healthy. |
+| `Can't reach database server` | Check that the PostgreSQL service is running (Windows Services → `postgresql-x64-18`) and that `infra/postgres/local-setup.sql` has been run. Use `127.0.0.1` rather than `localhost`. |
 | Port already in use | Another project is using 3100, 4100 or the Docker ports. Change the port mapping in `docker-compose.yml` and the matching URLs in both env files. |
 | Images stay "Processing" | The worker is not running (`npm run dev:worker`), or MinIO is down |
 | No verification or OTP message | Email: check Mailpit at http://localhost:8125. SMS: check the API console output. |

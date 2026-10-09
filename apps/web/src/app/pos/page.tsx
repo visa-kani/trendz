@@ -31,7 +31,7 @@ type ScanFeedback =
   | { kind: "ok"; product: ScannedProduct; quantity: number; at: number }
   | { kind: "error"; message: string; code: string; quantity: number; canOverride: boolean; product: ScannedProduct | null; at: number };
 
-const WAREHOUSE_KEY = "drift.pos.warehouse";
+const WAREHOUSE_KEY = "trendz.pos.warehouse";
 
 function storedWarehouse() {
   try {
@@ -236,7 +236,7 @@ export default function PosPage() {
       <header className="sticky top-0 z-30 flex flex-wrap items-center gap-3 border-b border-black/5 bg-offwhite/90 px-4 py-2.5 backdrop-blur-md sm:px-6">
         <Link href="/admin" className="flex items-center gap-2" aria-label="Back to admin">
           <LogoMark />
-          <span className="text-sm font-semibold tracking-[0.25em]">DRIFT</span>
+          <span className="text-sm font-semibold tracking-[0.25em]">TRENDZ</span>
           <span className="rounded-full bg-ink px-2 py-0.5 text-[10px] font-semibold text-white">Billing</span>
         </Link>
         <Select

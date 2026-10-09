@@ -111,7 +111,7 @@ async function request<T>(method: string, path: string, opts: RequestOptions = {
 
   if (res.status === 401 && !opts.noRefresh && !path.startsWith("/auth/")) {
     if (await refreshSession()) return request<T>(method, path, { ...opts, noRefresh: true });
-    if (typeof window !== "undefined") window.dispatchEvent(new Event("drift:session-expired"));
+    if (typeof window !== "undefined") window.dispatchEvent(new Event("trendz:session-expired"));
   }
 
   const json = (await res.json().catch(() => null)) as

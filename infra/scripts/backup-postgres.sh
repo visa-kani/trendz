@@ -3,11 +3,11 @@
 # PostgreSQL backup → local disk → Cloudflare R2 (separate backup bucket).
 #     backup-postgres.sh [label]          e.g. nightly | pre-deploy-1a2b3c4d
 #
-# Reads /srv/drift/shared/backup.env:
+# Reads /srv/trendz/shared/backup.env:
 #   DATABASE_URL                 same database as the API (query string is ignored)
-#   BACKUP_DIR=/srv/drift/backups
+#   BACKUP_DIR=/srv/trendz/backups
 #   LOCAL_RETENTION_DAYS=7
-#   BACKUP_BUCKET=drift-backups  R2 bucket WITHOUT public access; add a lifecycle
+#   BACKUP_BUCKET=trendz-backups  R2 bucket WITHOUT public access; add a lifecycle
 #                                rule there (e.g. delete after 35 days)
 #   BACKUP_R2_ENDPOINT=https://<account-id>.r2.cloudflarestorage.com
 #   BACKUP_R2_ACCESS_KEY_ID / BACKUP_R2_SECRET_ACCESS_KEY
@@ -16,19 +16,19 @@
 # =============================================================================
 set -Eeuo pipefail
 
-CONFIG="${BACKUP_CONFIG:-/srv/drift/shared/backup.env}"
+CONFIG="${BACKUP_CONFIG:-/srv/trendz/shared/backup.env}"
 # shellcheck disable=SC1090
 [[ -f "$CONFIG" ]] && set -a && source "$CONFIG" && set +a
 
 LABEL="${1:-manual}"
 : "${DATABASE_URL:?DATABASE_URL is not set (see $CONFIG)}"
-BACKUP_DIR="${BACKUP_DIR:-/srv/drift/backups}"
+BACKUP_DIR="${BACKUP_DIR:-/srv/trendz/backups}"
 LOCAL_RETENTION_DAYS="${LOCAL_RETENTION_DAYS:-7}"
 
 # libpq rejects Prisma-only parameters such as ?schema=public.
 DB_URL="${DATABASE_URL%%\?*}"
 STAMP="$(date -u +%Y%m%dT%H%M%SZ)"
-FILE="$BACKUP_DIR/drift-$STAMP-$LABEL.dump"
+FILE="$BACKUP_DIR/trendz-$STAMP-$LABEL.dump"
 
 umask 077
 mkdir -p "$BACKUP_DIR"
@@ -50,5 +50,5 @@ if [[ -n "${BACKUP_BUCKET:-}" ]]; then
   echo "uploaded s3://$BACKUP_BUCKET/$KEY"
 fi
 
-find "$BACKUP_DIR" -name 'drift-*.dump*' -type f -mtime +"$LOCAL_RETENTION_DAYS" -delete
+find "$BACKUP_DIR" -name 'trendz-*.dump*' -type f -mtime +"$LOCAL_RETENTION_DAYS" -delete
 echo "done"

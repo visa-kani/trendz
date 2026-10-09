@@ -4,7 +4,7 @@
 #
 # Repository configuration needed for deploys (Settings → Secrets and variables → Actions):
 #   variables: DEPLOY_ENABLED=true
-#   secrets:   LIGHTSAIL_HOST, LIGHTSAIL_USER (e.g. drift), LIGHTSAIL_SSH_KEY (private key),
+#   secrets:   LIGHTSAIL_HOST, LIGHTSAIL_USER (e.g. trendz), LIGHTSAIL_SSH_KEY (private key),
 #              LIGHTSAIL_KNOWN_HOSTS (output of `ssh-keyscan -t ed25519 <host>`)
 # Protect the "production" environment with required reviewers for a manual approval gate.
 name: CI
@@ -30,12 +30,12 @@ jobs:
       postgres:
         image: postgres:16-alpine
         env:
-          POSTGRES_USER: drift
-          POSTGRES_PASSWORD: drift_ci_pw
-          POSTGRES_DB: drift_test
+          POSTGRES_USER: trendz
+          POSTGRES_PASSWORD: trendz_ci_pw
+          POSTGRES_DB: trendz_test
         ports: ["5432:5432"]
         options: >-
-          --health-cmd "pg_isready -U drift -d drift_test" --health-interval 5s --health-timeout 5s --health-retries 20
+          --health-cmd "pg_isready -U trendz -d trendz_test" --health-interval 5s --health-timeout 5s --health-retries 20
       redis:
         image: redis:7-alpine
         ports: ["6379:6379"]
@@ -43,17 +43,17 @@ jobs:
           --health-cmd "redis-cli ping" --health-interval 5s --health-timeout 5s --health-retries 20
     env:
       # Throwaway CI-only values; nothing here is a real credential.
-      TEST_DATABASE_URL: postgresql://drift:drift_ci_pw@127.0.0.1:5432/drift_test?schema=public
+      TEST_DATABASE_URL: postgresql://trendz:trendz_ci_pw@127.0.0.1:5432/trendz_test?schema=public
       TEST_REDIS_URL: redis://127.0.0.1:6379/1
-      DATABASE_URL: postgresql://drift:drift_ci_pw@127.0.0.1:5432/drift_test?schema=public
+      DATABASE_URL: postgresql://trendz:trendz_ci_pw@127.0.0.1:5432/trendz_test?schema=public
       REDIS_URL: redis://127.0.0.1:6379/1
       JWT_SECRET: ci-only-jwt-secret-ci-only-jwt-secret-0001
       OTP_SECRET: ci-only-otp-secret-ci-only-otp-secret-0002
       R2_ENDPOINT: http://127.0.0.1:9000
       R2_ACCESS_KEY_ID: ci_minio
       R2_SECRET_ACCESS_KEY: ci_minio_secret
-      R2_BUCKET_NAME: drift-media
-      R2_PUBLIC_URL: http://127.0.0.1:9000/drift-media
+      R2_BUCKET_NAME: trendz-media
+      R2_PUBLIC_URL: http://127.0.0.1:9000/trendz-media
       R2_FORCE_PATH_STYLE: "true"
       WEB_URL: http://localhost:3100
       API_INTERNAL_URL: http://127.0.0.1:4100
@@ -122,4 +122,4 @@ jobs:
         env:
           HOST: ${{ secrets.LIGHTSAIL_HOST }}
           USER: ${{ secrets.LIGHTSAIL_USER }}
-        run: ssh -i ~/.ssh/id_deploy "$USER@$HOST" "/srv/drift/bin/deploy.sh ${{ github.sha }}"
+        run: ssh -i ~/.ssh/id_deploy "$USER@$HOST" "/srv/trendz/bin/deploy.sh ${{ github.sha }}"

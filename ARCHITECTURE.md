@@ -1,6 +1,6 @@
 # Architecture
 
-Drift Commerce is a **modular monolith**: one Node.js/TypeScript API, one
+Trendz is a **modular monolith**: one Node.js/TypeScript API, one
 Next.js web application (storefront, admin panel and POS), one background
 worker, PostgreSQL as the source of truth and Redis for cache, rate limiting
 and job queues. Everything runs on a single AWS Lightsail instance at launch and
@@ -95,7 +95,7 @@ Routes never contain business logic; services never touch `req`/`res`.
 ## 4. Folder structure
 
 ```
-drift-commerce/
+trendz/
 ├── docker-compose.yml            local Postgres, Redis, MinIO (R2 stand-in), Mailpit
 ├── apps/
 │   ├── api/

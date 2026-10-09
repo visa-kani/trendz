@@ -1,8 +1,8 @@
 {
-  "name": "drift-commerce",
+  "name": "trendz",
   "private": true,
   "version": "0.1.0",
-  "description": "Drift Commerce — e-commerce, POS, inventory and billing platform",
+  "description": "Trendz — e-commerce, POS, inventory and billing platform",
   "workspaces": [
     "apps/api",
     "apps/web"

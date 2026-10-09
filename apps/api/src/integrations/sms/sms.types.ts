@@ -2,9 +2,9 @@
  * SMS messages are sent through DLT-registered templates (mandatory in India).
  * Three templates cover every message the platform sends:
  *
- *   OTP       "##otp## is your Drift verification code. Valid for ##minutes## minutes. Do not share it."
- *   ORDER     "Drift: update on order ##order##: ##message##"
- *   SHIPPING  "Drift: your order ##order## is ##status##. Track: ##url##"
+ *   OTP       "##otp## is your Trendz verification code. Valid for ##minutes## minutes. Do not share it."
+ *   ORDER     "Trendz: update on order ##order##: ##message##"
+ *   SHIPPING  "Trendz: your order ##order## is ##status##. Track: ##url##"
  *
  * The variable names above must match the variables configured in the
  * provider's template (e.g. MSG91 Flow).
@@ -28,11 +28,11 @@ export interface SmsProvider {
 export function renderSmsText(template: SmsTemplate, v: Record<string, string>): string {
   switch (template) {
     case "OTP":
-      return `${v.otp} is your Drift verification code. Valid for ${v.minutes} minutes. Do not share it.`;
+      return `${v.otp} is your Trendz verification code. Valid for ${v.minutes} minutes. Do not share it.`;
     case "ORDER":
-      return `Drift: update on order ${v.order}: ${v.message}`;
+      return `Trendz: update on order ${v.order}: ${v.message}`;
     case "SHIPPING":
-      return `Drift: your order ${v.order} is ${v.status}. Track: ${v.url}`;
+      return `Trendz: your order ${v.order} is ${v.status}. Track: ${v.url}`;
   }
 }
 

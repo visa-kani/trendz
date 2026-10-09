@@ -62,10 +62,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       setUser(null);
       setStatus("anonymous");
     };
-    window.addEventListener("drift:session-expired", onExpired);
+    window.addEventListener("trendz:session-expired", onExpired);
     return () => {
       alive = false;
-      window.removeEventListener("drift:session-expired", onExpired);
+      window.removeEventListener("trendz:session-expired", onExpired);
     };
   }, [applySession]);
 

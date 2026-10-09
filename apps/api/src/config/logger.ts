@@ -5,7 +5,7 @@ import { env, isProduction, isTest } from "./env";
 // in development. Secrets and tokens are redacted wherever they may appear.
 export const logger = pino({
   level: isTest ? "silent" : env.LOG_LEVEL,
-  base: { service: "drift-api" },
+  base: { service: "trendz-api" },
   redact: {
     paths: [
       "req.headers.cookie",

@@ -1998,7 +1998,7 @@ ALTER TABLE "coupons" ADD CONSTRAINT "coupons_value_valid" CHECK ("value" > 0 AN
 ALTER TABLE "discounts" ADD CONSTRAINT "discounts_value_valid" CHECK ("value" > 0 AND ("discount_type" <> 'PERCENTAGE' OR "value" <= 10000));
 
 -- Append-only tables: the stock ledger, the audit log and credit notes.
-CREATE OR REPLACE FUNCTION drift_prevent_modification() RETURNS trigger AS $$
+CREATE OR REPLACE FUNCTION trendz_prevent_modification() RETURNS trigger AS $$
 BEGIN
   RAISE EXCEPTION '% is append-only; % is not allowed', TG_TABLE_NAME, TG_OP
     USING ERRCODE = 'restrict_violation';
@@ -2007,18 +2007,18 @@ $$ LANGUAGE plpgsql;
 
 CREATE TRIGGER "inventory_transactions_append_only"
   BEFORE UPDATE OR DELETE ON "inventory_transactions"
-  FOR EACH ROW EXECUTE FUNCTION drift_prevent_modification();
+  FOR EACH ROW EXECUTE FUNCTION trendz_prevent_modification();
 
 CREATE TRIGGER "audit_logs_append_only"
   BEFORE UPDATE OR DELETE ON "audit_logs"
-  FOR EACH ROW EXECUTE FUNCTION drift_prevent_modification();
+  FOR EACH ROW EXECUTE FUNCTION trendz_prevent_modification();
 
 CREATE TRIGGER "credit_notes_append_only"
   BEFORE UPDATE OR DELETE ON "credit_notes"
-  FOR EACH ROW EXECUTE FUNCTION drift_prevent_modification();
+  FOR EACH ROW EXECUTE FUNCTION trendz_prevent_modification();
 
 -- Issued invoices are immutable: only status, cancelled_at and pdf_key change.
-CREATE OR REPLACE FUNCTION drift_invoice_guard() RETURNS trigger AS $$
+CREATE OR REPLACE FUNCTION trendz_invoice_guard() RETURNS trigger AS $$
 BEGIN
   IF TG_OP = 'DELETE' THEN
     RAISE EXCEPTION 'invoices cannot be deleted' USING ERRCODE = 'restrict_violation';
@@ -2041,4 +2041,4 @@ $$ LANGUAGE plpgsql;
 
 CREATE TRIGGER "invoices_immutable"
   BEFORE UPDATE OR DELETE ON "invoices"
-  FOR EACH ROW EXECUTE FUNCTION drift_invoice_guard();
+  FOR EACH ROW EXECUTE FUNCTION trendz_invoice_guard();

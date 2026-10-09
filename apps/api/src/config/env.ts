@@ -53,8 +53,8 @@ const schema = z.object({
 
   EMAIL_PROVIDER: z.enum(["brevo", "ses", "smtp"]).default("smtp"),
   EMAIL_API_KEY: optionalString,
-  EMAIL_FROM_ADDRESS: z.string().default("orders@drift.local"),
-  EMAIL_FROM_NAME: z.string().default("Drift"),
+  EMAIL_FROM_ADDRESS: z.string().default("orders@trendz.local"),
+  EMAIL_FROM_NAME: z.string().default("Trendz"),
   AWS_REGION: z.string().default("ap-south-1"),
   AWS_ACCESS_KEY_ID: optionalString,
   AWS_SECRET_ACCESS_KEY: optionalString,

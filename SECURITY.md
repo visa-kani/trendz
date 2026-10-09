@@ -1,17 +1,17 @@
 # Security
 
-How Drift Commerce protects customer data, money and stock, and what operators have to do to keep it that way. Report suspected vulnerabilities privately to the store's technical owner. Do not open a public issue.
+How Trendz protects customer data, money and stock, and what operators have to do to keep it that way. Report suspected vulnerabilities privately to the store's technical owner. Do not open a public issue.
 
 ## 1. Secrets
 
 | Rule | How it is enforced |
 | --- | --- |
 | Secrets never reach the browser | Only `NEXT_PUBLIC_*` variables are bundled into the web app: site URL, media origin and store name. The Razorpay **key id** is public by design and is served from `/api/store/config`. The key secret, webhook secret, R2 keys, SMS and email keys, JWT/OTP secrets and the database URL exist only in the API process. |
-| No secrets in git | `.gitignore` excludes every `.env*` except `.env.example`. Production values live in `/srv/drift/shared/*.env` (mode 600, owned by `drift`) and are symlinked into each release. |
+| No secrets in git | `.gitignore` excludes every `.env*` except `.env.example`. Production values live in `/srv/trendz/shared/*.env` (mode 600, owned by `trendz`) and are symlinked into each release. |
 | No unsafe production config | `apps/api/src/config/env.ts` refuses to start with `NODE_ENV=production` if any of these apply: a mock provider (payment, SMS, shipping), `COOKIE_SECURE=false`, a missing Razorpay webhook secret or Shiprocket webhook token, missing R2 settings, placeholder JWT/OTP secrets, or identical JWT/OTP secrets. |
 | Least-privilege provider keys | Use an R2 API token scoped to the media bucket, and a separate token scoped to the backup bucket. Use a Razorpay key pair per environment, and SES/Brevo keys limited to sending. |
 
-Rotate a secret by changing it in `/srv/drift/shared/api.env` and running `pm2 reload drift-api drift-worker --update-env`.
+Rotate a secret by changing it in `/srv/trendz/shared/api.env` and running `pm2 reload trendz-api trendz-worker --update-env`.
 - Rotating `JWT_SECRET` signs everyone out at their next request. Refresh sessions survive, so users are silently re-issued tokens.
 - Rotating `OTP_SECRET` invalidates outstanding OTP codes, which expire after 5 minutes anyway.
 
@@ -93,7 +93,7 @@ Per-IP and per-identity limits (Redis-backed, `rate-limiter-flexible`):
 | Payment creation | 20 per user (or IP) / 10 min |
 | Public catalogue API | 300 per IP / min |
 
-Nginx adds coarse `limit_req` zones for `/api/auth/` and `/api/` (see `infra/nginx/drift.conf`). With Cloudflare in front, `infra/scripts/cloudflare-ips.sh` makes Nginx and the API see the real client IP.
+Nginx adds coarse `limit_req` zones for `/api/auth/` and `/api/` (see `infra/nginx/trendz.conf`). With Cloudflare in front, `infra/scripts/cloudflare-ips.sh` makes Nginx and the API see the real client IP.
 
 ## 7. Audit and monitoring
 
@@ -107,7 +107,7 @@ Nginx adds coarse `limit_req` zones for `/api/auth/` and `/api/` (see `infra/ngi
 
   The log is append-only and viewable under Admin → Audit logs.
 - The structured logs (pino) redact `cookie`, `authorization`, `x-csrf-token` and `set-cookie` headers, and any `password`, `token`, `otp` or signature field. Request bodies are not logged.
-- Card data never touches Drift. Razorpay Checkout collects it, so PCI scope is limited to SAQ-A.
+- Card data never touches Trendz. Razorpay Checkout collects it, so PCI scope is limited to SAQ-A.
 
 ## 8. Operator checklist
 

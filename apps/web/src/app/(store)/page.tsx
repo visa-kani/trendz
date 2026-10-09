@@ -19,7 +19,7 @@ export default async function HomePage() {
 
   return (
     <>
-      {/* Hero — Drift's original design, without the heavy video keying. */}
+      {/* Hero — Trendz's original design, without the heavy video keying. */}
       <section className="relative overflow-hidden bg-white">
         <div className="container-x grid min-h-[calc(100svh-4rem)] items-center gap-10 py-12 lg:grid-cols-12">
           <div className="flex flex-col gap-7 lg:col-span-7">

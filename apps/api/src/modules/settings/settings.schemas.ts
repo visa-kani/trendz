@@ -18,10 +18,10 @@ const address = z.object({
 
 export const settingSchemas = {
   store: z.object({
-    displayName: z.string().min(1).max(100).default("Drift"),
-    legalName: z.string().max(200).default("Drift Retail Private Limited (placeholder)"),
+    displayName: z.string().min(1).max(100).default("Trendz"),
+    legalName: z.string().max(200).default("Trendz Retail Private Limited (placeholder)"),
     gstin: z.string().max(15).default(""),
-    email: z.string().max(200).default("support@drift.local"),
+    email: z.string().max(200).default("support@trendz.local"),
     phone: z.string().max(20).default(""),
     // address.stateCode is the seller's GST registration state; it decides
     // CGST+SGST (intra-state supply) vs IGST (inter-state supply).

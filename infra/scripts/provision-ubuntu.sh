@@ -1,20 +1,20 @@
 #!/usr/bin/env bash
 # =============================================================================
 # One-time setup of a fresh AWS Lightsail Ubuntu 24.04 instance (run as root):
-#     sudo DOMAIN=shop.example.com REPO_URL=git@github.com:org/drift-commerce.git \
+#     sudo DOMAIN=shop.example.com REPO_URL=git@github.com:org/trendz.git \
 #          bash provision-ubuntu.sh
 #
 # Installs Node.js 22, PostgreSQL 16, Redis 7, Nginx, Certbot, PM2, AWS CLI
 # (for R2 backups) and hardens the box (UFW, fail2ban, unattended upgrades).
-# Generated database / Redis passwords are written to /srv/drift/shared/*.env
+# Generated database / Redis passwords are written to /srv/trendz/shared/*.env
 # (mode 600) — nothing is printed. Review before running; re-running is safe.
 # =============================================================================
 set -Eeuo pipefail
 
 DOMAIN="${DOMAIN:?set DOMAIN=shop.example.com}"
 REPO_URL="${REPO_URL:?set REPO_URL to the git clone URL}"
-APP_USER=drift
-BASE=/srv/drift
+APP_USER=trendz
+BASE=/srv/trendz
 SHARED="$BASE/shared"
 
 [[ $EUID -eq 0 ]] || { echo "run as root" >&2; exit 1; }
@@ -49,7 +49,7 @@ echo "== app user and directories"
 id "$APP_USER" >/dev/null 2>&1 || adduser --system --group --shell /bin/bash --home "$BASE" "$APP_USER"
 install -d -o "$APP_USER" -g "$APP_USER" -m 755 "$BASE" "$BASE/releases" "$BASE/bin"
 install -d -o "$APP_USER" -g "$APP_USER" -m 700 "$SHARED" "$BASE/backups"
-install -d -o "$APP_USER" -g "$APP_USER" -m 755 /var/log/drift
+install -d -o "$APP_USER" -g "$APP_USER" -m 755 /var/log/trendz
 
 echo "== PostgreSQL"
 systemctl enable --now postgresql
@@ -60,12 +60,12 @@ fi
 DB_PASSWORD="$(cat "$SHARED/.db_password")"
 sudo -u postgres psql -v ON_ERROR_STOP=1 -q <<SQL
 DO \$\$ BEGIN
-  IF NOT EXISTS (SELECT FROM pg_roles WHERE rolname = 'drift') THEN
-    CREATE ROLE drift LOGIN CREATEDB PASSWORD '${DB_PASSWORD}';
+  IF NOT EXISTS (SELECT FROM pg_roles WHERE rolname = 'trendz') THEN
+    CREATE ROLE trendz LOGIN CREATEDB PASSWORD '${DB_PASSWORD}';
   END IF;
 END \$\$;
 SQL
-sudo -u postgres psql -tAc "SELECT 1 FROM pg_database WHERE datname='drift'" | grep -q 1 || sudo -u postgres createdb -O drift drift
+sudo -u postgres psql -tAc "SELECT 1 FROM pg_database WHERE datname='trendz'" | grep -q 1 || sudo -u postgres createdb -O trendz trendz
 # Only local connections (default on Ubuntu: listen_addresses = 'localhost').
 
 echo "== Redis (BullMQ needs noeviction and persistence)"
@@ -88,7 +88,7 @@ WEB_URL=https://${DOMAIN}
 CORS_ORIGINS=
 TRUST_PROXY=1
 LOG_LEVEL=info
-DATABASE_URL=postgresql://drift:${DB_PASSWORD}@127.0.0.1:5432/drift?schema=public&connection_limit=10
+DATABASE_URL=postgresql://trendz:${DB_PASSWORD}@127.0.0.1:5432/trendz?schema=public&connection_limit=10
 REDIS_URL=redis://:${REDIS_PASSWORD}@127.0.0.1:6379/0
 JWT_SECRET=$(rand 64)
 OTP_SECRET=$(rand 64)
@@ -116,7 +116,7 @@ SMS_TEMPLATE_SHIPPING=
 EMAIL_PROVIDER=brevo
 EMAIL_API_KEY=
 EMAIL_FROM_ADDRESS=orders@${DOMAIN}
-EMAIL_FROM_NAME=Drift
+EMAIL_FROM_NAME=Trendz
 AWS_REGION=ap-south-1
 AWS_ACCESS_KEY_ID=
 AWS_SECRET_ACCESS_KEY=
@@ -134,12 +134,12 @@ if [[ ! -f "$SHARED/web.env" ]]; then
 API_INTERNAL_URL=http://127.0.0.1:4100
 NEXT_PUBLIC_SITE_URL=https://${DOMAIN}
 NEXT_PUBLIC_MEDIA_ORIGIN=https://media.${DOMAIN}
-NEXT_PUBLIC_STORE_NAME=Drift
+NEXT_PUBLIC_STORE_NAME=Trendz
 ENV
 fi
 if [[ ! -f "$SHARED/backup.env" ]]; then
   cat > "$SHARED/backup.env" <<ENV
-DATABASE_URL=postgresql://drift:${DB_PASSWORD}@127.0.0.1:5432/drift
+DATABASE_URL=postgresql://trendz:${DB_PASSWORD}@127.0.0.1:5432/trendz
 BACKUP_DIR=${BASE}/backups
 LOCAL_RETENTION_DAYS=7
 BACKUP_BUCKET=
@@ -152,7 +152,7 @@ chown "$APP_USER:$APP_USER" "$SHARED"/*.env && chmod 600 "$SHARED"/*.env
 
 echo "== repository mirror (add $BASE/.ssh/id_ed25519.pub as a read-only deploy key)"
 install -d -o "$APP_USER" -g "$APP_USER" -m 700 "$BASE/.ssh"
-[[ -f "$BASE/.ssh/id_ed25519" ]] || sudo -u "$APP_USER" ssh-keygen -q -t ed25519 -N '' -f "$BASE/.ssh/id_ed25519" -C "drift-deploy@${DOMAIN}"
+[[ -f "$BASE/.ssh/id_ed25519" ]] || sudo -u "$APP_USER" ssh-keygen -q -t ed25519 -N '' -f "$BASE/.ssh/id_ed25519" -C "trendz-deploy@${DOMAIN}"
 sudo -u "$APP_USER" bash -c "ssh-keyscan -t ed25519 github.com 2>/dev/null >> $BASE/.ssh/known_hosts"
 [[ -d "$BASE/repo.git" ]] || sudo -u "$APP_USER" git init --bare -q "$BASE/repo.git"
 sudo -u "$APP_USER" git --git-dir="$BASE/repo.git" remote remove origin 2>/dev/null || true
@@ -165,15 +165,15 @@ sudo -u "$APP_USER" -H pm2 set pm2-logrotate:max_size 50M >/dev/null
 sudo -u "$APP_USER" -H pm2 set pm2-logrotate:retain 14 >/dev/null
 
 echo "== scheduled jobs"
-cat > /etc/cron.d/drift <<CRON
+cat > /etc/cron.d/trendz <<CRON
 SHELL=/bin/bash
 # Nightly database backup at 02:30 server time
-30 2 * * * ${APP_USER} /bin/bash ${BASE}/current/infra/scripts/backup-postgres.sh nightly >> /var/log/drift/backup.log 2>&1
+30 2 * * * ${APP_USER} /bin/bash ${BASE}/current/infra/scripts/backup-postgres.sh nightly >> /var/log/trendz/backup.log 2>&1
 # Refresh Cloudflare IP ranges monthly
-15 4 1 * * root /bin/bash ${BASE}/current/infra/scripts/cloudflare-ips.sh >> /var/log/drift/cloudflare-ips.log 2>&1
+15 4 1 * * root /bin/bash ${BASE}/current/infra/scripts/cloudflare-ips.sh >> /var/log/trendz/cloudflare-ips.log 2>&1
 CRON
-cat > /etc/logrotate.d/drift <<ROT
-/var/log/drift/*.log {
+cat > /etc/logrotate.d/trendz <<ROT
+/var/log/trendz/*.log {
   weekly
   rotate 8
   compress
@@ -200,5 +200,5 @@ Provisioning finished. Next steps (DEPLOYMENT.md has the details):
        $(cat "$BASE/.ssh/id_ed25519.pub")
   2. Fill in provider credentials:  sudo -u ${APP_USER} nano ${SHARED}/api.env
   3. First deploy:  sudo -u ${APP_USER} -H bash -c 'cp <repo>/infra/scripts/deploy.sh ${BASE}/bin/ && ${BASE}/bin/deploy.sh main'
-  4. Nginx + TLS:   copy infra/nginx/drift.conf, set the domain, run certbot, reload nginx
+  4. Nginx + TLS:   copy infra/nginx/trendz.conf, set the domain, run certbot, reload nginx
 DONE

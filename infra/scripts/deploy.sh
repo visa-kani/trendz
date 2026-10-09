@@ -1,9 +1,9 @@
 #!/usr/bin/env bash
 # =============================================================================
-# Zero-surprise deploy for a single Lightsail instance. Run as the `drift` user:
-#     /srv/drift/bin/deploy.sh <git-sha-or-ref>
+# Zero-surprise deploy for a single Lightsail instance. Run as the `trendz` user:
+#     /srv/trendz/bin/deploy.sh <git-sha-or-ref>
 #
-#  1. export the commit into /srv/drift/releases/<timestamp>-<sha>
+#  1. export the commit into /srv/trendz/releases/<timestamp>-<sha>
 #  2. link the shared env files (secrets never live in the repo)
 #  3. npm ci, prisma generate, build
 #  4. back up the database, then `prisma migrate deploy` (applies committed
@@ -17,12 +17,12 @@
 set -Eeuo pipefail
 
 REF="${1:?usage: deploy.sh <git-sha-or-ref>}"
-BASE=/srv/drift
+BASE=/srv/trendz
 REPO="$BASE/repo.git"
 SHARED="$BASE/shared"
 RELEASES="$BASE/releases"
 KEEP_RELEASES=5
-export DRIFT_ROOT="$BASE/current"
+export TRENDZ_ROOT="$BASE/current"
 export NEXT_TELEMETRY_DISABLED=1
 
 log() { printf '\n[%s] %s\n' "$(date -u +%H:%M:%S)" "$*"; }
