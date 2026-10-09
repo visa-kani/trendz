@@ -1,0 +1,69 @@
+# Local development infrastructure only.
+# Production runs PostgreSQL/Redis natively on the Lightsail instance and uses
+# Cloudflare R2 + a real email provider (see DEPLOYMENT.md).
+#
+# Ports are deliberately non-default so this stack can run next to other
+# projects on the same machine.
+name: drift-commerce
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: drift
+      POSTGRES_PASSWORD: drift_local_pw
+      POSTGRES_DB: drift
+    ports:
+      - "5544:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+      - ./infra/postgres/init.sql:/docker-entrypoint-initdb.d/init.sql:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U drift -d drift"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+
+  redis:
+    image: redis:7-alpine
+    restart: unless-stopped
+    command: ["redis-server", "--appendonly", "yes", "--maxmemory-policy", "noeviction"]
+    ports:
+      - "6390:6379"
+    volumes:
+      - redisdata:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+
+  # S3-compatible object storage standing in for Cloudflare R2 locally.
+  minio:
+    image: pgsty/minio:latest
+    restart: unless-stopped
+    command: server /data --console-address ":9001"
+    environment:
+      MINIO_ROOT_USER: drift_minio
+      MINIO_ROOT_PASSWORD: drift_minio_secret
+    ports:
+      - "9100:9000"
+      - "9101:9001"
+    volumes:
+      - miniodata:/data
+    # The bucket is created by `npm run storage:init` (apps/api), which uses
+    # the same S3 API calls the app uses against Cloudflare R2.
+
+  # Catches all outgoing email locally. Web UI: http://localhost:8125
+  mailpit:
+    image: axllent/mailpit:v1.21
+    restart: unless-stopped
+    ports:
+      - "1125:1025"
+      - "8125:8025"
+
+volumes:
+  pgdata:
+  redisdata:
+  miniodata:
