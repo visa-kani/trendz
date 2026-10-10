@@ -181,7 +181,7 @@ export default function CategoriesPage() {
           <EmptyState
             icon={<FolderTree size={22} />}
             title="No categories yet"
-            body="Every product belongs to a category. Start with a few top-level ones such as Men, Women and Accessories."
+            body="Every product belongs to a category. Start with the shop's collections, such as Kurti Sets, Anarkali and Kids Wear."
             action={
               canWrite && (
                 <Button size="sm" icon={<Plus size={14} />} onClick={() => setEditing({ id: null, parentId: null })}>

@@ -37,22 +37,22 @@ describe("categories", () => {
   it("builds a nested tree and moves subtrees with their paths", async () => {
     const { client: admin } = await loginAs(["ADMIN"]);
     const women = await makeCategory(admin, "Women");
-    const men = await makeCategory(admin, "Men");
+    const kids = await makeCategory(admin, "Kids Wear");
     const tops = await makeCategory(admin, "Tops", women.id);
     const tees = await makeCategory(admin, "Tees", tops.id);
     expect(tees.depth).toBe(2);
     expect(tees.path).toBe(`/${women.id}/${tops.id}/${tees.id}/`);
 
-    await admin.put(`/api/categories/${tops.id}`).send({ name: "Tops", parentId: men.id }).expect(200);
+    await admin.put(`/api/categories/${tops.id}`).send({ name: "Tops", parentId: kids.id }).expect(200);
     const moved = await prisma.category.findUniqueOrThrow({ where: { id: tees.id } });
-    expect(moved.path).toBe(`/${men.id}/${tops.id}/${tees.id}/`);
+    expect(moved.path).toBe(`/${kids.id}/${tops.id}/${tees.id}/`);
 
-    const cycle = await admin.put(`/api/categories/${men.id}`).send({ name: "Men", parentId: tees.id }).expect(400);
+    const cycle = await admin.put(`/api/categories/${kids.id}`).send({ name: "Kids Wear", parentId: tees.id }).expect(400);
     expect(cycle.body.message).toMatch(/inside itself/);
 
     const tree = await admin.get("/api/categories").expect(200);
-    const menNode = tree.body.data.find((n: { id: string }) => n.id === men.id);
-    expect(menNode.children[0].children[0].name).toBe("Tees");
+    const kidsNode = tree.body.data.find((n: { id: string }) => n.id === kids.id);
+    expect(kidsNode.children[0].children[0].name).toBe("Tees");
   });
 
   it("refuses to delete a category that still has products", async () => {

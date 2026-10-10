@@ -30,7 +30,7 @@ async function setup(admin: TestClient) {
     await admin
       .post("/api/products")
       .send({
-        name: "Men's T-Shirt",
+        name: "Cotton Kurti",
         baseSku: "TSH",
         categoryId: cat.id,
         status: "ACTIVE",
