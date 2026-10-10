@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
-import Link from "next/link";
 import { notFound } from "next/navigation";
 import { Listing, type SearchParams } from "@/components/store/listing";
+import type { Crumb } from "@/components/store/shop-breadcrumbs";
 import { NotFoundError, serverGet } from "@/lib/server-api";
 
 interface CategoryDetail {
@@ -39,33 +39,21 @@ export async function generateMetadata({ params }: { params: Promise<{ slug: str
 export default async function CategoryPage({ params, searchParams }: { params: Promise<{ slug: string }>; searchParams: Promise<SearchParams> }) {
   const [{ slug }, sp] = await Promise.all([params, searchParams]);
   const c = await load(slug);
+
+  // Home / …parents / this category (the last crumb is the current page).
+  const trail: Crumb[] = [{ name: "Home", href: "/" }, ...c.breadcrumb.map((b) => ({ name: b.name, href: `/category/${b.slug}` }))];
+  if (c.breadcrumb.at(-1)?.slug !== c.slug) trail.push({ name: c.name });
+  const parent = c.breadcrumb.filter((b) => b.slug !== c.slug).at(-1);
+
   return (
-    <>
-      <div className="container-x pt-8">
-        <nav aria-label="Breadcrumb" className="text-xs text-ink/50">
-          <Link href="/" className="hover:text-ink">
-            Home
-          </Link>
-          {c.breadcrumb.map((b) => (
-            <span key={b.id}>
-              {" / "}
-              <Link href={`/category/${b.slug}`} className="hover:text-ink">
-                {b.name}
-              </Link>
-            </span>
-          ))}
-        </nav>
-        {c.children.length > 0 && (
-          <div className="mt-4 flex flex-wrap gap-2">
-            {c.children.map((child) => (
-              <Link key={child.id} href={`/category/${child.slug}`} className="rounded-full border border-black/10 bg-white px-4 py-1.5 text-sm hover:border-ink/40">
-                {child.name}
-              </Link>
-            ))}
-          </div>
-        )}
-      </div>
-      <Listing searchParams={sp} category={c.slug} title={c.name} subtitle={c.description ?? undefined} />
-    </>
+    <Listing
+      searchParams={sp}
+      category={c.slug}
+      title={c.name}
+      eyebrow={parent?.name ?? "Collection"}
+      description={c.description ?? undefined}
+      breadcrumb={trail}
+      subcategories={c.children}
+    />
   );
 }

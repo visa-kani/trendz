@@ -3,12 +3,17 @@
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { Suspense, useState } from "react";
-import { Button, Field, Input, Spinner } from "@/components/ui";
+import { AnimatePresence, m } from "motion/react";
+import { CircleAlert } from "lucide-react";
+import { AuthFallback, AuthMedallion, AuthShell, AuthSubmit, FormAlert } from "@/components/store/auth-shell";
+import { CtaLink, DrawnCheck } from "@/components/store/checkout-ui";
+import { EASE_OUT } from "@/components/store/motion";
+import { Field, Input } from "@/components/ui";
 import { api, errorMessage } from "@/lib/api";
 
 export default function ResetPasswordPage() {
   return (
-    <Suspense fallback={<Spinner className="py-32" />}>
+    <Suspense fallback={<AuthFallback />}>
       <Reset />
     </Suspense>
   );
@@ -38,33 +43,39 @@ function Reset() {
   };
 
   return (
-    <div className="container-x flex justify-center py-16">
-      <div className="card w-full max-w-md p-7">
-        <h1 className="text-2xl font-bold tracking-tight">Choose a new password</h1>
+    <AuthShell eyebrow="Account recovery" title="Choose a new password" tagline="Fresh start, same fit.">
+      <AnimatePresence mode="wait" initial={false}>
         {done ? (
-          <div className="mt-4 space-y-4 text-sm text-ink/70">
-            <p>Your password has been changed and all other sessions were signed out.</p>
-            <Link href="/login" className="link">
-              Sign in
-            </Link>
-          </div>
+          <m.div key="done" role="status" className="flex flex-col items-start gap-5" initial={{ opacity: 0, y: 14 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5, ease: EASE_OUT }}>
+            <span className="grid h-20 w-20 place-items-center rounded-full bg-success/10 text-success">
+              <DrawnCheck className="h-14 w-14" />
+            </span>
+            <p className="text-sm leading-relaxed text-ink/70">Your password has been changed and all other sessions were signed out.</p>
+            <CtaLink href="/login">Sign in</CtaLink>
+          </m.div>
         ) : !token ? (
-          <p className="mt-4 text-sm text-danger">This reset link is incomplete. Request a new one.</p>
+          <m.div key="no-token" className="flex flex-col items-start gap-5" initial={{ opacity: 0, y: 14 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5, ease: EASE_OUT }}>
+            <AuthMedallion tone="danger">
+              <CircleAlert size={30} strokeWidth={1.6} />
+            </AuthMedallion>
+            <p className="text-sm text-danger">This reset link is incomplete. Request a new one.</p>
+            <Link href="/forgot-password" className="link text-sm">
+              Request a new link
+            </Link>
+          </m.div>
         ) : (
-          <form onSubmit={submit} className="mt-6 space-y-4">
+          <m.form key="form" onSubmit={submit} className="space-y-5" exit={{ opacity: 0, y: -10 }} transition={{ duration: 0.3, ease: EASE_OUT }}>
             <Field label="New password" htmlFor="password" hint="At least 8 characters with letters and numbers">
-              <Input id="password" type="password" autoComplete="new-password" value={password} onChange={(e) => setPassword(e.target.value)} required minLength={8} />
+              <Input id="password" type="password" autoComplete="new-password" className="h-12" value={password} onChange={(e) => setPassword(e.target.value)} required minLength={8} />
             </Field>
             <Field label="Confirm password" htmlFor="confirm">
-              <Input id="confirm" type="password" autoComplete="new-password" value={confirm} onChange={(e) => setConfirm(e.target.value)} required />
+              <Input id="confirm" type="password" autoComplete="new-password" className="h-12" value={confirm} onChange={(e) => setConfirm(e.target.value)} required />
             </Field>
-            {error && <p role="alert" className="text-sm text-danger">{error}</p>}
-            <Button type="submit" size="lg" className="w-full" loading={busy}>
-              Update password
-            </Button>
-          </form>
+            <FormAlert message={error} />
+            <AuthSubmit loading={busy}>Update password</AuthSubmit>
+          </m.form>
         )}
-      </div>
-    </div>
+      </AnimatePresence>
+    </AuthShell>
   );
 }

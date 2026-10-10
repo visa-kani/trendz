@@ -4,9 +4,12 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { useQuery } from "@tanstack/react-query";
-import { Button, Checkbox, Field, Input, Select } from "@/components/ui";
+import { AnimatePresence, m } from "motion/react";
+import { CircleAlert, Loader2 } from "lucide-react";
+import { Field, Input, Select } from "@/components/ui";
 import { api, ApiError } from "@/lib/api";
 import type { Address, StoreConfig } from "@/lib/types";
+import { EASE_OUT } from "./motion";
 
 const schema = z.object({
   fullName: z.string().trim().min(2, "Enter the recipient's name"),
@@ -56,13 +59,16 @@ export function AddressForm({ initial, onSaved, onCancel }: { initial?: Address;
   });
 
   return (
-    <form onSubmit={submit} className="grid gap-4 sm:grid-cols-2" noValidate>
+    <form onSubmit={submit} className="grid gap-x-4 gap-y-5 sm:grid-cols-2" noValidate>
+      <p className="eyebrow sm:col-span-2">Contact</p>
       <Field label="Full name" error={errors.fullName?.message} htmlFor="fullName" required>
         <Input id="fullName" autoComplete="name" invalid={!!errors.fullName} {...register("fullName")} />
       </Field>
       <Field label="Mobile number" error={errors.phone?.message} htmlFor="phone" required>
         <Input id="phone" type="tel" autoComplete="tel" inputMode="numeric" invalid={!!errors.phone} {...register("phone")} />
       </Field>
+
+      <p className="eyebrow mt-2 sm:col-span-2">Address</p>
       <Field label="House / flat, street" error={errors.line1?.message} htmlFor="line1" className="sm:col-span-2" required>
         <Input id="line1" autoComplete="address-line1" invalid={!!errors.line1} {...register("line1")} />
       </Field>
@@ -88,16 +94,52 @@ export function AddressForm({ initial, onSaved, onCancel }: { initial?: Address;
           ))}
         </Select>
       </Field>
-      <Checkbox label="Use as my default delivery address" className="sm:col-span-2" {...register("isDefaultShipping")} />
-      {errors.root && <p className="text-sm text-danger sm:col-span-2">{errors.root.message}</p>}
-      <div className="flex gap-2 sm:col-span-2">
-        <Button type="submit" loading={isSubmitting}>
+
+      <label className="flex cursor-pointer items-center justify-between gap-4 rounded-2xl bg-offwhite px-4 py-3.5 text-sm transition-colors hover:bg-mist has-[:focus-visible]:ring-4 has-[:focus-visible]:ring-ink/10 sm:col-span-2">
+        <span>
+          <span className="block font-semibold">Use as my default delivery address</span>
+          <span className="block text-xs text-ink/50">We&apos;ll pre-select it at checkout.</span>
+        </span>
+        <input type="checkbox" className="peer sr-only" {...register("isDefaultShipping")} />
+        <span
+          aria-hidden="true"
+          className="relative h-6 w-11 shrink-0 rounded-full bg-black/15 transition-colors duration-300 after:absolute after:left-0.5 after:top-0.5 after:h-5 after:w-5 after:rounded-full after:bg-white after:shadow after:transition-transform after:duration-300 after:ease-[cubic-bezier(0.16,1,0.3,1)] peer-checked:bg-ink peer-checked:after:translate-x-5"
+        />
+      </label>
+
+      <AnimatePresence initial={false}>
+        {errors.root && (
+          <m.p
+            key="root"
+            role="alert"
+            className="flex items-start gap-2 rounded-2xl bg-danger/10 px-4 py-3 text-sm text-danger sm:col-span-2"
+            initial={{ opacity: 0, y: -6 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.3, ease: EASE_OUT }}
+          >
+            <CircleAlert size={16} className="mt-0.5 shrink-0" /> {errors.root.message}
+          </m.p>
+        )}
+      </AnimatePresence>
+
+      <div className="flex flex-wrap gap-2 pt-1 sm:col-span-2">
+        <button
+          type="submit"
+          disabled={isSubmitting}
+          className="inline-flex h-12 items-center justify-center gap-2 rounded-full bg-ink px-7 text-sm font-semibold text-white transition hover:bg-ink/85 focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-ink/20 disabled:cursor-not-allowed disabled:bg-ink/40"
+        >
+          {isSubmitting && <Loader2 size={16} className="animate-spin" />}
           Save address
-        </Button>
+        </button>
         {onCancel && (
-          <Button variant="ghost" onClick={onCancel}>
+          <button
+            type="button"
+            onClick={onCancel}
+            className="inline-flex h-12 items-center justify-center rounded-full px-6 text-sm font-semibold text-ink/60 transition hover:bg-black/5 hover:text-ink focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-ink/10"
+          >
             Cancel
-          </Button>
+          </button>
         )}
       </div>
     </form>

@@ -1,10 +1,16 @@
 "use client";
 
-import { usePathname, useRouter, useSearchParams } from "next/navigation";
-import { useState, useTransition } from "react";
+import Link from "next/link";
+import { usePathname, useRouter } from "next/navigation";
+import { createContext, useCallback, useContext, useEffect, useId, useMemo, useOptimistic, useRef, useState, useTransition, type KeyboardEvent as ReactKeyboardEvent, type ReactNode } from "react";
+import { createPortal } from "react-dom";
+import { AnimatePresence, m } from "motion/react";
 import { clsx } from "clsx";
-import { SlidersHorizontal, X } from "lucide-react";
+import { ArrowDownUp, ArrowUpRight, Check, ChevronDown, LoaderCircle, SearchX, SlidersHorizontal, X } from "lucide-react";
 import { money } from "@/lib/format";
+import { isColorOption, swatch } from "./colors";
+import { EASE_OUT } from "./motion";
+import { RollingNumber } from "./shop-rolling-number";
 
 export interface Facets {
   brands: { name: string; slug: string; count: number }[];
@@ -20,152 +26,761 @@ const SORTS = [
   { value: "name", label: "Name" },
 ];
 
-export function SortSelect() {
-  const params = useSearchParams();
-  const update = useUpdateParams();
+const FOCUS_RING = "outline-none focus-visible:ring-2 focus-visible:ring-ink focus-visible:ring-offset-2 focus-visible:ring-offset-offwhite";
+
+const list = (value: string | null) => (value ?? "").split(",").filter(Boolean);
+
+/* -------------------------------------------------------------------------- */
+/* Listing state: URL search params, updated optimistically                    */
+/* -------------------------------------------------------------------------- */
+
+interface ListingState {
+  /** Current search params — reflects a filter change immediately, before the new page arrives. */
+  params: URLSearchParams;
+  /** True while the server renders the new results. */
+  pending: boolean;
+  update: (changes: Record<string, string | null>) => void;
+  clearAll: () => void;
+}
+
+const ListingContext = createContext<ListingState | null>(null);
+
+function useListing() {
+  const ctx = useContext(ListingContext);
+  if (!ctx) throw new Error("Listing controls must be rendered inside <ListingProvider>");
+  return ctx;
+}
+
+/**
+ * Shares the listing's search params between the filter sidebar, mobile drawer,
+ * chips and sort menu. `query` is the page's current query string (from the server).
+ */
+export function ListingProvider({ query, children }: { query: string; children: ReactNode }) {
+  const router = useRouter();
+  const pathname = usePathname();
+  const [pending, startTransition] = useTransition();
+  const [optimisticQuery, setOptimisticQuery] = useOptimistic(query);
+
+  const value = useMemo<ListingState>(() => {
+    const params = new URLSearchParams(optimisticQuery);
+    const update = (changes: Record<string, string | null>) => {
+      const next = new URLSearchParams(params);
+      for (const [k, v] of Object.entries(changes)) {
+        if (v === null || v === "") next.delete(k);
+        else next.set(k, v);
+      }
+      const qs = next.toString();
+      startTransition(() => {
+        setOptimisticQuery(qs);
+        router.push(`${pathname}?${qs}`, { scroll: false });
+      });
+    };
+    const clearAll = () => update(Object.fromEntries([...params.keys()].filter((k) => !["q", "sort"].includes(k)).map((k) => [k, null])));
+    return { params, pending, update, clearAll };
+  }, [optimisticQuery, pending, pathname, router, setOptimisticQuery]);
+
+  return <ListingContext.Provider value={value}>{children}</ListingContext.Provider>;
+}
+
+interface Chip {
+  id: string;
+  label: string;
+  group?: string;
+  remove: Record<string, string | null>;
+}
+
+/** Every active filter as a removable chip. */
+function activeChips(params: URLSearchParams, facets: Facets): Chip[] {
+  const chips: Chip[] = [];
+  if (params.get("inStock") === "true") chips.push({ id: "inStock", label: "In stock", remove: { inStock: null, page: null } });
+  if (params.get("featured") === "true") chips.push({ id: "featured", label: "Trending", remove: { featured: null, page: null } });
+  for (const [key, raw] of params) {
+    if (!key.startsWith("opt.")) continue;
+    const values = list(raw);
+    for (const value of values) {
+      chips.push({ id: `${key}:${value}`, group: key.slice(4), label: value, remove: { [key]: values.filter((v) => v !== value).join(",") || null, page: null } });
+    }
+  }
+  const brands = list(params.get("brand"));
+  for (const slug of brands) {
+    chips.push({ id: `brand:${slug}`, group: "Brand", label: facets.brands.find((b) => b.slug === slug)?.name ?? slug, remove: { brand: brands.filter((b) => b !== slug).join(",") || null, page: null } });
+  }
+  const min = params.get("minPrice");
+  const max = params.get("maxPrice");
+  if (min || max) {
+    const label = min && max ? `${money(Number(min))} – ${money(Number(max))}` : min ? `From ${money(Number(min))}` : `Up to ${money(Number(max))}`;
+    chips.push({ id: "price", group: "Price", label, remove: { minPrice: null, maxPrice: null, page: null } });
+  }
+  return chips;
+}
+
+/* -------------------------------------------------------------------------- */
+/* Filter controls                                                             */
+/* -------------------------------------------------------------------------- */
+
+function FilterSection({ title, badge = 0, children }: { title: string; badge?: number; children: ReactNode }) {
+  const [open, setOpen] = useState(true);
+  const id = useId();
   return (
-    <label className="flex items-center gap-2 text-sm">
-      <span className="hidden text-ink/55 sm:inline">Sort</span>
-      <select value={params.get("sort") ?? ""} onChange={(e) => update({ sort: e.target.value || null, page: null })} className="rounded-full border border-black/10 bg-white px-3 py-2 text-sm outline-none">
-        {SORTS.map((s) => (
-          <option key={s.value} value={s.value}>
-            {s.label}
-          </option>
-        ))}
-      </select>
-    </label>
+    <section className="border-b border-black/[0.07] py-5 first:pt-0">
+      <h3>
+        <button type="button" aria-expanded={open} aria-controls={id} onClick={() => setOpen((o) => !o)} className={clsx("group flex w-full items-center justify-between gap-3 rounded-lg text-left", FOCUS_RING)}>
+          <span className="flex items-center gap-2 text-[11px] font-semibold uppercase tracking-[0.2em] text-ink/70 transition-colors group-hover:text-ink">
+            {title}
+            <AnimatePresence initial={false}>
+              {badge > 0 && (
+                <m.span
+                  key={badge}
+                  initial={{ scale: 0.4, opacity: 0 }}
+                  animate={{ scale: 1, opacity: 1 }}
+                  exit={{ scale: 0.4, opacity: 0 }}
+                  transition={{ type: "spring", stiffness: 500, damping: 24 }}
+                  className="grid h-[18px] min-w-[18px] place-items-center rounded-full bg-ink px-1 text-[10px] tracking-normal text-white"
+                >
+                  {badge}
+                </m.span>
+              )}
+            </AnimatePresence>
+          </span>
+          <span className="grid h-7 w-7 place-items-center rounded-full text-ink/50 transition-colors group-hover:bg-black/5 group-hover:text-ink">
+            <m.span animate={{ rotate: open ? 180 : 0 }} transition={{ duration: 0.4, ease: EASE_OUT }} className="grid place-items-center">
+              <ChevronDown size={15} />
+            </m.span>
+          </span>
+        </button>
+      </h3>
+      <AnimatePresence initial={false}>
+        {open && (
+          <m.div
+            id={id}
+            key="body"
+            initial={{ height: 0, opacity: 0 }}
+            animate={{ height: "auto", opacity: 1 }}
+            exit={{ height: 0, opacity: 0 }}
+            transition={{ duration: 0.45, ease: EASE_OUT }}
+            className="-mx-1 overflow-hidden px-1"
+          >
+            <div className="pb-1 pt-4">{children}</div>
+          </m.div>
+        )}
+      </AnimatePresence>
+    </section>
   );
 }
 
-function useUpdateParams() {
-  const router = useRouter();
-  const pathname = usePathname();
-  const params = useSearchParams();
-  const [, start] = useTransition();
-  return (changes: Record<string, string | null>) => {
-    const next = new URLSearchParams(params.toString());
-    for (const [k, v] of Object.entries(changes)) {
-      if (v === null || v === "") next.delete(k);
-      else next.set(k, v);
-    }
-    start(() => router.push(`${pathname}?${next.toString()}`, { scroll: false }));
-  };
+function StockToggle() {
+  const { params, update } = useListing();
+  const on = params.get("inStock") === "true";
+  return (
+    <button type="button" role="switch" aria-checked={on} onClick={() => update({ inStock: on ? null : "true", page: null })} className={clsx("flex w-full items-center justify-between gap-3 rounded-xl py-1 text-sm", FOCUS_RING)}>
+      <span>In stock only</span>
+      <span className={clsx("flex h-6 w-11 shrink-0 items-center rounded-full p-0.5 transition-colors duration-300", on ? "justify-end bg-ink" : "justify-start bg-black/15")}>
+        <m.span layout transition={{ type: "spring", stiffness: 600, damping: 36 }} className="h-5 w-5 rounded-full bg-white shadow-sm" />
+      </span>
+    </button>
+  );
 }
 
-export function Filters({ facets }: { facets: Facets }) {
-  const params = useSearchParams();
-  const update = useUpdateParams();
-  const [open, setOpen] = useState(false);
-  const [min, setMin] = useState(params.get("minPrice") ? String(Number(params.get("minPrice")) / 100) : "");
-  const [max, setMax] = useState(params.get("maxPrice") ? String(Number(params.get("maxPrice")) / 100) : "");
+/** Rough perceived brightness, to pick a readable tick colour on a swatch. */
+function isLight(hex: string) {
+  const n = Number.parseInt(hex.slice(1), 16);
+  const r = n >> 16;
+  const g = (n >> 8) & 255;
+  const b = n & 255;
+  return (r * 299 + g * 587 + b * 114) / 1000 > 165;
+}
 
-  const brands = (params.get("brand") ?? "").split(",").filter(Boolean);
-  const toggleBrand = (slug: string) => {
-    const next = brands.includes(slug) ? brands.filter((b) => b !== slug) : [...brands, slug];
-    update({ brand: next.join(",") || null, page: null });
-  };
-  const toggleOption = (name: string, value: string) => {
-    const key = `opt.${name}`;
-    const current = (params.get(key) ?? "").split(",").filter(Boolean);
+function OptionFilter({ option }: { option: Facets["options"][number] }) {
+  const { params, update } = useListing();
+  const key = `opt.${option.name}`;
+  const current = list(params.get(key));
+  const toggle = (value: string) => {
     const next = current.includes(value) ? current.filter((v) => v !== value) : [...current, value];
     update({ [key]: next.join(",") || null, page: null });
   };
-  const activeCount = [...params.keys()].filter((k) => ["brand", "minPrice", "maxPrice", "inStock"].includes(k) || k.startsWith("opt.")).length;
 
-  const panel = (
-    <div className="space-y-7">
-      <section>
-        <h3 className="text-xs font-semibold uppercase tracking-widest text-ink/50">Availability</h3>
-        <label className="mt-3 flex cursor-pointer items-center gap-2 text-sm">
-          <input type="checkbox" className="h-4 w-4 accent-ink" checked={params.get("inStock") === "true"} onChange={(e) => update({ inStock: e.target.checked ? "true" : null, page: null })} />
-          In stock only
-        </label>
-      </section>
+  if (isColorOption(option.name)) {
+    return (
+      <div className="grid grid-cols-2 gap-1.5">
+        {option.values.map((v) => {
+          const active = current.includes(v.value);
+          const hex = swatch(v.value);
+          return (
+            <button
+              key={v.value}
+              type="button"
+              onClick={() => toggle(v.value)}
+              aria-pressed={active}
+              className={clsx(
+                "flex min-w-0 items-center gap-2.5 rounded-full border py-1.5 pl-1.5 pr-3 text-left text-xs font-medium transition-[background-color,border-color,box-shadow] duration-300",
+                FOCUS_RING,
+                active ? "border-ink bg-white shadow-neu" : "border-transparent hover:bg-white",
+              )}
+            >
+              <span className="grid h-6 w-6 shrink-0 place-items-center rounded-full ring-1 ring-inset ring-black/10" style={{ backgroundColor: hex }}>
+                <AnimatePresence initial={false}>
+                  {active && (
+                    <m.span initial={{ scale: 0 }} animate={{ scale: 1 }} exit={{ scale: 0 }} transition={{ type: "spring", stiffness: 520, damping: 24 }} className="grid place-items-center">
+                      <Check size={12} strokeWidth={3} className={isLight(hex) ? "text-ink" : "text-white"} />
+                    </m.span>
+                  )}
+                </AnimatePresence>
+              </span>
+              <span className="min-w-0 flex-1 truncate">{v.value}</span>
+              <span className="text-[10px] tabular-nums text-ink/35">{v.count}</span>
+            </button>
+          );
+        })}
+      </div>
+    );
+  }
 
-      {facets.options.map((o) => (
-        <section key={o.name}>
-          <h3 className="text-xs font-semibold uppercase tracking-widest text-ink/50">{o.name}</h3>
-          <div className="mt-3 flex flex-wrap gap-2">
-            {o.values.map((v) => {
-              const active = (params.get(`opt.${o.name}`) ?? "").split(",").includes(v.value);
-              return (
-                <button
-                  key={v.value}
-                  onClick={() => toggleOption(o.name, v.value)}
-                  aria-pressed={active}
-                  className={clsx("rounded-full border px-3 py-1.5 text-xs font-medium transition", active ? "border-ink bg-ink text-white" : "border-black/10 bg-white hover:border-ink/40")}
-                >
-                  {v.value}
-                </button>
-              );
-            })}
-          </div>
-        </section>
-      ))}
+  return (
+    <div className="flex flex-wrap gap-2">
+      {option.values.map((v) => {
+        const active = current.includes(v.value);
+        return (
+          <m.button
+            key={v.value}
+            type="button"
+            whileTap={{ scale: 0.94 }}
+            onClick={() => toggle(v.value)}
+            aria-pressed={active}
+            title={`${v.count} ${v.count === 1 ? "product" : "products"}`}
+            className={clsx(
+              "h-9 min-w-11 rounded-full border px-3.5 text-xs font-semibold transition-colors duration-300",
+              FOCUS_RING,
+              active ? "border-ink bg-ink text-white" : "border-black/10 bg-white hover:border-ink/50",
+            )}
+          >
+            {v.value}
+          </m.button>
+        );
+      })}
+    </div>
+  );
+}
 
-      {facets.brands.length > 0 && (
-        <section>
-          <h3 className="text-xs font-semibold uppercase tracking-widest text-ink/50">Brand</h3>
-          <div className="mt-3 space-y-2">
-            {facets.brands.map((b) => (
-              <label key={b.slug} className="flex cursor-pointer items-center gap-2 text-sm">
-                <input type="checkbox" className="h-4 w-4 accent-ink" checked={brands.includes(b.slug)} onChange={() => toggleBrand(b.slug)} />
-                <span className="flex-1">{b.name}</span>
-                <span className="text-xs text-ink/40">{b.count}</span>
-              </label>
-            ))}
-          </div>
-        </section>
-      )}
+const BRAND_LIMIT = 6;
 
-      <section>
-        <h3 className="text-xs font-semibold uppercase tracking-widest text-ink/50">Price</h3>
-        <p className="mt-1 text-xs text-ink/45">
-          {money(facets.price.min)} – {money(facets.price.max)}
-        </p>
-        <form
-          className="mt-3 flex items-center gap-2"
-          onSubmit={(e) => {
-            e.preventDefault();
-            update({ minPrice: min ? String(Math.round(Number(min) * 100)) : null, maxPrice: max ? String(Math.round(Number(max) * 100)) : null, page: null });
-          }}
-        >
-          <input aria-label="Minimum price" value={min} onChange={(e) => setMin(e.target.value)} inputMode="numeric" placeholder="Min ₹" className="input py-2" />
-          <input aria-label="Maximum price" value={max} onChange={(e) => setMax(e.target.value)} inputMode="numeric" placeholder="Max ₹" className="input py-2" />
-          <button className="rounded-full bg-ink px-3 py-2 text-xs font-semibold text-white">Go</button>
-        </form>
-      </section>
+function BrandFilter({ brands }: { brands: Facets["brands"] }) {
+  const { params, update } = useListing();
+  const selected = list(params.get("brand"));
+  const [showAll, setShowAll] = useState(false);
+  const shown = showAll ? brands : brands.slice(0, BRAND_LIMIT);
+  const toggle = (slug: string) => {
+    const next = selected.includes(slug) ? selected.filter((b) => b !== slug) : [...selected, slug];
+    update({ brand: next.join(",") || null, page: null });
+  };
 
-      {activeCount > 0 && (
-        <button
-          onClick={() => update(Object.fromEntries([...params.keys()].filter((k) => !["q", "sort"].includes(k)).map((k) => [k, null])))}
-          className="text-sm font-medium text-ink/60 underline underline-offset-4 hover:text-ink"
-        >
-          Clear all filters
+  return (
+    <div>
+      <ul>
+        <AnimatePresence initial={false}>
+          {shown.map((b) => {
+            const checked = selected.includes(b.slug);
+            return (
+              <m.li key={b.slug} initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: "auto" }} exit={{ opacity: 0, height: 0 }} transition={{ duration: 0.35, ease: EASE_OUT }} className="overflow-hidden">
+                <label className="group flex cursor-pointer items-center gap-3 py-1.5 text-sm">
+                  <input type="checkbox" className="peer sr-only" checked={checked} onChange={() => toggle(b.slug)} />
+                  <span
+                    className={clsx(
+                      "grid h-5 w-5 shrink-0 place-items-center rounded-md border transition-colors duration-200 peer-focus-visible:ring-2 peer-focus-visible:ring-ink peer-focus-visible:ring-offset-2 peer-focus-visible:ring-offset-offwhite",
+                      checked ? "border-ink bg-ink text-white" : "border-black/20 bg-white group-hover:border-ink/60",
+                    )}
+                  >
+                    <AnimatePresence initial={false}>
+                      {checked && (
+                        <m.span initial={{ scale: 0 }} animate={{ scale: 1 }} exit={{ scale: 0 }} transition={{ type: "spring", stiffness: 520, damping: 24 }} className="grid place-items-center">
+                          <Check size={12} strokeWidth={3} />
+                        </m.span>
+                      )}
+                    </AnimatePresence>
+                  </span>
+                  <span className={clsx("flex-1 transition-colors", checked ? "font-medium text-ink" : "text-ink/75 group-hover:text-ink")}>{b.name}</span>
+                  <span className="text-xs tabular-nums text-ink/35">{b.count}</span>
+                </label>
+              </m.li>
+            );
+          })}
+        </AnimatePresence>
+      </ul>
+      {brands.length > BRAND_LIMIT && (
+        <button type="button" onClick={() => setShowAll((s) => !s)} aria-expanded={showAll} className={clsx("link-draw mt-3 rounded-sm text-xs font-semibold", FOCUS_RING)}>
+          {showAll ? "Show fewer" : `Show all ${brands.length}`}
         </button>
       )}
     </div>
   );
+}
+
+const rupeesFromParam = (paise: string | null) => (paise ? String(Number(paise) / 100) : "");
+
+function PriceFilter({ facets }: { facets: Facets }) {
+  const { params, update } = useListing();
+  const minParam = params.get("minPrice");
+  const maxParam = params.get("maxPrice");
+  const source = `${minParam ?? ""}|${maxParam ?? ""}`;
+  const [synced, setSynced] = useState(source);
+  const [min, setMin] = useState(rupeesFromParam(minParam));
+  const [max, setMax] = useState(rupeesFromParam(maxParam));
+  // Keep the inputs in step with the URL (e.g. after "Clear all"), adjusting state during render.
+  if (synced !== source) {
+    setSynced(source);
+    setMin(rupeesFromParam(minParam));
+    setMax(rupeesFromParam(maxParam));
+  }
+
+  return (
+    <div>
+      {facets.price.max > 0 && (
+        <p className="text-xs text-ink/45">
+          Range {money(facets.price.min)} – {money(facets.price.max)}
+        </p>
+      )}
+      <form
+        className="mt-3 space-y-3"
+        onSubmit={(e) => {
+          e.preventDefault();
+          update({ minPrice: min ? String(Math.round(Number(min) * 100)) : null, maxPrice: max ? String(Math.round(Number(max) * 100)) : null, page: null });
+        }}
+      >
+        <div className="grid grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] items-center gap-2">
+          <label className="relative block">
+            <span className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-xs text-ink/40">₹</span>
+            <input aria-label="Minimum price" value={min} onChange={(e) => setMin(e.target.value)} inputMode="numeric" placeholder="Min" className="input rounded-full py-2 pl-7" />
+          </label>
+          <span aria-hidden="true" className="text-ink/30">
+            –
+          </span>
+          <label className="relative block">
+            <span className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-xs text-ink/40">₹</span>
+            <input aria-label="Maximum price" value={max} onChange={(e) => setMax(e.target.value)} inputMode="numeric" placeholder="Max" className="input rounded-full py-2 pl-7" />
+          </label>
+        </div>
+        <button type="submit" className={clsx("group flex h-10 w-full items-center justify-center gap-2 rounded-full border border-ink/15 text-xs font-semibold transition-colors hover:border-ink hover:bg-ink hover:text-white", FOCUS_RING)}>
+          Apply price
+          <ArrowUpRight size={14} className="transition-transform duration-500 group-hover:rotate-45" />
+        </button>
+      </form>
+    </div>
+  );
+}
+
+function FilterPanel({ facets }: { facets: Facets }) {
+  const { params } = useListing();
+  const count = (key: string) => list(params.get(key)).length;
+  return (
+    <div>
+      <FilterSection title="Availability" badge={params.get("inStock") === "true" ? 1 : 0}>
+        <StockToggle />
+      </FilterSection>
+      {facets.options.map((o) => (
+        <FilterSection key={o.name} title={o.name} badge={count(`opt.${o.name}`)}>
+          <OptionFilter option={o} />
+        </FilterSection>
+      ))}
+      {facets.brands.length > 0 && (
+        <FilterSection title="Brand" badge={count("brand")}>
+          <BrandFilter brands={facets.brands} />
+        </FilterSection>
+      )}
+      <FilterSection title="Price" badge={params.get("minPrice") || params.get("maxPrice") ? 1 : 0}>
+        <PriceFilter facets={facets} />
+      </FilterSection>
+    </div>
+  );
+}
+
+/** Desktop filter column. */
+export function FilterSidebar({ facets }: { facets: Facets }) {
+  const { params, clearAll } = useListing();
+  const active = activeChips(params, facets).length;
+  return (
+    <div>
+      <div className="mb-6 flex h-6 items-center justify-between">
+        <p className="eyebrow">Filter by</p>
+        <AnimatePresence initial={false}>
+          {active > 0 && (
+            <m.button
+              key="clear"
+              type="button"
+              onClick={clearAll}
+              initial={{ opacity: 0, x: 8 }}
+              animate={{ opacity: 1, x: 0 }}
+              exit={{ opacity: 0, x: 8 }}
+              transition={{ duration: 0.3, ease: EASE_OUT }}
+              className={clsx("link-draw rounded-sm text-xs font-semibold text-ink/60 hover:text-ink", FOCUS_RING)}
+            >
+              Clear all
+            </m.button>
+          )}
+        </AnimatePresence>
+      </div>
+      <FilterPanel facets={facets} />
+    </div>
+  );
+}
+
+/** Removable chips for every active filter, plus "Clear all". */
+export function ActiveFilters({ facets }: { facets: Facets }) {
+  const { params, update, clearAll } = useListing();
+  const chips = activeChips(params, facets);
+  return (
+    <AnimatePresence initial={false}>
+      {chips.length > 0 && (
+        <m.div key="chips" initial={{ height: 0, opacity: 0 }} animate={{ height: "auto", opacity: 1 }} exit={{ height: 0, opacity: 0 }} transition={{ duration: 0.4, ease: EASE_OUT }} className="-mx-1 overflow-hidden px-1">
+          <ul aria-label="Active filters" className="flex flex-wrap items-center gap-2 pb-7 pt-1">
+            <AnimatePresence mode="popLayout" initial={false}>
+              {chips.map((c) => (
+                <m.li key={c.id} layout initial={{ opacity: 0, scale: 0.8 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.8 }} transition={{ duration: 0.35, ease: EASE_OUT }}>
+                  <button
+                    type="button"
+                    onClick={() => update(c.remove)}
+                    aria-label={`Remove filter ${c.group ? `${c.group}: ` : ""}${c.label}`}
+                    className={clsx("group inline-flex h-9 items-center gap-1.5 rounded-full bg-ink pl-3.5 pr-1.5 text-xs font-semibold text-white transition-colors hover:bg-ink/85", FOCUS_RING)}
+                  >
+                    {c.group && <span className="font-medium text-white/50">{c.group}</span>}
+                    {c.label}
+                    <span className="ml-0.5 grid h-6 w-6 place-items-center rounded-full bg-white/15 transition-transform duration-300 group-hover:rotate-90">
+                      <X size={12} />
+                    </span>
+                  </button>
+                </m.li>
+              ))}
+              <m.li key="clear-all" layout className="pl-1">
+                <button type="button" onClick={clearAll} className={clsx("link-draw rounded-sm text-xs font-semibold text-ink/60 hover:text-ink", FOCUS_RING)}>
+                  Clear all
+                </button>
+              </m.li>
+            </AnimatePresence>
+          </ul>
+        </m.div>
+      )}
+    </AnimatePresence>
+  );
+}
+
+/** Keeps keyboard focus inside an open drawer. */
+function trapFocus(e: KeyboardEvent, root: HTMLElement) {
+  const nodes = root.querySelectorAll<HTMLElement>('a[href], button:not([disabled]), input:not([disabled]), select, textarea, [tabindex]:not([tabindex="-1"])');
+  if (!nodes.length) return;
+  const first = nodes[0]!;
+  const last = nodes[nodes.length - 1]!;
+  if (e.shiftKey && document.activeElement === first) {
+    e.preventDefault();
+    last.focus();
+  } else if (!e.shiftKey && document.activeElement === last) {
+    e.preventDefault();
+    first.focus();
+  }
+}
+
+function FilterDrawer({ facets, total, onClose }: { facets: Facets; total: number; onClose: () => void }) {
+  const { params, pending, clearAll } = useListing();
+  const panel = useRef<HTMLDivElement>(null);
+  const closeButton = useRef<HTMLButtonElement>(null);
+  const titleId = useId();
+  const active = activeChips(params, facets).length;
+
+  useEffect(() => {
+    closeButton.current?.focus();
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") onClose();
+      else if (e.key === "Tab" && panel.current) trapFocus(e, panel.current);
+    };
+    window.addEventListener("keydown", onKey);
+    const overflow = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    return () => {
+      window.removeEventListener("keydown", onKey);
+      document.body.style.overflow = overflow;
+    };
+  }, [onClose]);
+
+  return createPortal(
+    <div className="fixed inset-0 z-[60] lg:hidden">
+      <m.div className="absolute inset-0 bg-ink/40 backdrop-blur-[2px]" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} transition={{ duration: 0.3 }} onClick={onClose} />
+      <m.div
+        ref={panel}
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby={titleId}
+        className="absolute inset-y-0 right-0 flex w-full max-w-sm flex-col bg-offwhite shadow-neu-lg"
+        initial={{ x: "100%" }}
+        animate={{ x: 0 }}
+        exit={{ x: "100%" }}
+        transition={{ duration: 0.55, ease: EASE_OUT }}
+      >
+        <header className="flex items-center justify-between border-b border-black/5 px-5 py-4">
+          <div>
+            <p className="eyebrow">Refine</p>
+            <h2 id={titleId} className="mt-0.5 text-xl font-bold tracking-tight">
+              Filters
+            </h2>
+          </div>
+          <button ref={closeButton} type="button" aria-label="Close filters" onClick={onClose} className={clsx("grid h-10 w-10 place-items-center rounded-full transition hover:rotate-90 hover:bg-black/5", FOCUS_RING)}>
+            <X size={20} />
+          </button>
+        </header>
+        <div className="flex-1 overflow-y-auto overscroll-contain px-5 py-6">
+          <ActiveFilters facets={facets} />
+          <FilterPanel facets={facets} />
+        </div>
+        <footer className="grid grid-cols-[auto_minmax(0,1fr)] gap-3 border-t border-black/5 bg-white/80 px-5 pb-[max(1rem,env(safe-area-inset-bottom))] pt-4 backdrop-blur">
+          <button type="button" onClick={clearAll} disabled={!active} className={clsx("h-12 rounded-full border border-ink/15 px-5 text-sm font-semibold transition hover:border-ink disabled:opacity-35", FOCUS_RING)}>
+            Clear all
+          </button>
+          <button type="button" onClick={onClose} className={clsx("flex h-12 items-center justify-center gap-2 rounded-full bg-ink px-4 text-sm font-semibold text-white transition hover:bg-ink/90", FOCUS_RING)}>
+            {pending && <LoaderCircle size={16} className="animate-spin" aria-hidden="true" />}
+            <span className="flex items-center gap-1 whitespace-nowrap">
+              Show <RollingNumber value={total} /> {total === 1 ? "product" : "products"}
+            </span>
+          </button>
+        </footer>
+        <p className="sr-only" role="status" aria-live="polite">
+          {pending ? "Updating results" : `${total} ${total === 1 ? "product" : "products"} found`}
+        </p>
+      </m.div>
+    </div>,
+    document.body,
+  );
+}
+
+/** "Filters" button (below lg) that opens the slide-in filter drawer. */
+export function MobileFilters({ facets, total }: { facets: Facets; total: number }) {
+  const { params } = useListing();
+  const [open, setOpen] = useState(false);
+  const trigger = useRef<HTMLButtonElement>(null);
+  const close = useCallback(() => setOpen(false), []);
+  const active = activeChips(params, facets).length;
 
   return (
     <>
-      <button onClick={() => setOpen(true)} className="flex items-center gap-2 rounded-full border border-black/10 bg-white px-4 py-2 text-sm font-medium lg:hidden">
-        <SlidersHorizontal size={15} /> Filters{activeCount ? ` (${activeCount})` : ""}
+      <button
+        ref={trigger}
+        type="button"
+        onClick={() => setOpen(true)}
+        aria-haspopup="dialog"
+        aria-expanded={open}
+        className={clsx("flex h-10 items-center gap-2 rounded-full border border-black/10 bg-white pl-4 pr-3 text-sm font-semibold transition hover:border-ink/40 lg:hidden", FOCUS_RING)}
+      >
+        <SlidersHorizontal size={15} />
+        Filters
+        <AnimatePresence initial={false}>
+          {active > 0 && (
+            <m.span
+              key={active}
+              initial={{ scale: 0.4, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0.4, opacity: 0 }}
+              transition={{ type: "spring", stiffness: 500, damping: 22 }}
+              className="grid h-5 min-w-5 place-items-center rounded-full bg-ink px-1 text-[10px] font-bold text-white"
+            >
+              {active}
+            </m.span>
+          )}
+        </AnimatePresence>
       </button>
-      <aside className="hidden lg:block">{panel}</aside>
-      {open && (
-        <div className="fixed inset-0 z-50 flex justify-end bg-black/40 lg:hidden" onMouseDown={(e) => e.target === e.currentTarget && setOpen(false)}>
-          <div className="h-full w-80 max-w-[90vw] animate-rise overflow-y-auto bg-offwhite p-5">
-            <div className="mb-6 flex items-center justify-between">
-              <span className="font-semibold">Filters</span>
-              <button aria-label="Close filters" onClick={() => setOpen(false)} className="rounded-full p-2 hover:bg-black/5">
-                <X size={18} />
-              </button>
-            </div>
-            {panel}
-          </div>
-        </div>
-      )}
+      <AnimatePresence onExitComplete={() => trigger.current?.focus()}>{open && <FilterDrawer key="filters" facets={facets} total={total} onClose={close} />}</AnimatePresence>
     </>
+  );
+}
+
+/* -------------------------------------------------------------------------- */
+/* Sort menu                                                                   */
+/* -------------------------------------------------------------------------- */
+
+export function SortSelect() {
+  const { params, update } = useListing();
+  const current = params.get("sort") ?? "";
+  const selectedIndex = Math.max(0, SORTS.findIndex((s) => s.value === current));
+  const [open, setOpen] = useState(false);
+  const [hovered, setHovered] = useState(selectedIndex);
+  const root = useRef<HTMLDivElement>(null);
+  const trigger = useRef<HTMLButtonElement>(null);
+  const items = useRef<(HTMLButtonElement | null)[]>([]);
+  const menuId = useId();
+
+  useEffect(() => {
+    if (!open) return;
+    items.current[selectedIndex]?.focus();
+    const onPointer = (e: PointerEvent) => {
+      if (!root.current?.contains(e.target as Node)) setOpen(false);
+    };
+    document.addEventListener("pointerdown", onPointer);
+    return () => document.removeEventListener("pointerdown", onPointer);
+  }, [open, selectedIndex]);
+
+  const show = () => {
+    setHovered(selectedIndex);
+    setOpen(true);
+  };
+  const close = (refocus = true) => {
+    setOpen(false);
+    if (refocus) trigger.current?.focus();
+  };
+  const choose = (value: string) => {
+    if (value !== current) update({ sort: value || null, page: null });
+    close();
+  };
+  const onMenuKey = (e: ReactKeyboardEvent) => {
+    const buttons = items.current.filter((b): b is HTMLButtonElement => !!b);
+    const i = buttons.indexOf(document.activeElement as HTMLButtonElement);
+    const focusAt = (n: number) => buttons[(n + buttons.length) % buttons.length]?.focus();
+    if (e.key === "ArrowDown") {
+      e.preventDefault();
+      focusAt(i + 1);
+    } else if (e.key === "ArrowUp") {
+      e.preventDefault();
+      focusAt(i - 1);
+    } else if (e.key === "Home") {
+      e.preventDefault();
+      focusAt(0);
+    } else if (e.key === "End") {
+      e.preventDefault();
+      focusAt(buttons.length - 1);
+    } else if (e.key === "Escape") {
+      e.preventDefault();
+      close();
+    } else if (e.key === "Tab") {
+      close(false);
+    }
+  };
+
+  return (
+    <div ref={root} className="relative">
+      <button
+        ref={trigger}
+        type="button"
+        aria-haspopup="menu"
+        aria-expanded={open}
+        aria-controls={open ? menuId : undefined}
+        onClick={() => (open ? close() : show())}
+        onKeyDown={(e) => {
+          if (e.key === "ArrowDown" && !open) {
+            e.preventDefault();
+            show();
+          }
+        }}
+        className={clsx("flex h-10 max-w-[13rem] items-center gap-2 rounded-full border border-black/10 bg-white pl-4 pr-3 text-sm transition hover:border-ink/40 sm:max-w-none", FOCUS_RING)}
+      >
+        <ArrowDownUp size={14} className="shrink-0 text-ink/50 sm:hidden" />
+        <span className="hidden text-ink/50 sm:inline">Sort</span>
+        <span className="truncate font-semibold">{SORTS[selectedIndex]!.label}</span>
+        <m.span animate={{ rotate: open ? 180 : 0 }} transition={{ duration: 0.35, ease: EASE_OUT }} className="grid shrink-0 place-items-center text-ink/50">
+          <ChevronDown size={15} />
+        </m.span>
+      </button>
+      <AnimatePresence>
+        {open && (
+          <m.div
+            id={menuId}
+            role="menu"
+            aria-label="Sort products"
+            onKeyDown={onMenuKey}
+            initial={{ opacity: 0, scale: 0.95, y: -6 }}
+            animate={{ opacity: 1, scale: 1, y: 0 }}
+            exit={{ opacity: 0, scale: 0.96, y: -4 }}
+            transition={{ duration: 0.25, ease: EASE_OUT }}
+            className="absolute right-0 top-full z-30 mt-2 w-60 origin-top-right rounded-2xl border border-black/5 bg-white p-1.5 shadow-neu-lg"
+          >
+            {SORTS.map((s, i) => {
+              const checked = s.value === current;
+              return (
+                <button
+                  key={s.value || "default"}
+                  ref={(el) => {
+                    items.current[i] = el;
+                  }}
+                  type="button"
+                  role="menuitemradio"
+                  aria-checked={checked}
+                  tabIndex={-1}
+                  onClick={() => choose(s.value)}
+                  onMouseEnter={() => setHovered(i)}
+                  onFocus={() => setHovered(i)}
+                  className="relative flex w-full items-center justify-between rounded-xl px-3.5 py-2.5 text-left text-sm outline-none"
+                >
+                  {hovered === i && <m.span layoutId="sort-highlight" className="absolute inset-0 rounded-xl bg-offwhite" transition={{ type: "spring", stiffness: 500, damping: 38 }} />}
+                  <span className={clsx("relative", checked ? "font-semibold" : "text-ink/70")}>{s.label}</span>
+                  {checked && <Check size={15} className="relative" />}
+                </button>
+              );
+            })}
+          </m.div>
+        )}
+      </AnimatePresence>
+    </div>
+  );
+}
+
+/* -------------------------------------------------------------------------- */
+/* Results                                                                     */
+/* -------------------------------------------------------------------------- */
+
+/** "Showing 1–24 of 120", with a spinner while new results load. */
+export function ListingCount({ from, to, total }: { from: number; to: number; total: number }) {
+  const { pending } = useListing();
+  return (
+    <p className="hidden items-center gap-2 text-sm text-ink/55 sm:flex" aria-live="polite">
+      {pending ? (
+        <>
+          <LoaderCircle size={14} className="animate-spin" aria-hidden="true" /> Updating…
+        </>
+      ) : total === 0 ? (
+        "No products"
+      ) : (
+        <>
+          Showing{" "}
+          <span className="font-semibold tabular-nums text-ink">
+            {from}–{to}
+          </span>{" "}
+          of <span className="font-semibold tabular-nums text-ink">{total}</span>
+        </>
+      )}
+    </p>
+  );
+}
+
+/** Dims the grid while the server renders the next set of results. */
+export function ListingResults({ children }: { children: ReactNode }) {
+  const { pending } = useListing();
+  return (
+    <div aria-busy={pending} className={clsx("transition-opacity duration-300", pending && "pointer-events-none opacity-45")}>
+      {children}
+    </div>
+  );
+}
+
+/** Shown when nothing matches the current filters. */
+export function ListingEmpty() {
+  const { params, clearAll } = useListing();
+  const filtered = [...params.keys()].some((k) => !["q", "sort", "page"].includes(k));
+  return (
+    <div className="relative overflow-hidden rounded-[2rem] bg-white px-6 py-16 text-center shadow-neu md:py-24">
+      <div aria-hidden="true" className="pointer-events-none absolute -right-16 -top-16 h-56 w-56 animate-float rounded-full bg-sand/60 blur-3xl" />
+      {/* CSS entrances: this can be the first thing on screen, so it never waits for JavaScript. */}
+      <span className="relative mx-auto grid h-20 w-20 animate-rise place-items-center rounded-full bg-offwhite">
+        <SearchX size={30} strokeWidth={1.5} className="animate-float" />
+      </span>
+      <div className="relative animate-rise [animation-delay:120ms]">
+        <p className="mt-6 text-3xl font-bold tracking-tighter md:text-4xl">No products match</p>
+        <p className="mx-auto mt-2 max-w-sm text-sm text-ink/55">Try removing a filter or searching for something else.</p>
+        <div className="mt-8 flex flex-wrap items-center justify-center gap-3">
+          {filtered && (
+            <button type="button" onClick={clearAll} className={clsx("h-12 rounded-full bg-ink px-6 text-sm font-semibold text-white transition hover:bg-ink/90", FOCUS_RING)}>
+              Clear filters
+            </button>
+          )}
+          <Link href="/products" className={clsx("group flex h-12 items-center gap-3 rounded-full border border-ink/15 py-1 pl-6 pr-1 text-sm font-semibold transition hover:border-ink", FOCUS_RING)}>
+            Browse everything
+            <span className="grid h-10 w-10 place-items-center rounded-full bg-ink text-white transition-transform duration-500 group-hover:rotate-45">
+              <ArrowUpRight size={16} />
+            </span>
+          </Link>
+        </div>
+      </div>
+    </div>
   );
 }

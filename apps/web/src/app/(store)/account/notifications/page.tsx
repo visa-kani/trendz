@@ -4,7 +4,9 @@ import Link from "next/link";
 import { useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { clsx } from "clsx";
-import { Card, EmptyState, Pagination, Spinner } from "@/components/ui";
+import { Bell, BellRing } from "lucide-react";
+import { AccountHeader, EmptyPanel, Panel, RowArrow, RowsSkeleton, StaggerList, StaggerRow } from "@/components/store/account-ui";
+import { Pagination } from "@/components/ui";
 import { api } from "@/lib/api";
 import { dateTime } from "@/lib/format";
 
@@ -17,6 +19,8 @@ interface Note {
   createdAt: string;
 }
 
+const rowClass = "group flex w-full gap-4 px-5 py-4 text-left transition-colors hover:bg-offwhite/70 focus-visible:bg-offwhite focus-visible:outline-none sm:px-7";
+
 export default function NotificationsPage() {
   const [page, setPage] = useState(1);
   const qc = useQueryClient();
@@ -24,43 +28,59 @@ export default function NotificationsPage() {
   const read = useMutation({ mutationFn: (id: string) => api.post(`/account/notifications/${id}/read`), onSuccess: () => qc.invalidateQueries({ queryKey: ["notifications"] }) });
 
   return (
-    <div className="space-y-6">
-      <h1 className="text-2xl font-bold tracking-tight">Notifications</h1>
-      <Card padded={false}>
-        {q.isLoading ? (
-          <Spinner />
-        ) : !q.data?.data.length ? (
-          <EmptyState title="You're all caught up" />
-        ) : (
-          <ul className="divide-y divide-black/5">
-            {q.data.data.map((n) => {
-              const content = (
-                <>
-                  <span className={clsx("mt-1.5 h-2 w-2 shrink-0 rounded-full", n.readAt ? "bg-transparent" : "bg-ink")} aria-hidden />
-                  <div className="min-w-0 flex-1">
-                    <p className={clsx("text-sm", !n.readAt && "font-semibold")}>{n.title}</p>
-                    {n.body && <p className="text-sm text-ink/60">{n.body}</p>}
-                    <p className="mt-1 text-xs text-ink/40">{dateTime(n.createdAt)}</p>
-                  </div>
-                </>
-              );
-              return (
-                <li key={n.id}>
-                  {n.payload?.link ? (
-                    <Link href={n.payload.link} onClick={() => !n.readAt && read.mutate(n.id)} className="flex gap-3 px-5 py-4 hover:bg-black/[0.02]">
-                      {content}
-                    </Link>
-                  ) : (
-                    <button onClick={() => !n.readAt && read.mutate(n.id)} className="flex w-full gap-3 px-5 py-4 text-left hover:bg-black/[0.02]">
-                      {content}
-                    </button>
-                  )}
-                </li>
-              );
-            })}
-          </ul>
-        )}
-      </Card>
+    <div className="space-y-8">
+      <AccountHeader eyebrow="Inbox" title="Notifications" description="Order updates, refunds and account news — newest first." />
+      {!q.isLoading && !q.data?.data.length ? (
+        <EmptyPanel icon={<Bell size={28} strokeWidth={1.5} />} title="You're all caught up" body="New updates about your orders will show up here." />
+      ) : (
+        <Panel padded={false}>
+          {q.isLoading ? (
+            <RowsSkeleton thumb={false} rows={4} label="Loading notifications" />
+          ) : (
+            <StaggerList key={page} className="divide-y divide-black/5 py-1">
+              {q.data?.data.map((n) => {
+                const unread = !n.readAt;
+                const content = (
+                  <>
+                    <span className="relative mt-0.5 grid h-10 w-10 shrink-0 place-items-center rounded-2xl bg-offwhite text-ink/70 transition-colors duration-500 group-hover:bg-ink group-hover:text-white">
+                      {unread ? <BellRing size={16} strokeWidth={1.75} /> : <Bell size={16} strokeWidth={1.75} />}
+                      <span
+                        aria-hidden="true"
+                        className={clsx(
+                          "absolute -right-0.5 -top-0.5 h-2.5 w-2.5 rounded-full border-2 border-white bg-accent transition-[scale,opacity] duration-500",
+                          unread ? "animate-pulse-dot" : "scale-0 opacity-0",
+                        )}
+                      />
+                    </span>
+                    <div className="min-w-0 flex-1">
+                      <p className={clsx("text-sm", unread ? "font-semibold" : "text-ink/75")}>
+                        {n.title}
+                        {unread && <span className="sr-only"> (unread)</span>}
+                      </p>
+                      {n.body && <p className="mt-0.5 text-sm text-ink/60">{n.body}</p>}
+                      <p className="mt-1.5 text-xs text-ink/40">{dateTime(n.createdAt)}</p>
+                    </div>
+                    {n.payload?.link && <RowArrow className="mt-0.5 hidden sm:grid" />}
+                  </>
+                );
+                return (
+                  <StaggerRow key={n.id}>
+                    {n.payload?.link ? (
+                      <Link href={n.payload.link} onClick={() => !n.readAt && read.mutate(n.id)} className={rowClass}>
+                        {content}
+                      </Link>
+                    ) : (
+                      <button type="button" onClick={() => !n.readAt && read.mutate(n.id)} className={rowClass}>
+                        {content}
+                      </button>
+                    )}
+                  </StaggerRow>
+                );
+              })}
+            </StaggerList>
+          )}
+        </Panel>
+      )}
       <Pagination meta={q.data?.meta} onPage={setPage} />
     </div>
   );

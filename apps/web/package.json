@@ -5,6 +5,7 @@
   "scripts": {
     "dev": "next dev --port 3100",
     "build": "next build",
+    "build:webpack": "next build --webpack",
     "start": "next start --port 3100",
     "typecheck": "tsc --noEmit",
     "lint": "eslint src"
@@ -26,6 +27,7 @@
     "@zxing/library": "^0.23.0",
     "clsx": "^2.1.1",
     "lucide-react": "^1.53.0",
+    "motion": "^12.43.0",
     "next": "^16.4.0",
     "react": "^19.3.0",
     "react-dom": "^19.3.0",

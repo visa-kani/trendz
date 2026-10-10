@@ -38,6 +38,9 @@ export function getQueue(name: QueueName): Queue {
   return q;
 }
 
+/** Longest a request waits for a job to be queued. */
+const ENQUEUE_WAIT_MS = 3000;
+
 /**
  * Adds a job. `jobId` makes the add idempotent: adding the same id twice while
  * the first job is still retained is a no-op. Enqueue failures are logged and
@@ -50,11 +53,25 @@ export async function enqueue<T extends object>(
   data: T,
   opts: JobsOptions & { jobId?: string } = {},
 ): Promise<void> {
-  try {
-    await getQueue(queue).add(name, data, opts);
-  } catch (err) {
-    logger.error({ err, queue, name, jobId: opts.jobId }, "failed to enqueue job");
-  }
+  // Never let a struggling Redis hold up the request that queued the job: wait a
+  // few seconds at most. The queue connection keeps the command and adds the job
+  // as soon as Redis answers (and outbox sweepers re-queue anything missed).
+  const added = getQueue(queue)
+    .add(name, data, opts)
+    .then(
+      () => "added" as const,
+      (err: unknown) => {
+        logger.error({ err, queue, name, jobId: opts.jobId }, "failed to enqueue job");
+        return "failed" as const;
+      },
+    );
+  let timer: ReturnType<typeof setTimeout> | undefined;
+  const timeout = new Promise<"slow">((resolve) => {
+    timer = setTimeout(() => resolve("slow"), ENQUEUE_WAIT_MS);
+  });
+  const outcome = await Promise.race([added, timeout]);
+  clearTimeout(timer);
+  if (outcome === "slow") logger.warn({ queue, name, jobId: opts.jobId }, "enqueue is slow; continuing without waiting (the job is added when Redis responds)");
 }
 
 export async function closeQueues(): Promise<void> {

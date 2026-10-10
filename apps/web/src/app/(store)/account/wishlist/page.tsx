@@ -2,10 +2,15 @@
 
 import Link from "next/link";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { Trash2 } from "lucide-react";
-import { ProductImage, Price } from "@/components/store/product-card";
-import { Card, EmptyState, Spinner } from "@/components/ui";
+import { AnimatePresence, m } from "motion/react";
+import { clsx } from "clsx";
+import { ArrowUpRight, Heart } from "lucide-react";
+import { AccountHeader, EmptyPanel } from "@/components/store/account-ui";
+import { CtaLink, delay } from "@/components/store/checkout-ui";
+import { EASE_OUT } from "@/components/store/motion";
+import { Price, ProductCardSkeleton, ProductImage } from "@/components/store/product-card";
 import { api } from "@/lib/api";
+import { pluralize } from "@/lib/format";
 import type { ImageView } from "@/lib/types";
 
 interface WishItem {
@@ -24,32 +29,77 @@ export default function WishlistPage() {
   const remove = useMutation({ mutationFn: (id: string) => api.delete(`/account/wishlist/${id}`), onSuccess: () => qc.invalidateQueries({ queryKey: ["wishlist"] }) });
 
   return (
-    <div className="space-y-6">
-      <h1 className="text-2xl font-bold tracking-tight">Wishlist</h1>
+    <div className="space-y-8">
+      <AccountHeader eyebrow="Saved for later" title="Wishlist" description={q.data?.length ? `${pluralize(q.data.length, "piece")} you've got your eye on.` : "Pieces you've saved for later."} />
       {q.isLoading ? (
-        <Spinner />
-      ) : !q.data?.length ? (
-        <Card>
-          <EmptyState title="Nothing saved yet" body="Tap the heart on any product to save it here." action={<Link href="/products" className="link text-sm">Browse products</Link>} />
-        </Card>
-      ) : (
-        <div className="grid grid-cols-2 gap-5 md:grid-cols-3">
-          {q.data.map((w) => (
-            <div key={w.productId} className="group relative">
-              <Link href={`/products/${w.slug}`} className="block">
-                <div className="aspect-[4/5] overflow-hidden rounded-3xl bg-white shadow-neu">
-                  <ProductImage image={w.image} alt={w.name} className="h-full w-full object-cover" />
-                </div>
-                <p className="mt-2 line-clamp-1 text-sm font-medium">{w.name}</p>
-                {w.available ? <Price price={w.sellingPrice} mrp={w.mrp} className="text-sm" /> : <p className="text-sm text-ink/50">No longer available</p>}
-              </Link>
-              <button aria-label={`Remove ${w.name}`} onClick={() => remove.mutate(w.productId)} className="absolute right-3 top-3 rounded-full bg-white/90 p-2 text-ink/60 shadow-neu hover:text-ink">
-                <Trash2 size={15} />
-              </button>
-            </div>
+        <div className="grid grid-cols-2 gap-x-4 gap-y-10 sm:gap-x-6 md:grid-cols-3" aria-busy="true">
+          <p role="status" className="sr-only">
+            Loading your wishlist…
+          </p>
+          {Array.from({ length: 6 }, (_, i) => (
+            <ProductCardSkeleton key={i} />
           ))}
         </div>
+      ) : !q.data?.length ? (
+        <EmptyPanel
+          icon={<Heart size={28} strokeWidth={1.5} />}
+          title="Nothing saved yet"
+          body="Tap the heart on any product to save it here."
+          action={<CtaLink href="/products">Browse products</CtaLink>}
+        />
+      ) : (
+        <ul className="relative grid grid-cols-2 gap-x-4 gap-y-10 sm:gap-x-6 md:grid-cols-3">
+          {/* Cards on the first render rise in via CSS; removals pop out and the grid closes the gap. */}
+          <AnimatePresence initial={false} mode="popLayout">
+            {q.data.map((w, i) => (
+              <m.li key={w.productId} layout exit={{ opacity: 0, scale: 0.85, transition: { duration: 0.35, ease: EASE_OUT } }} transition={{ layout: { duration: 0.55, ease: EASE_OUT } }}>
+                <div className="animate-rise" style={delay(120 + Math.min(i, 8) * 60)}>
+                  <WishCard item={w} removing={remove.isPending && remove.variables === w.productId} onRemove={() => remove.mutate(w.productId)} />
+                </div>
+              </m.li>
+            ))}
+          </AnimatePresence>
+        </ul>
       )}
     </div>
+  );
+}
+
+/** Mirrors the storefront product card for the leaner wishlist data (no category / options). */
+function WishCard({ item: w, removing, onRemove }: { item: WishItem; removing: boolean; onRemove: () => void }) {
+  return (
+    <article className={clsx("group relative transition-opacity duration-300", removing && "opacity-50")}>
+      <Link href={`/products/${w.slug}`} className="block rounded-3xl focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-ink/10" aria-label={w.name}>
+        <div className="relative aspect-[4/5] overflow-hidden rounded-3xl bg-white shadow-neu transition-shadow duration-500 group-hover:shadow-neu-lg">
+          <ProductImage
+            image={w.image}
+            alt={w.name}
+            sizes="(min-width: 768px) 25vw, 50vw"
+            className={clsx("h-full w-full object-cover transition-transform duration-[1200ms] ease-[cubic-bezier(0.16,1,0.3,1)] group-hover:scale-[1.07]", !w.available && "grayscale")}
+          />
+          {!w.available && <span className="absolute left-3 top-3 rounded-full bg-ink/85 px-2.5 py-1 text-[11px] font-semibold text-white">Unavailable</span>}
+          <div className="pointer-events-none absolute inset-x-3 bottom-3 flex translate-y-[130%] items-center justify-between rounded-2xl bg-white/90 px-4 py-3 text-xs font-semibold opacity-0 shadow-neu backdrop-blur-md transition-all duration-500 ease-[cubic-bezier(0.16,1,0.3,1)] group-hover:translate-y-0 group-hover:opacity-100">
+            <span>View product</span>
+            <span className="grid h-7 w-7 place-items-center rounded-full bg-ink text-white transition-transform duration-500 group-hover:rotate-45">
+              <ArrowUpRight size={14} />
+            </span>
+          </div>
+        </div>
+        <div className="mt-3.5 px-1">
+          <h3 className="line-clamp-1 text-sm font-semibold">{w.name}</h3>
+          <div className="mt-1.5">{w.available ? <Price price={w.sellingPrice} mrp={w.mrp} className="text-sm" /> : <p className="text-sm text-ink/50">No longer available</p>}</div>
+        </div>
+      </Link>
+      <button
+        type="button"
+        aria-label={`Remove ${w.name}`}
+        title="Remove from wishlist"
+        onClick={onRemove}
+        disabled={removing}
+        className="absolute right-3 top-3 grid h-9 w-9 place-items-center rounded-full bg-white/85 shadow-neu backdrop-blur transition hover:scale-110 focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-ink/15 disabled:cursor-wait"
+      >
+        <Heart size={16} strokeWidth={1.8} className="fill-accent text-accent" />
+      </button>
+    </article>
   );
 }

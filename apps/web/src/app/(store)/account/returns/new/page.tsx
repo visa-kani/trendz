@@ -3,7 +3,12 @@
 import { useRouter, useSearchParams } from "next/navigation";
 import { Suspense, useState } from "react";
 import { useMutation, useQuery } from "@tanstack/react-query";
-import { Button, Card, Field, Select, Spinner, Textarea } from "@/components/ui";
+import { AnimatePresence, m } from "motion/react";
+import { clsx } from "clsx";
+import { ArrowUpRight, Loader2, PackageX } from "lucide-react";
+import { AccountHeader, DetailSkeleton, EmptyPanel, Panel, StaggerList, StaggerRow, Thumb } from "@/components/store/account-ui";
+import { CtaLink, delay, RollingNumber } from "@/components/store/checkout-ui";
+import { Field, Select, Textarea } from "@/components/ui";
 import { useToast } from "@/components/ui/toast";
 import { api, errorMessage } from "@/lib/api";
 import { money } from "@/lib/format";
@@ -13,7 +18,7 @@ const REASONS = ["Size too small", "Size too large", "Damaged or defective", "No
 
 export default function NewReturnPage() {
   return (
-    <Suspense fallback={<Spinner />}>
+    <Suspense fallback={<DetailSkeleton />}>
       <NewReturn />
     </Suspense>
   );
@@ -45,9 +50,22 @@ function NewReturn() {
     onError: (e) => toast(errorMessage(e), "error"),
   });
 
-  if (q.isLoading || !q.data) return <Spinner />;
+  if (q.isLoading || !q.data) return <DetailSkeleton label="Loading your order" />;
   const o = q.data;
-  if (!o.canReturn) return <p className="text-sm text-ink/60">This order is not eligible for return.</p>;
+  if (!o.canReturn) {
+    return (
+      <EmptyPanel
+        icon={<PackageX size={28} strokeWidth={1.5} />}
+        title="This order is not eligible for return."
+        body="Returns open once an order is delivered and stay open for the return window."
+        action={
+          <CtaLink href={`/account/orders/${o.orderNumber}`} tone="light">
+            Back to the order
+          </CtaLink>
+        }
+      />
+    );
+  }
 
   // Units already in another return request cannot be requested again.
   const inReturn = (itemId: string) => o.returnRequests.filter((r) => !["REJECTED", "CANCELLED"].includes(r.status)).flatMap((r) => r.items).filter((i) => i.orderItemId === itemId).reduce((s, i) => s + i.quantity, 0);
@@ -55,49 +73,88 @@ function NewReturn() {
 
   return (
     <div className="space-y-6">
-      <h1 className="text-2xl font-bold tracking-tight">Return items from {o.orderNumber}</h1>
-      <Card title="Choose items">
-        <ul className="divide-y divide-black/5">
+      <AccountHeader eyebrow="New return" title={`Return items from ${o.orderNumber}`} long back={{ href: `/account/orders/${o.orderNumber}`, label: "Back to order" }} />
+
+      <Panel eyebrow="Step 1" title="Choose items" padded={false}>
+        <StaggerList className="divide-y divide-black/5">
           {o.items.map((i) => {
             const max = i.quantity - inReturn(i.id);
+            const picked = (qty[i.id] ?? 0) > 0;
             return (
-              <li key={i.id} className="flex items-center gap-4 py-3">
-                <div className="h-14 w-12 shrink-0 overflow-hidden rounded-lg bg-offwhite">{i.imageUrl && <img src={i.imageUrl} alt="" className="h-full w-full object-cover" />}</div>
+              <StaggerRow key={i.id} className={clsx("transition-colors duration-300", picked && "bg-offwhite/70")}>
+                <div className={clsx("flex items-center gap-4 px-5 py-4 sm:px-7", max <= 0 && "opacity-50")}>
+                <Thumb src={i.imageUrl} />
                 <div className="min-w-0 flex-1 text-sm">
-                  <p className="font-medium">{i.productName}</p>
+                  <p className="font-semibold">{i.productName}</p>
                   <p className="text-ink/55">
                     {i.variantTitle} · paid {money(Math.round(i.lineTotal / i.quantity))} each
                   </p>
+                  {max <= 0 && <p className="mt-0.5 text-xs text-ink/50">Already in a return request</p>}
                 </div>
-                <Select aria-label={`Quantity to return for ${i.productName}`} className="w-24" value={qty[i.id] ?? 0} disabled={max <= 0} onChange={(e) => setQty((s) => ({ ...s, [i.id]: Number(e.target.value) }))}>
+                <Select aria-label={`Quantity to return for ${i.productName}`} className="w-22 rounded-full" value={qty[i.id] ?? 0} disabled={max <= 0} onChange={(e) => setQty((s) => ({ ...s, [i.id]: Number(e.target.value) }))}>
                   {Array.from({ length: Math.max(0, max) + 1 }, (_, n) => (
                     <option key={n} value={n}>
                       {n}
                     </option>
                   ))}
                 </Select>
-              </li>
+                </div>
+              </StaggerRow>
             );
           })}
-        </ul>
-      </Card>
-      <Card title="Why are you returning?">
-        <div className="space-y-4">
-          <Field label="Reason" htmlFor="reason">
-            <Select id="reason" value={reason} onChange={(e) => setReason(e.target.value)}>
-              {REASONS.map((r) => (
-                <option key={r}>{r}</option>
-              ))}
-            </Select>
-          </Field>
-          <Field label="Anything else? (optional)" htmlFor="notes">
-            <Textarea id="notes" value={notes} onChange={(e) => setNotes(e.target.value)} maxLength={1000} />
-          </Field>
-        </div>
-      </Card>
-      <Button size="lg" disabled={!selected} loading={submit.isPending} onClick={() => submit.mutate()}>
-        Request return ({selected} item{selected === 1 ? "" : "s"})
-      </Button>
+        </StaggerList>
+      </Panel>
+
+      <Panel eyebrow="Step 2" title="Why are you returning?" delay={0.08}>
+        <fieldset>
+          <legend className="label">Reason</legend>
+          <div className="mt-1 flex flex-wrap gap-2">
+            {REASONS.map((r) => {
+              const active = reason === r;
+              return (
+                <label
+                  key={r}
+                  className={clsx(
+                    "relative isolate cursor-pointer rounded-full border px-4 py-2 text-sm font-medium transition-colors duration-300 has-[:focus-visible]:ring-4 has-[:focus-visible]:ring-ink/10",
+                    active ? "border-ink text-white" : "border-black/10 text-ink/70 hover:border-ink/40 hover:text-ink",
+                  )}
+                >
+                  <input type="radio" name="reason" value={r} checked={active} onChange={() => setReason(r)} className="sr-only" />
+                  {active && <m.span layoutId="return-reason-pill" aria-hidden="true" className="absolute inset-0 -z-10 rounded-full bg-ink" transition={{ type: "spring", stiffness: 420, damping: 34 }} />}
+                  {r}
+                </label>
+              );
+            })}
+          </div>
+        </fieldset>
+        <Field label="Anything else? (optional)" htmlFor="notes" className="mt-6">
+          <Textarea id="notes" value={notes} onChange={(e) => setNotes(e.target.value)} maxLength={1000} className="rounded-2xl" />
+        </Field>
+      </Panel>
+
+      <div className="flex animate-rise flex-wrap items-center gap-4" style={delay(250)}>
+        <button
+          type="button"
+          disabled={!selected || submit.isPending}
+          aria-busy={submit.isPending || undefined}
+          onClick={() => submit.mutate()}
+          className="group flex h-14 items-center gap-5 rounded-full bg-ink py-1.5 pl-7 pr-2 text-sm font-semibold text-white shadow-neu-lg transition-[background-color,box-shadow] duration-300 hover:bg-ink/90 focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-ink/20 disabled:cursor-not-allowed disabled:bg-ink/35 disabled:shadow-none"
+        >
+          <span>
+            Request return (<RollingNumber value={selected} /> item{selected === 1 ? "" : "s"})
+          </span>
+          <span className="grid h-10 w-10 place-items-center rounded-full bg-white text-ink transition-transform duration-500 group-enabled:group-hover:rotate-45">
+            {submit.isPending ? <Loader2 size={16} className="animate-spin" /> : <ArrowUpRight size={17} />}
+          </span>
+        </button>
+        <AnimatePresence initial={false}>
+          {!selected && (
+            <m.p key="hint" className="text-xs text-ink/50" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
+              Pick at least one item to continue.
+            </m.p>
+          )}
+        </AnimatePresence>
+      </div>
     </div>
   );
 }

@@ -3,17 +3,23 @@
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { Suspense, useEffect, useRef, useState } from "react";
-import { Spinner } from "@/components/ui";
+import { AnimatePresence, m } from "motion/react";
+import { Loader2, MailX } from "lucide-react";
+import { AuthFallback, AuthMedallion, AuthShell } from "@/components/store/auth-shell";
+import { CtaLink, DrawnCheck } from "@/components/store/checkout-ui";
+import { EASE_OUT } from "@/components/store/motion";
 import { api, errorMessage } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
 
 export default function VerifyEmailPage() {
   return (
-    <Suspense fallback={<Spinner className="py-32" />}>
+    <Suspense fallback={<AuthFallback />}>
       <Verify />
     </Suspense>
   );
 }
+
+const TITLES = { working: "Verifying your email", done: "Email verified", error: "Could not verify" } as const;
 
 function Verify() {
   const token = useSearchParams().get("token");
@@ -41,25 +47,47 @@ function Verify() {
   }, [token, reload]);
 
   return (
-    <div className="container-x flex justify-center py-20">
-      <div className="card w-full max-w-md p-7 text-center">
-        {state === "working" && <Spinner label="Verifying your email" />}
-        {state === "done" && (
-          <>
-            <h1 className="text-xl font-bold">Email verified</h1>
-            <p className="mt-2 text-sm text-ink/60">Thanks — your email address is confirmed.</p>
-            <Link href="/account" className="link mt-4 inline-block text-sm">
-              Go to my account
-            </Link>
-          </>
-        )}
-        {state === "error" && (
-          <>
-            <h1 className="text-xl font-bold">Could not verify</h1>
-            <p className="mt-2 text-sm text-ink/60">{message}</p>
-          </>
-        )}
-      </div>
-    </div>
+    <AuthShell eyebrow="Email verification" title={TITLES[state]} tagline="Almost there.">
+      <AnimatePresence mode="wait" initial={false}>
+        <m.div
+          key={state}
+          role="status"
+          className="flex flex-col items-start gap-5"
+          initial={{ opacity: 0, y: 14 }}
+          animate={{ opacity: 1, y: 0 }}
+          exit={{ opacity: 0, y: -10 }}
+          transition={{ duration: 0.45, ease: EASE_OUT }}
+        >
+          {state === "working" && (
+            <>
+              <AuthMedallion>
+                <Loader2 size={28} className="animate-spin" />
+              </AuthMedallion>
+              <p className="text-sm text-ink/60">Verifying your email…</p>
+            </>
+          )}
+          {state === "done" && (
+            <>
+              <span className="grid h-20 w-20 place-items-center rounded-full bg-success/10 text-success">
+                <DrawnCheck className="h-14 w-14" />
+              </span>
+              <p className="text-sm text-ink/60">Thanks — your email address is confirmed.</p>
+              <CtaLink href="/account">Go to my account</CtaLink>
+            </>
+          )}
+          {state === "error" && (
+            <>
+              <AuthMedallion tone="danger">
+                <MailX size={30} strokeWidth={1.6} />
+              </AuthMedallion>
+              <p className="text-sm text-ink/60">{message}</p>
+              <Link href="/account" className="link text-sm">
+                Request a new link from your account
+              </Link>
+            </>
+          )}
+        </m.div>
+      </AnimatePresence>
+    </AuthShell>
   );
 }

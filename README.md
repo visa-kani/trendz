@@ -208,3 +208,5 @@ infra/   nginx, pm2, provisioning / deploy / backup scripts
 | No verification or OTP message | Email: check Mailpit at http://localhost:8125. SMS: check the API console output. |
 | Camera scanning does not start on another device | Browsers allow the camera only on `https://` or `localhost`. Use a tunnel with HTTPS, or a USB scanner. |
 | Prisma client out of date after pulling | `npm run db:generate --workspace apps/api` |
+| `next build` fails on Windows with `node process exited … 0xc0000142` | Turbopack could not start its CSS worker process (seen under heavy memory pressure). Build with webpack instead: `npm run build:webpack --workspace apps/web` |
+| API requests hang, or `docker` commands stop responding | Docker Desktop has stalled. Restart it, then run `npm run infra:up`. The API fails fast on a stalled Redis (1.5 s command timeout) and falls back to the database. |

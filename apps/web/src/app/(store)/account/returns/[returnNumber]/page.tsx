@@ -3,7 +3,9 @@
 import Link from "next/link";
 import { use } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { Card, Spinner, StatusBadge } from "@/components/ui";
+import { MessageSquareText, Wallet } from "lucide-react";
+import { AccountHeader, DetailSkeleton, Panel, StaggerList, StaggerRow, StatusTrack, Thumb } from "@/components/store/account-ui";
+import { StatusBadge } from "@/components/ui";
 import { api } from "@/lib/api";
 import { dateTime, money } from "@/lib/format";
 
@@ -26,70 +28,80 @@ const STEPS = ["REQUESTED", "APPROVED", "RECEIVED", "REFUNDED"];
 export default function ReturnDetailPage({ params }: { params: Promise<{ returnNumber: string }> }) {
   const { returnNumber } = use(params);
   const q = useQuery({ queryKey: ["return", returnNumber], queryFn: () => api.get<ReturnDetail>(`/account/returns/${encodeURIComponent(returnNumber)}`) });
-  if (q.isLoading || !q.data) return <Spinner />;
+  if (q.isLoading || !q.data) return <DetailSkeleton label="Loading your return" />;
   const r = q.data;
   const step = STEPS.indexOf(r.status === "CLOSED" ? "REFUNDED" : r.status);
 
   return (
     <div className="space-y-6">
-      <div>
-        <Link href="/account/returns" className="text-xs text-ink/50 hover:text-ink">
-          ← All returns
-        </Link>
-        <div className="mt-1 flex flex-wrap items-center gap-3">
-          <h1 className="text-2xl font-bold tracking-tight">Return {r.returnNumber}</h1>
+      <AccountHeader
+        eyebrow="Return"
+        title={r.returnNumber}
+        long
+        back={{ href: "/account/returns", label: "All returns" }}
+        description={
+          <>
+            For order{" "}
+            <Link href={`/account/orders/${r.order.orderNumber}`} className="link">
+              {r.order.orderNumber}
+            </Link>{" "}
+            · requested {dateTime(r.requestedAt)}
+          </>
+        }
+      >
+        <div className="mt-4">
           <StatusBadge status={r.status} />
         </div>
-        <p className="text-sm text-ink/55">
-          For order{" "}
-          <Link href={`/account/orders/${r.order.orderNumber}`} className="link">
-            {r.order.orderNumber}
-          </Link>{" "}
-          · requested {dateTime(r.requestedAt)}
-        </p>
-      </div>
+      </AccountHeader>
+
       {r.status !== "REJECTED" && r.status !== "CANCELLED" && (
-        <Card title="Progress">
-          <ol className="grid grid-cols-4 gap-2 text-center text-[11px] font-medium">
-            {STEPS.map((s, i) => (
-              <li key={s} className="flex flex-col gap-2">
-                <span className={`h-2 rounded-full ${i <= step ? "bg-ink" : "bg-black/10"}`} />
-                <span className={i <= step ? "" : "text-ink/40"}>{s.charAt(0) + s.slice(1).toLowerCase()}</span>
-              </li>
-            ))}
-          </ol>
-        </Card>
+        <Panel eyebrow="Progress" title={r.reason}>
+          <StatusTrack steps={STEPS.map((s) => s.charAt(0) + s.slice(1).toLowerCase())} current={step} label="Return progress" />
+        </Panel>
       )}
       {r.adminNotes && (
-        <Card title="Message from our team">
-          <p className="text-sm text-ink/70">{r.adminNotes}</p>
-        </Card>
+        <Panel eyebrow="Message from our team" delay={0.05}>
+          <div className="flex gap-3">
+            <MessageSquareText size={18} strokeWidth={1.75} className="mt-0.5 shrink-0 text-ink/40" />
+            <p className="text-sm leading-relaxed text-ink/70">{r.adminNotes}</p>
+          </div>
+        </Panel>
       )}
-      <Card title="Items" padded={false}>
-        <ul className="divide-y divide-black/5">
+      <Panel title="Items" padded={false} delay={0.1}>
+        <StaggerList className="divide-y divide-black/5 pb-1">
           {r.items.map((i) => (
-            <li key={i.id} className="flex items-center gap-4 px-5 py-4 text-sm">
-              <div className="h-14 w-12 shrink-0 overflow-hidden rounded-lg bg-offwhite">{i.orderItem.imageUrl && <img src={i.orderItem.imageUrl} alt="" className="h-full w-full object-cover" />}</div>
-              <span className="flex-1">
-                {i.orderItem.productName} <span className="text-ink/50">· {i.orderItem.variantTitle} × {i.quantity}</span>
+            <StaggerRow key={i.id} className="flex items-center gap-4 px-5 py-4 text-sm sm:px-7">
+              <Thumb src={i.orderItem.imageUrl} />
+              <span className="min-w-0 flex-1">
+                <span className="block font-semibold">{i.orderItem.productName}</span>
+                <span className="text-ink/50">
+                  {i.orderItem.variantTitle} × {i.quantity}
+                </span>
               </span>
               {i.condition && <StatusBadge status={i.condition} />}
-            </li>
+            </StaggerRow>
           ))}
-        </ul>
-      </Card>
+        </StaggerList>
+      </Panel>
       {r.refunds.length > 0 && (
-        <Card title="Refund">
-          {r.refunds.map((f) => (
-            <div key={f.id} className="flex items-center justify-between text-sm">
-              <span>
-                {f.refundNumber} · {money(f.amount)} · {dateTime(f.createdAt)}
-              </span>
-              <StatusBadge status={f.status} />
-            </div>
-          ))}
-          <p className="mt-3 text-xs text-ink/50">Refunds to cards and UPI usually reach your account in 5–7 business days.</p>
-        </Card>
+        <Panel eyebrow="Refund" delay={0.15}>
+          <ul className="space-y-3">
+            {r.refunds.map((f) => (
+              <li key={f.id} className="flex flex-wrap items-center justify-between gap-3 text-sm">
+                <span className="flex items-center gap-3">
+                  <span className="grid h-9 w-9 shrink-0 place-items-center rounded-full bg-success/10 text-success">
+                    <Wallet size={16} strokeWidth={1.75} />
+                  </span>
+                  <span>
+                    <span className="font-semibold">{f.refundNumber}</span> · {money(f.amount)} <span className="text-ink/50">· {dateTime(f.createdAt)}</span>
+                  </span>
+                </span>
+                <StatusBadge status={f.status} />
+              </li>
+            ))}
+          </ul>
+          <p className="mt-4 text-xs text-ink/50">Refunds to cards and UPI usually reach your account in 5–7 business days.</p>
+        </Panel>
       )}
     </div>
   );

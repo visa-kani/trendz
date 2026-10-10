@@ -2,7 +2,11 @@
 
 import Link from "next/link";
 import { useState } from "react";
-import { Button, Field, Input } from "@/components/ui";
+import { AnimatePresence, m } from "motion/react";
+import { ArrowLeft, MailCheck } from "lucide-react";
+import { AuthMedallion, AuthShell, AuthSubmit, FormAlert } from "@/components/store/auth-shell";
+import { EASE_OUT } from "@/components/store/motion";
+import { Field, Input } from "@/components/ui";
 import { api, errorMessage } from "@/lib/api";
 
 export default function ForgotPasswordPage() {
@@ -26,26 +30,35 @@ export default function ForgotPasswordPage() {
   };
 
   return (
-    <div className="container-x flex justify-center py-16">
-      <div className="card w-full max-w-md p-7">
-        <h1 className="text-2xl font-bold tracking-tight">Reset your password</h1>
-        {sent ? (
-          <p className="mt-4 text-sm text-ink/70">{sent} The link is valid for one hour.</p>
-        ) : (
-          <form onSubmit={submit} className="mt-6 space-y-4">
-            <Field label="Email" htmlFor="email">
-              <Input id="email" type="email" autoComplete="email" value={email} onChange={(e) => setEmail(e.target.value)} required />
-            </Field>
-            {error && <p role="alert" className="text-sm text-danger">{error}</p>}
-            <Button type="submit" size="lg" className="w-full" loading={busy}>
-              Send reset link
-            </Button>
-          </form>
-        )}
-        <Link href="/login" className="mt-6 block text-center text-sm text-ink/55 hover:text-ink">
-          Back to sign in
+    <AuthShell
+      eyebrow="Account recovery"
+      title="Reset your password"
+      subtitle={sent ? undefined : "Enter the email on your account and we will send you a link to choose a new password."}
+      tagline="Locked out? It happens."
+      footer={
+        <Link href="/login" className="group inline-flex items-center gap-2 font-medium text-ink/55 hover:text-ink">
+          <ArrowLeft size={14} className="transition-transform duration-300 group-hover:-translate-x-1" /> Back to sign in
         </Link>
-      </div>
-    </div>
+      }
+    >
+      <AnimatePresence mode="wait" initial={false}>
+        {sent ? (
+          <m.div key="sent" role="status" className="flex flex-col items-start gap-5" initial={{ opacity: 0, y: 14 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5, ease: EASE_OUT }}>
+            <AuthMedallion tone="success">
+              <MailCheck size={30} strokeWidth={1.6} />
+            </AuthMedallion>
+            <p className="text-sm leading-relaxed text-ink/70">{sent} The link is valid for one hour.</p>
+          </m.div>
+        ) : (
+          <m.form key="form" onSubmit={submit} className="space-y-5" exit={{ opacity: 0, y: -10 }} transition={{ duration: 0.3, ease: EASE_OUT }}>
+            <Field label="Email" htmlFor="email">
+              <Input id="email" type="email" autoComplete="email" className="h-12" value={email} onChange={(e) => setEmail(e.target.value)} required />
+            </Field>
+            <FormAlert message={error} />
+            <AuthSubmit loading={busy}>Send reset link</AuthSubmit>
+          </m.form>
+        )}
+      </AnimatePresence>
+    </AuthShell>
   );
 }

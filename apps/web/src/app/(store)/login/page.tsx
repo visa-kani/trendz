@@ -6,7 +6,12 @@ import { Suspense, useEffect, useState } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
-import { Button, Field, Input, Spinner, Tabs } from "@/components/ui";
+import { AnimatePresence, m } from "motion/react";
+import { clsx } from "clsx";
+import { KeyRound, Smartphone } from "lucide-react";
+import { AuthFallback, AuthShell, AuthSubmit, FormAlert } from "@/components/store/auth-shell";
+import { EASE_OUT } from "@/components/store/motion";
+import { Field, Input } from "@/components/ui";
 import { api, errorMessage } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
 
@@ -17,45 +22,101 @@ function safeNext(next: string | null, fallback: string) {
 
 export default function LoginPage() {
   return (
-    <Suspense fallback={<Spinner className="py-32" />}>
+    <Suspense fallback={<AuthFallback />}>
       <Login />
     </Suspense>
   );
 }
 
+type Mode = "password" | "otp";
+const MODES: { value: Mode; label: string; icon: typeof KeyRound }[] = [
+  { value: "password", label: "Password", icon: KeyRound },
+  { value: "otp", label: "Mobile OTP", icon: Smartphone },
+];
+
 function Login() {
   const { status, user } = useAuth();
   const router = useRouter();
   const params = useSearchParams();
-  const [mode, setMode] = useState<"password" | "otp">("password");
+  const [mode, setMode] = useState<Mode>("password");
 
   useEffect(() => {
     if (status === "authenticated" && user) router.replace(safeNext(params.get("next"), user.isStaff ? "/admin" : "/account"));
   }, [status, user, router, params]);
 
   return (
-    <div className="container-x flex justify-center py-16">
-      <div className="card w-full max-w-md p-7">
-        <h1 className="text-2xl font-bold tracking-tight">Welcome back</h1>
-        <p className="mt-1 text-sm text-ink/55">Sign in to track orders, save addresses and check out faster.</p>
-        <div className="mt-6">
-          <Tabs
-            value={mode}
-            onChange={setMode}
-            tabs={[
-              { value: "password", label: "Password" },
-              { value: "otp", label: "Mobile OTP" },
-            ]}
-          />
-        </div>
-        <div className="mt-6">{mode === "password" ? <PasswordLogin /> : <OtpLogin />}</div>
-        <p className="mt-6 text-center text-sm text-ink/60">
+    <AuthShell
+      eyebrow="Sign in"
+      title="Welcome back"
+      subtitle="Sign in to track orders, save addresses and check out faster."
+      tagline="Good to see you again."
+      footer={
+        <>
           New here?{" "}
           <Link href={`/register${params.get("next") ? `?next=${encodeURIComponent(params.get("next")!)}` : ""}`} className="link">
             Create an account
           </Link>
-        </p>
+        </>
+      }
+    >
+      <ModeTabs mode={mode} onChange={setMode} />
+      <div className="mt-7">
+        <AnimatePresence mode="wait" initial={false}>
+          <m.div
+            key={mode}
+            id={`login-panel-${mode}`}
+            role="tabpanel"
+            aria-labelledby={`login-tab-${mode}`}
+            initial={{ opacity: 0, x: mode === "password" ? -24 : 24 }}
+            animate={{ opacity: 1, x: 0 }}
+            exit={{ opacity: 0, x: mode === "password" ? -24 : 24 }}
+            transition={{ duration: 0.35, ease: EASE_OUT }}
+          >
+            {mode === "password" ? <PasswordLogin /> : <OtpLogin />}
+          </m.div>
+        </AnimatePresence>
       </div>
+    </AuthShell>
+  );
+}
+
+/** Password / OTP switch with a sliding pill (arrow keys move between tabs). */
+function ModeTabs({ mode, onChange }: { mode: Mode; onChange: (m: Mode) => void }) {
+  const focusTab = (next: Mode) => {
+    onChange(next);
+    document.getElementById(`login-tab-${next}`)?.focus();
+  };
+  return (
+    <div role="tablist" aria-label="Sign-in method" className="grid grid-cols-2 gap-1 rounded-full bg-offwhite p-1">
+      {MODES.map(({ value, label, icon: Icon }) => {
+        const selected = mode === value;
+        return (
+          <button
+            key={value}
+            id={`login-tab-${value}`}
+            type="button"
+            role="tab"
+            aria-selected={selected}
+            aria-controls={`login-panel-${value}`}
+            tabIndex={selected ? 0 : -1}
+            onClick={() => onChange(value)}
+            onKeyDown={(e) => {
+              if (e.key === "ArrowRight" || e.key === "ArrowLeft") {
+                e.preventDefault();
+                focusTab(value === "password" ? "otp" : "password");
+              }
+            }}
+            className={clsx(
+              "relative isolate flex h-11 items-center justify-center gap-2 rounded-full text-sm font-semibold transition-colors duration-300 focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-ink/10",
+              selected ? "text-ink" : "text-ink/50 hover:text-ink",
+            )}
+          >
+            {selected && <m.span layoutId="login-mode-pill" className="absolute inset-0 -z-10 rounded-full bg-white shadow-neu" transition={{ type: "spring", stiffness: 420, damping: 34 }} />}
+            <Icon size={15} strokeWidth={1.9} />
+            {label}
+          </button>
+        );
+      })}
     </div>
   );
 }
@@ -78,20 +139,20 @@ function PasswordLogin() {
     }
   });
   return (
-    <form onSubmit={submit} className="space-y-4" noValidate>
+    <form onSubmit={submit} className="space-y-5" noValidate>
       <Field label="Email or mobile number" error={errors.identifier?.message} htmlFor="identifier">
-        <Input id="identifier" autoComplete="username" invalid={!!errors.identifier} {...register("identifier")} />
+        <Input id="identifier" autoComplete="username" className="h-12" invalid={!!errors.identifier} {...register("identifier")} />
       </Field>
       <Field label="Password" error={errors.password?.message} htmlFor="password">
-        <Input id="password" type="password" autoComplete="current-password" invalid={!!errors.password} {...register("password")} />
+        <Input id="password" type="password" autoComplete="current-password" className="h-12" invalid={!!errors.password} {...register("password")} />
       </Field>
-      {errors.root && <p role="alert" className="text-sm text-danger">{errors.root.message}</p>}
-      <Button type="submit" size="lg" className="w-full" loading={isSubmitting}>
-        Sign in
-      </Button>
-      <Link href="/forgot-password" className="block text-center text-sm text-ink/55 hover:text-ink">
-        Forgot password?
-      </Link>
+      <FormAlert message={errors.root?.message} />
+      <AuthSubmit loading={isSubmitting}>Sign in</AuthSubmit>
+      <p className="text-center">
+        <Link href="/forgot-password" className="link-draw text-sm text-ink/55 hover:text-ink">
+          Forgot password?
+        </Link>
+      </p>
     </form>
   );
 }
@@ -138,21 +199,40 @@ function OtpLogin() {
   };
 
   return (
-    <form onSubmit={sent ? verify : (e) => (e.preventDefault(), void request())} className="space-y-4" noValidate>
+    <form onSubmit={sent ? verify : (e) => (e.preventDefault(), void request())} className="space-y-5" noValidate>
       <Field label="Mobile number" htmlFor="phone" hint="We will send a 6-digit code by SMS.">
-        <Input id="phone" type="tel" inputMode="numeric" autoComplete="tel" value={phone} onChange={(e) => setPhone(e.target.value)} disabled={sent} placeholder="98765 43210" />
+        <Input id="phone" type="tel" inputMode="numeric" autoComplete="tel" className="h-12" value={phone} onChange={(e) => setPhone(e.target.value)} disabled={sent} placeholder="98765 43210" />
       </Field>
-      {sent && (
-        <Field label="Verification code" htmlFor="code">
-          <Input id="code" inputMode="numeric" autoComplete="one-time-code" maxLength={6} value={code} onChange={(e) => setCode(e.target.value.replace(/\D/g, ""))} autoFocus />
-        </Field>
-      )}
-      {error && <p role="alert" className="text-sm text-danger">{error}</p>}
-      <Button type="submit" size="lg" className="w-full" loading={busy} disabled={sent ? code.length !== 6 : phone.length < 10}>
+      <AnimatePresence initial={false}>
+        {sent && (
+          <m.div key="code" className="overflow-hidden" initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: "auto" }} exit={{ opacity: 0, height: 0 }} transition={{ duration: 0.45, ease: EASE_OUT }}>
+            <Field label="Verification code" htmlFor="code">
+              <Input
+                id="code"
+                inputMode="numeric"
+                autoComplete="one-time-code"
+                maxLength={6}
+                value={code}
+                onChange={(e) => setCode(e.target.value.replace(/\D/g, ""))}
+                autoFocus
+                className="h-14 text-center text-xl font-bold tracking-[0.6em] placeholder:tracking-[0.6em] placeholder:text-ink/20"
+                placeholder="••••••"
+              />
+            </Field>
+          </m.div>
+        )}
+      </AnimatePresence>
+      <FormAlert message={error} />
+      <AuthSubmit loading={busy} disabled={sent ? code.length !== 6 : phone.length < 10}>
         {sent ? "Verify and sign in" : "Send code"}
-      </Button>
+      </AuthSubmit>
       {sent && (
-        <button type="button" onClick={request} disabled={cooldown > 0 || busy} className="block w-full text-center text-sm text-ink/55 hover:text-ink disabled:opacity-50">
+        <button
+          type="button"
+          onClick={request}
+          disabled={cooldown > 0 || busy}
+          className="block w-full rounded-full py-1 text-center text-sm text-ink/55 tabular-nums transition hover:text-ink focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-ink/10 disabled:opacity-50"
+        >
           {cooldown > 0 ? `Resend code in ${cooldown}s` : "Resend code"}
         </button>
       )}

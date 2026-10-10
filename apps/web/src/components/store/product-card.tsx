@@ -1,7 +1,11 @@
 import Link from "next/link";
 import { clsx } from "clsx";
+import { ArrowUpRight } from "lucide-react";
 import { money } from "@/lib/format";
 import type { ImageView, ProductCard as Card } from "@/lib/types";
+import { isColorOption, swatch } from "./colors";
+import { Stagger, StaggerItem } from "./motion";
+import { WishlistButton } from "./wishlist-button";
 
 /** Responsive product image: AVIF first, WebP fallback, lazy by default. */
 export function ProductImage({ image, alt, sizes = "(min-width: 1024px) 25vw, 50vw", className, priority = false }: { image: ImageView | null; alt: string; sizes?: string; className?: string; priority?: boolean }) {
@@ -36,7 +40,7 @@ export function Price({ price, mrp, className }: { price: number; mrp?: number; 
       {off > 0 && (
         <>
           <s className="text-xs text-ink/40">{money(mrp)}</s>
-          <span className="text-xs font-semibold text-success">{off}% off</span>
+          <span className="text-xs font-semibold text-accent">{off}% off</span>
         </>
       )}
     </span>
@@ -44,38 +48,92 @@ export function Price({ price, mrp, className }: { price: number; mrp?: number; 
 }
 
 export function ProductCard({ product, priority = false }: { product: Card; priority?: boolean }) {
-  const colors = product.options.find((o) => o.name.toLowerCase() === "color")?.values ?? [];
+  const colors = product.options.find((o) => isColorOption(o.name))?.values ?? [];
   return (
-    <Link href={`/products/${product.slug}`} className="group block">
-      <div className="relative aspect-[4/5] overflow-hidden rounded-3xl bg-white shadow-neu">
-        <ProductImage image={product.image} alt={product.name} priority={priority} className="h-full w-full object-cover transition duration-500 group-hover:scale-[1.03]" />
-        {product.hoverImage && (
-          <div className="absolute inset-0 opacity-0 transition duration-500 group-hover:opacity-100">
-            <ProductImage image={product.hoverImage} alt="" className="h-full w-full object-cover" />
+    <article className="group relative">
+      <Link href={`/products/${product.slug}`} className="block" aria-label={product.name}>
+        <div className="relative aspect-[4/5] overflow-hidden rounded-3xl bg-white shadow-neu transition-shadow duration-500 group-hover:shadow-neu-lg">
+          <ProductImage
+            image={product.image}
+            alt={product.name}
+            priority={priority}
+            className="h-full w-full object-cover transition-transform duration-[1200ms] ease-[cubic-bezier(0.16,1,0.3,1)] group-hover:scale-[1.07]"
+          />
+          {product.hoverImage && (
+            <div className="absolute inset-0 opacity-0 transition-opacity duration-700 group-hover:opacity-100">
+              <ProductImage image={product.hoverImage} alt="" className="h-full w-full scale-[1.07] object-cover transition-transform duration-[1200ms] ease-[cubic-bezier(0.16,1,0.3,1)] group-hover:scale-100" />
+            </div>
+          )}
+          <div className="absolute left-3 top-3 flex flex-col items-start gap-1.5">
+            {product.discountPercent > 0 && <span className="rounded-full bg-accent px-2.5 py-1 text-[11px] font-bold text-white">−{product.discountPercent}%</span>}
+            {product.isFeatured && product.inStock && (
+              <span className="flex items-center gap-1.5 rounded-full bg-white/90 px-2.5 py-1 text-[11px] font-semibold backdrop-blur">
+                <span className="h-1.5 w-1.5 animate-pulse-dot rounded-full bg-accent" /> Trending
+              </span>
+            )}
+            {!product.inStock && <span className="rounded-full bg-ink/85 px-2.5 py-1 text-[11px] font-semibold text-white">Sold out</span>}
           </div>
-        )}
-        <div className="absolute left-3 top-3 flex flex-col gap-1.5">
-          {product.discountPercent > 0 && <span className="rounded-full bg-ink px-2.5 py-1 text-[11px] font-semibold text-white">−{product.discountPercent}%</span>}
-          {!product.inStock && <span className="rounded-full bg-white/90 px-2.5 py-1 text-[11px] font-semibold text-ink/70">Sold out</span>}
+          {/* Slides up on hover (pointer devices). */}
+          <div className="pointer-events-none absolute inset-x-3 bottom-3 flex translate-y-[130%] items-center justify-between rounded-2xl bg-white/90 px-4 py-3 text-xs font-semibold opacity-0 shadow-neu backdrop-blur-md transition-all duration-500 ease-[cubic-bezier(0.16,1,0.3,1)] group-hover:translate-y-0 group-hover:opacity-100">
+            <span>{product.inStock ? "View product" : "See details"}</span>
+            <span className="grid h-7 w-7 place-items-center rounded-full bg-ink text-white transition-transform duration-500 group-hover:rotate-45">
+              <ArrowUpRight size={14} />
+            </span>
+          </div>
         </div>
-      </div>
-      <div className="mt-3 px-1">
-        <p className="text-xs text-ink/45">{product.brand?.name ?? product.category.name}</p>
-        <h3 className="mt-0.5 line-clamp-1 text-sm font-medium">{product.name}</h3>
-        <div className="mt-1 flex items-center justify-between gap-2">
-          <Price price={product.sellingPrice} mrp={product.mrp} className="text-sm" />
-          {colors.length > 1 && <span className="text-[11px] text-ink/45">{colors.length} colours</span>}
+        <div className="mt-3.5 px-1">
+          <p className="text-[11px] font-medium uppercase tracking-[0.14em] text-ink/40">{product.brand?.name ?? product.category.name}</p>
+          <h3 className="mt-1 line-clamp-1 text-sm font-semibold">{product.name}</h3>
+          <div className="mt-1.5 flex items-center justify-between gap-2">
+            <Price price={product.sellingPrice} mrp={product.mrp} className="text-sm" />
+            {colors.length > 1 && (
+              <span className="flex items-center" aria-label={`${colors.length} colours`}>
+                {colors.slice(0, 4).map((c, i) => (
+                  <span key={c} title={c} className={clsx("h-3.5 w-3.5 rounded-full border-2 border-offwhite", i > 0 && "-ml-1")} style={{ backgroundColor: swatch(c) }} />
+                ))}
+                {colors.length > 4 && <span className="ml-1 text-[10px] text-ink/45">+{colors.length - 4}</span>}
+              </span>
+            )}
+          </div>
         </div>
-      </div>
-    </Link>
+      </Link>
+      <WishlistButton productId={product.id} productName={product.name} className="absolute right-3 top-3 h-9 w-9 bg-white/85 shadow-neu backdrop-blur hover:scale-110" />
+    </article>
   );
 }
 
-export function ProductGrid({ products, priorityCount = 0 }: { products: Card[]; priorityCount?: number }) {
+/** Product grid whose cards rise in one after another as it scrolls into view. */
+export function ProductGrid({ products, priorityCount = 0, columns = 4 }: { products: Card[]; priorityCount?: number; columns?: 3 | 4 }) {
   return (
-    <div className="grid grid-cols-2 gap-x-4 gap-y-8 sm:gap-x-6 md:grid-cols-3 lg:grid-cols-4">
+    <Stagger className={clsx("grid grid-cols-2 gap-x-4 gap-y-10 sm:gap-x-6", columns === 4 ? "md:grid-cols-3 lg:grid-cols-4" : "md:grid-cols-3")} gap={0.06}>
       {products.map((p, i) => (
-        <ProductCard key={p.id} product={p} priority={i < priorityCount} />
+        <StaggerItem key={p.id}>
+          <ProductCard product={p} priority={i < priorityCount} />
+        </StaggerItem>
+      ))}
+    </Stagger>
+  );
+}
+
+/** Loading placeholder matching the card layout. */
+export function ProductCardSkeleton() {
+  return (
+    <div>
+      <div className="skeleton aspect-[4/5] rounded-3xl" />
+      <div className="mt-3.5 space-y-2 px-1">
+        <div className="skeleton h-2.5 w-1/3" />
+        <div className="skeleton h-3.5 w-3/4" />
+        <div className="skeleton h-3 w-1/2" />
+      </div>
+    </div>
+  );
+}
+
+export function ProductGridSkeleton({ count = 8, columns = 4 }: { count?: number; columns?: 3 | 4 }) {
+  return (
+    <div className={clsx("grid grid-cols-2 gap-x-4 gap-y-10 sm:gap-x-6", columns === 4 ? "md:grid-cols-3 lg:grid-cols-4" : "md:grid-cols-3")} aria-busy="true" aria-label="Loading products">
+      {Array.from({ length: count }, (_, i) => (
+        <ProductCardSkeleton key={i} />
       ))}
     </div>
   );
