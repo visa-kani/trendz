@@ -270,7 +270,7 @@ export function OptionsAndVariants({
                       <input
                         type="radio"
                         name="default-variant"
-                        className="mt-3 h-4 w-4 accent-ink"
+                        className="mt-3 h-4 w-4 accent-accent"
                         checked={!!row.isDefault}
                         onChange={() => setDefault(i)}
                         aria-label={`Make ${label} the default variant`}
@@ -418,7 +418,7 @@ function OptionValuesInput({
       <div
         role="group"
         aria-labelledby={labelledBy}
-        className={clsx("input flex min-h-10 flex-wrap items-center gap-1.5 py-1.5 focus-within:border-ink/40 focus-within:ring-4 focus-within:ring-ink/5", invalid && "border-danger/60")}
+        className={clsx("input flex min-h-10 flex-wrap items-center gap-1.5 py-1.5 focus-within:border-ink/40 focus-within:ring-4 focus-within:ring-accent/15", invalid && "border-danger/60")}
       >
         {values.map((v) =>
           editing?.value === v ? (

@@ -37,7 +37,7 @@ export default function AccountOverview() {
           <li key={href} className="animate-rise" style={delay(150 + i * 70)}>
             <Link
               href={href}
-              className="group flex h-full flex-col justify-between gap-6 rounded-3xl bg-white p-5 shadow-neu transition duration-500 hover:-translate-y-1 hover:shadow-neu-lg focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-ink/10"
+              className="group flex h-full flex-col justify-between gap-6 rounded-3xl bg-white p-5 shadow-neu transition duration-500 hover:-translate-y-1 hover:shadow-neu-lg focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-accent/25"
             >
               <div className="flex items-start justify-between gap-2">
                 <span className="grid h-11 w-11 place-items-center rounded-2xl bg-offwhite transition-colors duration-500 group-hover:bg-ink group-hover:text-white">

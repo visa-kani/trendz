@@ -8,19 +8,22 @@ import { Card, EmptyState } from "@/components/ui";
 import { money } from "@/lib/format";
 
 /**
- * Neutral chart palette: ink and greys carry the data, one accent marks the
- * hero series. Status colours are reserved for stock health.
+ * Chart palette, taken from the theme tokens so charts follow Admin →
+ * Appearance: text tones carry the data, the brand colour marks the hero
+ * series. Status colours are reserved for stock health.
  */
 export const CHART = {
-  ink: "#111111",
-  inkSoft: "#5f5f5b",
-  accent: "#2a78d6",
-  grid: "#ecebe8",
-  axis: "#8b8a85",
-  cursor: "rgba(17,17,17,0.04)",
-  success: "#1f7a4d",
-  warning: "#b26b00",
-  danger: "#b42318",
+  ink: "var(--color-ink)",
+  inkSoft: "color-mix(in srgb, var(--color-ink) 65%, transparent)",
+  accent: "var(--color-accent)",
+  surface: "var(--color-white)",
+  grid: "color-mix(in srgb, var(--color-ink) 10%, transparent)",
+  axis: "color-mix(in srgb, var(--color-ink) 55%, transparent)",
+  cursor: "color-mix(in srgb, var(--color-ink) 6%, transparent)",
+  crosshair: "color-mix(in srgb, var(--color-ink) 25%, transparent)",
+  success: "var(--color-success)",
+  warning: "var(--color-warning)",
+  danger: "var(--color-danger)",
 } as const;
 
 const compactInr = new Intl.NumberFormat("en-IN", { style: "currency", currency: "INR", notation: "compact", maximumFractionDigits: 1 });
@@ -179,7 +182,7 @@ export function SalesTrendChart({ data, monthly, metric }: { data: SalesPoint[];
             width={metric === "revenue" ? 76 : 40}
             allowDecimals={false}
           />
-          <Tooltip content={renderTooltip} cursor={{ stroke: "rgba(17,17,17,0.18)", strokeWidth: 1 }} />
+          <Tooltip content={renderTooltip} cursor={{ stroke: CHART.crosshair, strokeWidth: 1 }} />
           <Area
             type="monotone"
             dataKey={metric}
@@ -188,7 +191,7 @@ export function SalesTrendChart({ data, monthly, metric }: { data: SalesPoint[];
             strokeWidth={2}
             fill="url(#salesWash)"
             dot={false}
-            activeDot={{ r: 4, fill: CHART.accent, stroke: "#fff", strokeWidth: 2 }}
+            activeDot={{ r: 4, fill: CHART.accent, stroke: CHART.surface, strokeWidth: 2 }}
             isAnimationActive={false}
           />
         </AreaChart>
@@ -289,7 +292,7 @@ export function StockHealthMeter({ healthy, low, out }: { healthy: number; low: 
                 width: `${(p.value / total) * 100}%`,
                 minWidth: 4,
                 // Amber sits close to both green and red for colour-blind readers: hatch it.
-                background: p.key === "low" ? `repeating-linear-gradient(135deg, ${p.color} 0 5px, rgba(255,255,255,0.55) 5px 7px), ${p.color}` : p.color,
+                background: p.key === "low" ? `repeating-linear-gradient(135deg, ${p.color} 0 5px, color-mix(in srgb, var(--color-white) 55%, transparent) 5px 7px), ${p.color}` : p.color,
               }} title={`${p.label}: ${formatCount(p.value)}`} />
           ))}
       </div>

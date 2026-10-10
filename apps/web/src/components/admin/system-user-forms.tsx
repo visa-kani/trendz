@@ -54,7 +54,7 @@ export function RolePicker({
               (locked || disabled) && "cursor-not-allowed opacity-60",
             )}
           >
-            <input type="checkbox" className="mt-0.5 h-4 w-4 accent-ink" checked={checked} disabled={locked || disabled} onChange={() => toggle(r.code)} />
+            <input type="checkbox" className="mt-0.5 h-4 w-4 accent-accent" checked={checked} disabled={locked || disabled} onChange={() => toggle(r.code)} />
             <span className="min-w-0">
               <span className="flex flex-wrap items-center gap-1.5 font-medium">
                 {r.name}

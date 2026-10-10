@@ -38,7 +38,7 @@ function CouponCard({ coupon: c }: { coupon: PublicCoupon }) {
 
   return (
     <article className="group relative flex h-full flex-col overflow-hidden rounded-[2rem] bg-white shadow-neu transition duration-500 ease-[cubic-bezier(0.16,1,0.3,1)] hover:-translate-y-1 hover:shadow-neu-lg sm:flex-row">
-      <div className="relative flex shrink-0 items-end justify-between gap-4 bg-ink p-6 text-white sm:w-48 sm:flex-col sm:items-start">
+      <div className="on-dark ribbon relative flex shrink-0 items-end justify-between gap-4 p-6 text-white sm:w-48 sm:flex-col sm:items-start">
         <span className="grid h-10 w-10 place-items-center rounded-full bg-white/10 transition-transform duration-500 group-hover:-rotate-12">
           <Ticket size={18} />
         </span>
@@ -80,7 +80,7 @@ export default async function OffersPage() {
     <>
       {/* ------------------------------------------------------------ Hero */}
       <section className="container-x pt-6 md:pt-10">
-        <div className="relative isolate overflow-hidden rounded-[2.5rem] bg-ink px-6 pb-12 pt-10 text-white sm:px-10 md:px-16 md:pb-20 md:pt-16">
+        <div className="on-dark gold-frame relative isolate overflow-hidden rounded-[2.5rem] bg-ink px-6 pb-12 pt-10 text-white sm:px-10 md:px-16 md:pb-20 md:pt-16">
           <div aria-hidden="true" className="pointer-events-none absolute -right-24 -top-24 -z-10 h-80 w-80 animate-float rounded-full bg-accent/30 blur-3xl" />
           <div aria-hidden="true" className="pointer-events-none absolute -bottom-32 -left-20 -z-10 h-72 w-72 animate-float rounded-full bg-sand/15 blur-3xl [animation-delay:-3s]" />
 

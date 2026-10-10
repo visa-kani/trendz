@@ -5,7 +5,7 @@ import { usePathname } from "next/navigation";
 import { Suspense, useState } from "react";
 import { clsx } from "clsx";
 import { ExternalLink, LogOut, Menu, ScanLine, X } from "lucide-react";
-import { ADMIN_NAV } from "@/components/admin/nav";
+import { ADMIN_NAV, NAV_LINK } from "@/components/admin/nav";
 import { LogoMark } from "@/components/store/navbar";
 import { RequireAuth } from "@/components/require-auth";
 import { useAuth } from "@/lib/auth";
@@ -38,7 +38,7 @@ function Shell({ children }: { children: React.ReactNode }) {
       <Link href="/admin" className="flex items-center gap-2 px-5 py-5">
         <LogoMark />
         <span className="text-sm font-semibold tracking-[0.25em]">TRENDZ</span>
-        <span className="ml-1 rounded-full bg-ink px-2 py-0.5 text-[10px] font-semibold text-white">Admin</span>
+        <span className="ml-1 rounded-full bg-accent px-2 py-0.5 text-[10px] font-semibold text-white">Admin</span>
       </Link>
       <div className="flex-1 space-y-5 overflow-y-auto px-3 pb-6">
         {nav.map((g) => (
@@ -48,7 +48,8 @@ function Shell({ children }: { children: React.ReactNode }) {
               <Link
                 key={href}
                 href={href}
-                className={clsx("flex items-center gap-3 rounded-xl px-3 py-2 text-sm font-medium transition", isActive(href) ? "bg-white text-ink shadow-neu" : "text-ink/60 hover:bg-black/[0.03] hover:text-ink")}
+                aria-current={isActive(href) ? "page" : undefined}
+                className={clsx(NAV_LINK.base, isActive(href) ? NAV_LINK.active : NAV_LINK.idle)}
               >
                 <Icon size={16} strokeWidth={1.75} /> {label}
               </Link>
@@ -63,7 +64,7 @@ function Shell({ children }: { children: React.ReactNode }) {
     <div className="flex min-h-screen">
       <aside className="sticky top-0 hidden h-screen w-60 shrink-0 border-r border-black/5 bg-offwhite lg:block">{sidebar}</aside>
       {open && (
-        <div className="fixed inset-0 z-50 bg-black/40 lg:hidden" onMouseDown={(e) => e.target === e.currentTarget && setOpen(false)}>
+        <div className="fixed inset-0 z-50 bg-night/70 lg:hidden" onMouseDown={(e) => e.target === e.currentTarget && setOpen(false)}>
           <aside className="h-full w-64 animate-rise bg-offwhite">
             <button aria-label="Close menu" onClick={() => setOpen(false)} className="absolute right-3 top-4 rounded-full p-2 hover:bg-black/5 lg:hidden">
               <X size={18} />

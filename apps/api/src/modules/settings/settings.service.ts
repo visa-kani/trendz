@@ -27,6 +27,21 @@ export async function getSetting<K extends SettingKey>(key: K): Promise<Settings
   return (await getSettings())[key];
 }
 
+/** One setting with who last saved it and when (null until it is first saved). */
+export async function getSettingRecord<K extends SettingKey>(key: K) {
+  const row = await prisma.setting.findUnique({ where: { key } });
+  const parsed = settingSchemas[key].safeParse(row?.value ?? {});
+  const user = row?.updatedById
+    ? await prisma.user.findUnique({ where: { id: row.updatedById }, select: { email: true, profile: { select: { firstName: true, lastName: true } } } })
+    : null;
+  return {
+    key,
+    value: (parsed.success ? parsed.data : settingSchemas[key].parse({})) as Settings[K],
+    updatedAt: row?.updatedAt ?? null,
+    updatedBy: user ? [user.profile?.firstName, user.profile?.lastName].filter(Boolean).join(" ") || user.email : null,
+  };
+}
+
 /** Uncached read for use inside money/stock transactions. */
 export async function getSettingFresh<K extends SettingKey>(db: Db, key: K): Promise<Settings[K]> {
   const row = await db.setting.findUnique({ where: { key } });

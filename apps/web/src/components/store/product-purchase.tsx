@@ -306,10 +306,10 @@ export function ProductPurchase({ product }: { product: ProductDetail }) {
                           className={clsx(
                             "relative h-11 min-w-[3.25rem] rounded-full px-4 text-sm font-semibold transition-colors duration-300",
                             FOCUS_RING,
-                            active ? "text-white" : enabled ? "border border-black/10 bg-white hover:border-ink" : "border border-dashed border-black/15 text-ink/35 hover:border-ink/40",
+                            active ? "text-on-accent" : enabled ? "border border-black/10 bg-white hover:border-accent" : "border border-dashed border-black/15 text-ink/35 hover:border-ink/40",
                           )}
                         >
-                          {active && <m.span layoutId={`pdp-pill-${o.name}`} className={clsx("absolute inset-0 rounded-full", enabled ? "bg-ink" : "bg-ink/45")} transition={{ type: "spring", stiffness: 420, damping: 34 }} />}
+                          {active && <m.span layoutId={`pdp-pill-${o.name}`} className={clsx("absolute inset-0 rounded-full", enabled ? "bg-accent" : "bg-accent/45")} transition={{ type: "spring", stiffness: 420, damping: 34 }} />}
                           <span className={clsx("relative", !enabled && "line-through decoration-1")}>{value}</span>
                         </button>
                       );

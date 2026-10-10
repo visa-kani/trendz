@@ -20,7 +20,7 @@ const NAV = [
 ];
 
 const itemClass =
-  "relative isolate flex shrink-0 items-center gap-3 whitespace-nowrap rounded-full px-4 py-2.5 text-sm font-medium transition-colors duration-300 focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-ink/10 lg:rounded-2xl";
+  "relative isolate flex shrink-0 items-center gap-3 whitespace-nowrap rounded-full px-4 py-2.5 text-sm font-medium transition-colors duration-300 focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-accent/25 lg:rounded-2xl";
 
 export default function AccountLayout({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();

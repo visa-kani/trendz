@@ -9,7 +9,7 @@ import { RotateCw } from "lucide-react";
  */
 export default function GlobalError({ error, reset }: { error: Error & { digest?: string }; reset: () => void }) {
   return (
-    <div className="relative flex min-h-[80svh] flex-col items-center justify-center overflow-hidden px-6 py-16 text-center">
+    <div className="store-theme relative flex min-h-[80svh] flex-col items-center justify-center overflow-hidden px-6 py-16 text-center">
       <div aria-hidden="true" className="pointer-events-none absolute -left-32 top-0 h-80 w-80 animate-float rounded-full bg-sand/70 blur-3xl" />
       <div aria-hidden="true" className="pointer-events-none absolute -right-24 bottom-0 h-72 w-72 animate-float rounded-full bg-accent/15 blur-3xl [animation-delay:-3s]" />
 
@@ -35,7 +35,7 @@ export default function GlobalError({ error, reset }: { error: Error & { digest?
         <button
           type="button"
           onClick={reset}
-          className="group inline-flex items-center gap-4 rounded-full bg-ink py-1.5 pl-6 pr-1.5 text-sm font-semibold text-white shadow-neu-lg transition-colors hover:bg-ink/90 focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-ink/20"
+          className="group inline-flex items-center gap-4 rounded-full bg-ink py-1.5 pl-6 pr-1.5 text-sm font-semibold text-white shadow-neu-lg transition-colors hover:bg-ink/90 focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-accent/35"
         >
           Try again
           <span className="grid h-10 w-10 place-items-center rounded-full bg-white text-ink transition-transform duration-500 group-hover:rotate-180">
@@ -44,7 +44,7 @@ export default function GlobalError({ error, reset }: { error: Error & { digest?
         </button>
         <Link
           href="/"
-          className="inline-flex h-13 items-center rounded-full border border-ink/15 px-7 text-sm font-semibold transition hover:border-ink hover:bg-white focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-ink/10"
+          className="inline-flex h-13 items-center rounded-full border border-ink/15 px-7 text-sm font-semibold transition hover:border-ink hover:bg-white focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-accent/25"
         >
           Back home
         </Link>

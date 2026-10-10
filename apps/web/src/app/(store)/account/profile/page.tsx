@@ -27,9 +27,9 @@ interface Session {
 }
 
 const primaryBtn =
-  "inline-flex h-12 items-center justify-center gap-2 rounded-full bg-ink px-7 text-sm font-semibold text-white transition hover:bg-ink/85 focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-ink/20 disabled:cursor-not-allowed disabled:bg-ink/40";
+  "inline-flex h-12 items-center justify-center gap-2 rounded-full bg-ink px-7 text-sm font-semibold text-white transition hover:bg-ink/85 focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-accent/35 disabled:cursor-not-allowed disabled:bg-ink/40";
 const outlineBtn =
-  "inline-flex h-12 items-center justify-center gap-2 rounded-full border border-black/15 px-7 text-sm font-semibold transition hover:border-ink focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-ink/10 disabled:cursor-not-allowed disabled:opacity-50";
+  "inline-flex h-12 items-center justify-center gap-2 rounded-full border border-black/15 px-7 text-sm font-semibold transition hover:border-ink focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-accent/25 disabled:cursor-not-allowed disabled:opacity-50";
 
 export default function ProfilePage() {
   const toast = useToast();
@@ -156,7 +156,7 @@ export default function ProfilePage() {
               await api.post("/auth/logout-all");
               await logout();
             }}
-            className="inline-flex h-9 items-center gap-1.5 rounded-full px-4 text-xs font-semibold text-ink/60 transition hover:bg-danger/10 hover:text-danger focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-ink/10"
+            className="inline-flex h-9 items-center gap-1.5 rounded-full px-4 text-xs font-semibold text-ink/60 transition hover:bg-danger/10 hover:text-danger focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-accent/25"
           >
             <LogOut size={13} /> Sign out everywhere
           </button>
@@ -188,7 +188,7 @@ export default function ProfilePage() {
                       type="button"
                       onClick={() => revoke.mutate(s.id)}
                       disabled={revoke.isPending && revoke.variables === s.id}
-                      className="inline-flex h-8 shrink-0 items-center gap-1.5 rounded-full border border-black/10 bg-white px-3 text-xs font-semibold transition hover:border-danger hover:text-danger focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-ink/10 disabled:opacity-50"
+                      className="inline-flex h-8 shrink-0 items-center gap-1.5 rounded-full border border-black/10 bg-white px-3 text-xs font-semibold transition hover:border-danger hover:text-danger focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-accent/25 disabled:opacity-50"
                     >
                       {revoke.isPending && revoke.variables === s.id && <Loader2 size={12} className="animate-spin" />}
                       Sign out

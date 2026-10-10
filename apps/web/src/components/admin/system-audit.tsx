@@ -45,7 +45,7 @@ function JsonPane({ title, value, tone }: { title: string; value: unknown; tone:
       {empty ? (
         <p className="rounded-xl border border-dashed border-black/10 px-3 py-6 text-center text-xs text-ink/40">No value recorded</p>
       ) : (
-        <pre className={clsx("max-h-96 overflow-auto rounded-xl px-3 py-2.5 font-mono text-[12px] leading-relaxed", tone === "old" ? "bg-black/[0.035] text-ink/75" : "bg-sky-600/[0.05] text-ink")}>
+        <pre className={clsx("max-h-96 overflow-auto rounded-xl px-3 py-2.5 font-mono text-[12px] leading-relaxed", tone === "old" ? "bg-black/[0.035] text-ink/75" : "bg-info/[0.05] text-ink")}>
           {typeof value === "string" ? value : JSON.stringify(value, null, 2)}
         </pre>
       )}
@@ -154,7 +154,7 @@ export function AuditTable({ rows, onFilter }: { rows: AuditLogRow[]; onFilter: 
                         <div className="mb-3 flex flex-wrap items-center gap-1.5">
                           <span className="text-xs text-ink/50">Changed:</span>
                           {changed.map((k) => (
-                            <code key={k} className="rounded-md bg-sky-600/10 px-1.5 py-0.5 text-[11px] text-sky-800">
+                            <code key={k} className="rounded-md bg-info/10 px-1.5 py-0.5 text-[11px] text-info">
                               {k}
                             </code>
                           ))}

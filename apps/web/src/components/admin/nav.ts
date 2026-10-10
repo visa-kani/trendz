@@ -12,6 +12,7 @@ import {
   Mail,
   MessageSquare,
   Package,
+  Palette,
   ReceiptText,
   RotateCcw,
   ScrollText,
@@ -35,6 +36,15 @@ export interface NavItem {
   /** Shown when the user has any of these permissions. */
   any: string[];
 }
+
+/** Sidebar link styles. Shared with the Appearance preview, so it shows the real thing. */
+export const NAV_LINK = {
+  base: "flex items-center gap-3 rounded-xl px-3 py-2 text-sm font-medium transition",
+  idle: "text-ink/60 hover:bg-accent/[0.08] hover:text-ink",
+  /** The idle link while hovered (spelled out for the preview). */
+  hover: "bg-accent/[0.08] text-ink",
+  active: "bg-accent/15 text-ink [&>svg]:text-accent",
+} as const;
 
 export const ADMIN_NAV: { group: string; items: NavItem[] }[] = [
   { group: "Overview", items: [{ href: "/admin", label: "Dashboard", icon: LayoutDashboard, any: ["dashboard.read"] }] },
@@ -91,6 +101,7 @@ export const ADMIN_NAV: { group: string; items: NavItem[] }[] = [
       { href: "/admin/roles", label: "Roles", icon: ShieldCheck, any: ["roles.read"] },
       { href: "/admin/permissions", label: "Permissions", icon: KeyRound, any: ["roles.read"] },
       { href: "/admin/settings", label: "Settings", icon: Settings, any: ["settings.read"] },
+      { href: "/admin/appearance", label: "Appearance", icon: Palette, any: ["settings.read"] },
       { href: "/admin/audit-logs", label: "Audit logs", icon: ScrollText, any: ["audit.read"] },
     ],
   },

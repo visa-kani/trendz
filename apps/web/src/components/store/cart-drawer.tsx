@@ -57,7 +57,7 @@ function CartDrawer({ onClose }: { onClose: () => void }) {
 
   return (
     <div className="fixed inset-0 z-[60]">
-      <m.div className="absolute inset-0 bg-ink/40 backdrop-blur-[2px]" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} transition={{ duration: 0.3 }} onClick={onClose} />
+      <m.div className="absolute inset-0 bg-night/70 backdrop-blur-[2px]" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} transition={{ duration: 0.3 }} onClick={onClose} />
       <m.aside
         role="dialog"
         aria-modal="true"
@@ -148,7 +148,7 @@ function FreeShippingMeter({ cart }: { cart: Cart }) {
         )}
       </p>
       <div className="mt-2 h-1.5 overflow-hidden rounded-full bg-black/[0.06]">
-        <m.div className={clsx("h-full rounded-full", left > 0 ? "bg-ink" : "bg-success")} initial={{ width: 0 }} animate={{ width: `${progress * 100}%` }} transition={{ duration: 0.9, ease: EASE_OUT }} />
+        <m.div className={clsx("h-full rounded-full", left > 0 ? "bg-accent" : "bg-success")} initial={{ width: 0 }} animate={{ width: `${progress * 100}%` }} transition={{ duration: 0.9, ease: EASE_OUT }} />
       </div>
     </div>
   );

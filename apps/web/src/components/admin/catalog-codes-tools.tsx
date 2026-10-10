@@ -115,7 +115,7 @@ export function BulkGenerate() {
           renderRow={(p) => (
             <li key={p.id}>
               <label className="flex cursor-pointer items-center gap-3 py-2.5">
-                <input type="checkbox" className="h-4 w-4 accent-ink" checked={selected.has(p.id)} onChange={() => toggle(p)} />
+                <input type="checkbox" className="h-4 w-4 accent-accent" checked={selected.has(p.id)} onChange={() => toggle(p)} />
                 <Thumb src={p.image?.thumb ?? p.image?.url} size={36} />
                 <span className="min-w-0 flex-1">
                   <span className="block truncate text-sm font-medium">{p.name}</span>

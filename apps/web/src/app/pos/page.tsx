@@ -237,7 +237,7 @@ export default function PosPage() {
         <Link href="/admin" className="flex items-center gap-2" aria-label="Back to admin">
           <LogoMark />
           <span className="text-sm font-semibold tracking-[0.25em]">TRENDZ</span>
-          <span className="rounded-full bg-ink px-2 py-0.5 text-[10px] font-semibold text-white">Billing</span>
+          <span className="rounded-full bg-accent px-2 py-0.5 text-[10px] font-semibold text-white">Billing</span>
         </Link>
         <Select
           aria-label="Billing location"

@@ -77,6 +77,38 @@ describe("authorization", () => {
     expect(good.body.data).toMatchObject({ reservationTtlMinutes: 20, allowGuestCheckout: false });
     expect(await prisma.auditLog.count({ where: { action: "settings.update" } })).toBe(1);
   });
+
+  it("appearance: defaults to dark pink, validates colours and reaches the public config", async () => {
+    const anonymous = await client();
+    const before = await anonymous.get("/api/store/config").expect(200);
+    expect(before.body.data.appearance).toEqual({ mode: "dark", brandColor: "#ff3d9a", textColor: null });
+
+    const { client: admin } = await loginAs(["ADMIN"]);
+    const unsaved = await admin.get("/api/settings/appearance").expect(200);
+    expect(unsaved.body.data).toMatchObject({ key: "appearance", updatedAt: null, updatedBy: null });
+
+    for (const brandColor of ["pink", "#f0a", "#ff3d9a80", "javascript:alert(1)"]) {
+      const bad = await admin.put("/api/settings/appearance").send({ mode: "dark", brandColor }).expect(400);
+      expect(bad.body.code).toBe("VALIDATION_ERROR");
+    }
+    await admin.put("/api/settings/appearance").send({ mode: "sepia", brandColor: "#0f766e" }).expect(400);
+
+    const saved = await admin.put("/api/settings/appearance").send({ mode: "light", brandColor: "#0F766E", textColor: "#1B2430" }).expect(200);
+    expect(saved.body.data).toEqual({ mode: "light", brandColor: "#0f766e", textColor: "#1b2430" });
+
+    const record = await admin.get("/api/settings/appearance").expect(200);
+    expect(record.body.data.value).toEqual(saved.body.data);
+    expect(record.body.data.updatedAt).toEqual(expect.any(String));
+    expect(record.body.data.updatedBy).toMatch(/^Test User\d+$/);
+
+    // Visible to anonymous visitors straight away (the settings cache is invalidated on save).
+    const after = await anonymous.get("/api/store/config").expect(200);
+    expect(after.body.data.appearance).toEqual(saved.body.data);
+
+    // Staff without settings.write cannot change the theme.
+    const { client: cashier } = await loginAs(["CASHIER"]);
+    await cashier.put("/api/settings/appearance").send({ mode: "dark", brandColor: "#000000" }).expect(403);
+  });
 });
 
 describe("customer account", () => {

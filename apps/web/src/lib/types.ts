@@ -1,5 +1,7 @@
 /** Shapes returned by the API (money in paise, rates in basis points). */
 
+import type { Appearance } from "./theme";
+
 export interface SessionUser {
   id: string;
   email: string | null;
@@ -100,6 +102,8 @@ export interface StoreConfig {
   returns: { windowDays: number };
   checkout: { allowGuestCheckout: boolean; maxQuantityPerLine: number };
   payments: { provider: "razorpay" | "mock"; razorpayKeyId: string | null };
+  /** Theme saved in Admin → Appearance. */
+  appearance: Appearance;
   states: { name: string; code: string }[];
 }
 

@@ -40,7 +40,7 @@ export function AccountHeader({
       <div className="min-w-0 max-w-full">
         {back && (
           <div className="animate-fade">
-            <Link href={back.href} className="group mb-5 inline-flex items-center gap-2.5 rounded-full text-xs font-semibold text-ink/55 transition hover:text-ink focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-ink/10">
+            <Link href={back.href} className="group mb-5 inline-flex items-center gap-2.5 rounded-full text-xs font-semibold text-ink/55 transition hover:text-ink focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-accent/25">
               <span className="grid h-8 w-8 place-items-center rounded-full border border-black/10 bg-white transition duration-300 group-hover:-translate-x-0.5 group-hover:border-ink">
                 <ArrowLeft size={14} />
               </span>

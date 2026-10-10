@@ -14,7 +14,7 @@ import { api, errorMessage } from "@/lib/api";
 import type { Address } from "@/lib/types";
 
 const addButton =
-  "group inline-flex h-11 items-center gap-2 rounded-full bg-ink pl-3 pr-5 text-sm font-semibold text-white shadow-neu-lg transition hover:bg-ink/90 focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-ink/20";
+  "group inline-flex h-11 items-center gap-2 rounded-full bg-ink pl-3 pr-5 text-sm font-semibold text-white shadow-neu-lg transition hover:bg-ink/90 focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-accent/35";
 
 export default function AddressesPage() {
   const qc = useQueryClient();
@@ -109,14 +109,14 @@ export default function AddressesPage() {
                       <button
                         type="button"
                         onClick={() => setEditing(a)}
-                        className="inline-flex h-9 items-center gap-1.5 rounded-full border border-black/15 px-4 text-xs font-semibold transition hover:border-ink focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-ink/10"
+                        className="inline-flex h-9 items-center gap-1.5 rounded-full border border-black/15 px-4 text-xs font-semibold transition hover:border-ink focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-accent/25"
                       >
                         <Pencil size={13} /> Edit
                       </button>
                       <button
                         type="button"
                         onClick={() => setDeleting(a)}
-                        className="inline-flex h-9 items-center gap-1.5 rounded-full px-4 text-xs font-semibold text-ink/60 transition hover:bg-danger/10 hover:text-danger focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-ink/10"
+                        className="inline-flex h-9 items-center gap-1.5 rounded-full px-4 text-xs font-semibold text-ink/60 transition hover:bg-danger/10 hover:text-danger focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-accent/25"
                       >
                         <Trash2 size={13} /> Remove
                       </button>

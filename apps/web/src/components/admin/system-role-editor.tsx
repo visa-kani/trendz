@@ -29,7 +29,7 @@ function TriCheckbox({ checked, mixed, onChange, disabled, label }: { checked: b
     <input
       type="checkbox"
       aria-label={label}
-      className="h-4 w-4 accent-ink"
+      className="h-4 w-4 accent-accent"
       checked={checked}
       aria-checked={mixed ? "mixed" : checked}
       ref={(el) => {
@@ -288,12 +288,12 @@ export function RoleEditor({ role, catalog, canEdit }: { role: RoleView | null; 
                       const changed = !isSuper && checked !== initialPerms.includes(p.code);
                       return (
                         <li key={p.code}>
-                          <label className={clsx("flex items-start gap-2.5 rounded-lg px-2 py-1.5 text-sm", checklistLocked ? "cursor-default" : "cursor-pointer hover:bg-black/[0.03]", changed && "bg-sky-600/5")}>
-                            <input type="checkbox" className="mt-0.5 h-4 w-4 shrink-0 accent-ink" checked={checked} disabled={checklistLocked} onChange={() => toggle(p.code)} />
+                          <label className={clsx("flex items-start gap-2.5 rounded-lg px-2 py-1.5 text-sm", checklistLocked ? "cursor-default" : "cursor-pointer hover:bg-black/[0.03]", changed && "bg-info/5")}>
+                            <input type="checkbox" className="mt-0.5 h-4 w-4 shrink-0 accent-accent" checked={checked} disabled={checklistLocked} onChange={() => toggle(p.code)} />
                             <span className="min-w-0">
                               <span className="block">{p.description ?? p.code}</span>
                               <code className="text-[11px] text-ink/45">{p.code}</code>
-                              {changed && <span className="ml-1.5 text-[11px] font-semibold text-sky-700">{checked ? "added" : "removed"}</span>}
+                              {changed && <span className="ml-1.5 text-[11px] font-semibold text-info">{checked ? "added" : "removed"}</span>}
                             </span>
                           </label>
                         </li>

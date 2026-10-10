@@ -11,6 +11,7 @@ import { api } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
 import { useCart } from "@/lib/cart";
 import { money } from "@/lib/format";
+import { BRAND } from "@/lib/brand";
 import type { CategoryNode } from "@/lib/types";
 import { useCartDrawer } from "./cart-drawer";
 import { EASE_OUT, Marquee } from "./motion";
@@ -25,11 +26,15 @@ export function LogoMark({ size = 18 }: { size?: number }) {
 
 function Wordmark() {
   return (
-    <Link href="/" className="group flex items-center gap-2 text-ink" aria-label="Trendz home">
-      <span className="transition-transform duration-700 ease-[cubic-bezier(0.16,1,0.3,1)] group-hover:rotate-[180deg]">
-        <LogoMark />
+    <Link href="/" className="group flex items-center gap-2.5" aria-label={`${BRAND.fullName} home`}>
+      {/* Emblem cropped from the shop banner. It has a black background, so it sits on a black chip (which disappears into the page in dark mode). */}
+      <span className="grid h-11 shrink-0 place-items-center overflow-hidden rounded-xl bg-night px-1 transition-transform duration-700 ease-[cubic-bezier(0.16,1,0.3,1)] group-hover:scale-105">
+        <img src={BRAND.emblem} alt="" width={262} height={184} className="h-10 w-auto" />
       </span>
-      <span className="text-sm font-bold tracking-[0.3em]">TRENDZ</span>
+      <span className="flex flex-col leading-none">
+        <span className="text-gold-shine font-display text-xl font-bold tracking-[0.14em]">TRENDZ</span>
+        <span className="mt-1 hidden font-display text-[8px] font-semibold uppercase tracking-[0.42em] text-gold/75 sm:block">Women&apos;s Wear</span>
+      </span>
     </Link>
   );
 }
@@ -69,7 +74,7 @@ function SearchPanel({ categories, onClose }: { categories: CategoryNode[]; onCl
 
   return (
     <>
-      <m.div className="fixed inset-0 top-0 z-30 bg-ink/30 backdrop-blur-[2px]" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onClick={onClose} />
+      <m.div className="fixed inset-0 top-0 z-30 bg-night/60 backdrop-blur-[2px]" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onClick={onClose} />
       <m.div
         className="absolute inset-x-0 top-full z-40 border-b border-black/5 bg-offwhite shadow-neu-lg"
         initial={{ opacity: 0, y: -16 }}
@@ -88,7 +93,7 @@ function SearchPanel({ categories, onClose }: { categories: CategoryNode[]; onCl
               id="site-search"
               value={q}
               onChange={(e) => setQ(e.target.value)}
-              placeholder="Search tees, denim, hoodies…"
+              placeholder="Search kurtis, anarkalis, lehengas…"
               autoComplete="off"
               className="w-full border-b-2 border-ink/10 bg-transparent py-4 pl-10 pr-28 text-2xl font-semibold tracking-tight outline-none transition placeholder:font-normal placeholder:text-ink/30 focus:border-ink md:text-3xl"
             />
@@ -144,7 +149,7 @@ function MobileMenu({ links, categories, onClose }: { links: { label: string; hr
 
   return (
     <div className="fixed inset-0 z-[55] lg:hidden">
-      <m.div className="absolute inset-0 bg-ink/40" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onClick={onClose} />
+      <m.div className="absolute inset-0 bg-night/70" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onClick={onClose} />
       <m.nav
         aria-label="Mobile"
         className="absolute inset-y-0 left-0 flex w-[22rem] max-w-[88vw] flex-col overflow-y-auto bg-offwhite p-6"
@@ -264,7 +269,7 @@ export function Navbar({ categories, announcements = [] }: { categories: Categor
   return (
     <m.header className="sticky top-0 z-40" animate={{ y: hidden ? "-100%" : "0%" }} transition={{ duration: 0.4, ease: EASE_OUT }}>
       {announcements.length > 0 && (
-        <div className="bg-ink py-2 text-[11px] font-medium uppercase tracking-[0.2em] text-white/85">
+        <div className="on-dark border-b border-gold/25 bg-night py-2 font-display text-[11px] font-semibold uppercase tracking-[0.24em] text-gold-bright/90">
           <Marquee>
             {announcements.map((a) => (
               <span key={a} className="flex items-center gap-8 pr-8">
@@ -275,7 +280,7 @@ export function Navbar({ categories, announcements = [] }: { categories: Categor
           </Marquee>
         </div>
       )}
-      <div className={clsx("relative border-b transition-[background-color,box-shadow,border-color] duration-500", scrolled || searching || megaFor ? "border-black/5 bg-offwhite/90 shadow-[0_8px_30px_-20px_rgba(17,17,17,0.25)] backdrop-blur-xl" : "border-transparent bg-offwhite")}>
+      <div className={clsx("relative border-b transition-[background-color,box-shadow,border-color] duration-500", scrolled || searching || megaFor ? "border-gold/15 bg-offwhite/85 shadow-[0_12px_40px_-24px_rgba(0,0,0,0.9)] backdrop-blur-xl" : "border-transparent bg-offwhite")}>
         <div className="container-x flex h-16 items-center gap-4">
           <button className="-ml-2 grid h-10 w-10 place-items-center rounded-full hover:bg-black/5 lg:hidden" aria-label="Open menu" onClick={() => setMobile(true)}>
             <Menu size={20} />

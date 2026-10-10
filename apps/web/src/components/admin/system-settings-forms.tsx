@@ -446,7 +446,7 @@ function Switch({ id, checked, onChange, labelledBy, describedBy }: { id: string
       aria-describedby={describedBy}
       onClick={() => onChange(!checked)}
       className={clsx(
-        "relative inline-flex h-6 w-11 shrink-0 items-center rounded-full transition focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-ink/15 disabled:cursor-not-allowed disabled:opacity-50",
+        "relative inline-flex h-6 w-11 shrink-0 items-center rounded-full transition focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-accent/30 disabled:cursor-not-allowed disabled:opacity-50",
         checked ? "bg-ink" : "bg-black/15",
       )}
     >
@@ -637,7 +637,7 @@ function SettingControl({ def, control, setValue, errors, states }: { def: Field
                       <label key={o.value} className={clsx("flex cursor-pointer items-start gap-2.5 rounded-xl border px-3 py-2.5 text-sm transition", checked ? "border-ink/35 bg-offwhite" : "border-black/10 hover:border-black/20")}>
                         <input
                           type="checkbox"
-                          className="mt-0.5 h-4 w-4 accent-ink"
+                          className="mt-0.5 h-4 w-4 accent-accent"
                           checked={checked}
                           onChange={() => field.onChange(checked ? selected.filter((x) => x !== o.value) : [...selected, o.value])}
                         />

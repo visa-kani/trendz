@@ -123,7 +123,7 @@ export function ButtonLink({ href, variant = "primary", size = "md", icon, child
     <Link
       href={href}
       className={clsx(
-        "inline-flex shrink-0 items-center justify-center rounded-full font-semibold transition focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-ink/15",
+        "inline-flex shrink-0 items-center justify-center rounded-full font-semibold transition focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-accent/30",
         linkVariants[variant],
         size === "sm" ? "h-8 gap-1.5 px-3 text-xs" : "h-10 gap-2 px-4 text-sm",
       )}

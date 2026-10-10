@@ -23,13 +23,13 @@ const SUGGESTIONS = [
 
 export default function NotFound() {
   return (
-    <div className="relative flex min-h-svh flex-col overflow-hidden">
+    <div className="store-theme relative flex min-h-svh flex-col overflow-hidden">
       <div aria-hidden="true" className="pointer-events-none absolute -left-40 top-10 h-[26rem] w-[26rem] animate-float rounded-full bg-sand/70 blur-3xl" />
       <div aria-hidden="true" className="pointer-events-none absolute -right-24 bottom-0 h-[22rem] w-[22rem] animate-float rounded-full bg-mist blur-3xl [animation-delay:-3s]" />
       <div aria-hidden="true" className="pointer-events-none absolute right-1/4 top-1/3 h-40 w-40 animate-float rounded-full bg-accent/15 blur-3xl [animation-delay:-1.5s]" />
 
       <header className="container-x relative flex h-16 items-center">
-        <Link href="/" className="group flex items-center gap-2 rounded-full focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-ink/10" aria-label="Trendz home">
+        <Link href="/" className="group flex items-center gap-2 rounded-full focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-accent/25" aria-label="Trendz home">
           <span className="transition-transform duration-700 ease-out-expo group-hover:rotate-180">
             <Star className="h-[18px] w-[18px]" />
           </span>
@@ -67,7 +67,7 @@ export default function NotFound() {
         <div className="mt-9 flex animate-rise flex-wrap justify-center gap-3 [animation-delay:500ms]">
           <Link
             href="/products"
-            className="group inline-flex items-center gap-4 rounded-full bg-ink py-1.5 pl-6 pr-1.5 text-sm font-semibold text-white shadow-neu-lg transition-colors hover:bg-ink/90 focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-ink/20"
+            className="group inline-flex items-center gap-4 rounded-full bg-ink py-1.5 pl-6 pr-1.5 text-sm font-semibold text-white shadow-neu-lg transition-colors hover:bg-ink/90 focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-accent/35"
           >
             Browse products
             <span className="grid h-10 w-10 place-items-center rounded-full bg-white text-ink transition-transform duration-500 group-hover:rotate-45">
@@ -76,7 +76,7 @@ export default function NotFound() {
           </Link>
           <Link
             href="/"
-            className="inline-flex h-13 items-center rounded-full border border-ink/15 px-7 text-sm font-semibold transition hover:border-ink hover:bg-white focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-ink/10"
+            className="inline-flex h-13 items-center rounded-full border border-ink/15 px-7 text-sm font-semibold transition hover:border-ink hover:bg-white focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-accent/25"
           >
             Back home
           </Link>
@@ -89,7 +89,7 @@ export default function NotFound() {
               <li key={s.href}>
                 <Link
                   href={s.href}
-                  className="inline-block rounded-full border border-black/10 bg-white/70 px-4 py-1.5 text-sm backdrop-blur transition hover:border-ink hover:bg-ink hover:text-white focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-ink/10"
+                  className="inline-block rounded-full border border-black/10 bg-white/70 px-4 py-1.5 text-sm backdrop-blur transition hover:border-ink hover:bg-ink hover:text-white focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-accent/25"
                 >
                   {s.label}
                 </Link>
@@ -99,7 +99,7 @@ export default function NotFound() {
         </nav>
       </main>
 
-      <div aria-hidden="true" className="relative -rotate-1 overflow-hidden bg-ink py-4 text-white">
+      <div aria-hidden="true" className="on-dark ribbon relative -rotate-1 overflow-hidden py-4 text-white">
         <div className="flex w-max animate-marquee">
           {[0, 1].map((copy) => (
             <div key={copy} className="flex shrink-0 items-center">

@@ -163,7 +163,7 @@ function Checkout() {
                     <button
                       type="button"
                       onClick={() => setAdding(true)}
-                      className="group flex min-h-28 flex-col items-center justify-center gap-2 rounded-2xl border border-dashed border-black/15 p-4 text-sm font-semibold text-ink/60 transition-colors hover:border-ink hover:text-ink focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-ink/10"
+                      className="group flex min-h-28 flex-col items-center justify-center gap-2 rounded-2xl border border-dashed border-black/15 p-4 text-sm font-semibold text-ink/60 transition-colors hover:border-ink hover:text-ink focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-accent/25"
                     >
                       <span className="grid h-9 w-9 place-items-center rounded-full bg-offwhite transition-transform duration-500 group-hover:rotate-90">
                         <Plus size={16} />
@@ -306,7 +306,7 @@ function Checkout() {
                 onClick={() => place.mutate()}
                 disabled={placeDisabled || place.isPending}
                 aria-busy={place.isPending || undefined}
-                className="group flex h-14 w-full items-center justify-between rounded-full bg-ink py-1.5 pl-7 pr-2 text-sm font-semibold text-white shadow-neu-lg transition-[background-color,box-shadow] duration-300 hover:bg-ink/90 focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-ink/20 disabled:cursor-not-allowed disabled:bg-ink/35 disabled:shadow-none"
+                className="group flex h-14 w-full items-center justify-between rounded-full bg-ink py-1.5 pl-7 pr-2 text-sm font-semibold text-white shadow-neu-lg transition-[background-color,box-shadow] duration-300 hover:bg-ink/90 focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-accent/35 disabled:cursor-not-allowed disabled:bg-ink/35 disabled:shadow-none"
               >
                 <span>{place.isPending ? "Placing your order…" : "Place order"}</span>
                 <span className="grid h-10 w-10 place-items-center rounded-full bg-white text-ink transition-transform duration-500 group-enabled:group-hover:rotate-45">

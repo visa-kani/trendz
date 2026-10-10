@@ -69,7 +69,7 @@ export default function WishlistPage() {
 function WishCard({ item: w, removing, onRemove }: { item: WishItem; removing: boolean; onRemove: () => void }) {
   return (
     <article className={clsx("group relative transition-opacity duration-300", removing && "opacity-50")}>
-      <Link href={`/products/${w.slug}`} className="block rounded-3xl focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-ink/10" aria-label={w.name}>
+      <Link href={`/products/${w.slug}`} className="block rounded-3xl focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-accent/25" aria-label={w.name}>
         <div className="relative aspect-[4/5] overflow-hidden rounded-3xl bg-white shadow-neu transition-shadow duration-500 group-hover:shadow-neu-lg">
           <ProductImage
             image={w.image}
@@ -96,7 +96,7 @@ function WishCard({ item: w, removing, onRemove }: { item: WishItem; removing: b
         title="Remove from wishlist"
         onClick={onRemove}
         disabled={removing}
-        className="absolute right-3 top-3 grid h-9 w-9 place-items-center rounded-full bg-white/85 shadow-neu backdrop-blur transition hover:scale-110 focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-ink/15 disabled:cursor-wait"
+        className="absolute right-3 top-3 grid h-9 w-9 place-items-center rounded-full bg-white/85 shadow-neu backdrop-blur transition hover:scale-110 focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-accent/30 disabled:cursor-wait"
       >
         <Heart size={16} strokeWidth={1.8} className="fill-accent text-accent" />
       </button>

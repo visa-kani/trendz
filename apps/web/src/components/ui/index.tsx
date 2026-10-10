@@ -42,7 +42,7 @@ export const Button = forwardRef<HTMLButtonElement, ButtonProps>(function Button
       type={type}
       disabled={disabled || loading}
       className={clsx(
-        "inline-flex shrink-0 items-center justify-center rounded-full font-semibold transition disabled:cursor-not-allowed focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-ink/15",
+        "inline-flex shrink-0 items-center justify-center rounded-full font-semibold transition disabled:cursor-not-allowed focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-accent/30",
         variants[variant],
         sizes[size],
         className,
@@ -94,7 +94,7 @@ export const Textarea = forwardRef<HTMLTextAreaElement, TextareaHTMLAttributes<H
 
 export const Select = forwardRef<HTMLSelectElement, SelectHTMLAttributes<HTMLSelectElement> & { invalid?: boolean }>(function Select({ className, invalid, children, ...rest }, ref) {
   return (
-    <select ref={ref} className={clsx("input appearance-none bg-[length:16px] bg-[right_0.75rem_center] bg-no-repeat pr-9", invalid && "border-danger/60", className)} style={{ backgroundImage: "url(\"data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23111' stroke-width='2'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E\")" }} {...rest}>
+    <select ref={ref} className={clsx("input appearance-none bg-[length:16px] bg-[right_0.75rem_center] bg-no-repeat pr-9", invalid && "border-danger/60", className)} style={{ backgroundImage: "url(\"data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23908a8e' stroke-width='2'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E\")" }} {...rest}>
       {children}
     </select>
   );
@@ -103,7 +103,7 @@ export const Select = forwardRef<HTMLSelectElement, SelectHTMLAttributes<HTMLSel
 export function Checkbox({ label, className, ...rest }: InputHTMLAttributes<HTMLInputElement> & { label: ReactNode }) {
   return (
     <label className={clsx("inline-flex cursor-pointer items-center gap-2 text-sm", className)}>
-      <input type="checkbox" className="h-4 w-4 rounded border-black/20 accent-ink" {...rest} />
+      <input type="checkbox" className="h-4 w-4 rounded border-black/20 accent-accent" {...rest} />
       <span>{label}</span>
     </label>
   );
@@ -138,7 +138,7 @@ const tones = {
   success: "bg-success/10 text-success",
   warning: "bg-warning/10 text-warning",
   danger: "bg-danger/10 text-danger",
-  info: "bg-sky-600/10 text-sky-700",
+  info: "bg-info/10 text-info",
   dark: "bg-ink text-white",
 };
 export type Tone = keyof typeof tones;
@@ -243,7 +243,7 @@ export function Modal({ open, onClose, title, children, footer, size = "md" }: {
   if (!open) return null;
   const width = { sm: "max-w-md", md: "max-w-lg", lg: "max-w-2xl", xl: "max-w-4xl" }[size];
   return (
-    <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/40 p-0 animate-fade sm:items-center sm:p-4" onMouseDown={(e) => e.target === e.currentTarget && onClose()}>
+    <div className="fixed inset-0 z-50 flex items-end justify-center bg-night/70 p-0 animate-fade backdrop-blur-[2px] sm:items-center sm:p-4" onMouseDown={(e) => e.target === e.currentTarget && onClose()}>
       <div role="dialog" aria-modal="true" aria-label={title} className={clsx("flex max-h-[92vh] w-full flex-col rounded-t-3xl bg-white shadow-neu-lg animate-rise sm:rounded-3xl", width)}>
         <header className="flex items-center justify-between border-b border-black/5 px-5 py-4">
           <h2 className="text-base font-semibold">{title}</h2>

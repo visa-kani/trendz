@@ -30,7 +30,7 @@ export function ProductRail({ products, label }: { products: Card[]; label: stri
       </div>
       <div className="mt-6 flex items-center gap-4">
         <div className="h-[3px] flex-1 overflow-hidden rounded-full bg-black/[0.07]">
-          <m.div className="h-full origin-left rounded-full bg-ink" style={{ scaleX: scrollXProgress }} />
+          <m.div className="h-full origin-left rounded-full bg-accent" style={{ scaleX: scrollXProgress }} />
         </div>
         <div className="flex gap-2">
           <button onClick={() => page(-1)} aria-label="Previous products" className="grid h-11 w-11 place-items-center rounded-full border border-black/10 bg-white transition hover:border-ink hover:bg-ink hover:text-white">

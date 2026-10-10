@@ -73,7 +73,7 @@ response; reusing the key with a different body returns `409 IDEMPOTENCY_CONFLIC
 
 | Method | Path | Notes |
 |---|---|---|
-| GET | `/store/config` | Public settings (currency, free-shipping threshold, payment key id) |
+| GET | `/store/config` | Public settings (currency, free-shipping threshold, payment key id) and the saved theme (`appearance`). Sent with `Cache-Control: no-cache`, so browsers revalidate it on every use |
 | GET | `/store/products` | `q, category, brand, minPrice, maxPrice, inStock, sort (newest\|price_asc\|price_desc\|name\|relevance), page, limit` |
 | GET | `/store/products/:slug` | Product detail with variants, options, images, availability |
 | GET | `/store/search/suggest` | `q` — top matches by name / SKU |
@@ -255,4 +255,5 @@ response; reusing the key with a different body returns `409 IDEMPOTENCY_CONFLIC
 | GET, POST | `/roles` · GET, PUT, DELETE `/roles/:id` | roles.read / roles.write — PUT takes `{ name, description, permissions[] }` (system roles keep their code; SUPER_ADMIN is fixed) |
 | GET | `/permissions` | roles.read |
 | GET | `/settings` · PUT `/settings/:key` | settings.read / settings.write |
+| GET | `/settings/:key` | settings.read — one group with `updatedAt` and `updatedBy` (null until first saved) |
 | GET | `/audit-logs` | audit.read |

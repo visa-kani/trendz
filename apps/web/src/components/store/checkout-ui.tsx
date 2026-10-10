@@ -176,7 +176,7 @@ export function CtaLink({ href, children, className, tone = "dark", onClick }: {
       onClick={onClick}
       className={clsx(
         "group inline-flex items-center justify-between gap-4 rounded-full py-1.5 pl-6 pr-1.5 text-sm font-semibold transition-[background-color,box-shadow] duration-300 focus-visible:outline-none focus-visible:ring-4",
-        tone === "dark" ? "bg-ink text-white shadow-neu-lg hover:bg-ink/90 focus-visible:ring-ink/20" : "bg-white text-ink shadow-neu hover:shadow-neu-lg focus-visible:ring-ink/10",
+        tone === "dark" ? "bg-ink text-white shadow-neu-lg hover:bg-ink/90 focus-visible:ring-accent/35" : "bg-white text-ink shadow-neu hover:shadow-neu-lg focus-visible:ring-accent/25",
         className,
       )}
     >
@@ -194,7 +194,7 @@ export function GhostLink({ href, children, className }: { href: string; childre
     <Link
       href={href}
       className={clsx(
-        "inline-flex h-13 items-center justify-center rounded-full border border-ink/15 px-7 text-sm font-semibold transition hover:border-ink hover:bg-white focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-ink/10",
+        "inline-flex h-13 items-center justify-center rounded-full border border-ink/15 px-7 text-sm font-semibold transition hover:border-ink hover:bg-white focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-accent/25",
         className,
       )}
     >

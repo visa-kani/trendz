@@ -16,6 +16,12 @@ const address = z.object({
   country: z.string().length(2).default("IN"),
 });
 
+// Stored lower-case so equal colours compare equal.
+const hexColor = z
+  .string()
+  .regex(/^#[0-9a-fA-F]{6}$/, "Use a 6-digit hex colour, e.g. #ff3d9a")
+  .transform((v) => v.toLowerCase());
+
 export const settingSchemas = {
   store: z.object({
     displayName: z.string().min(1).max(100).default("Trendz"),
@@ -85,6 +91,14 @@ export const settingSchemas = {
     smsEnabled: z.boolean().default(true),
     adminEmails: z.array(z.email()).default([]),
   }),
+  // Look and feel shared by the storefront, admin and POS. Presentation only:
+  // the web app derives every other colour from these three values.
+  appearance: z.object({
+    mode: z.enum(["light", "dark"]).default("dark"),
+    brandColor: hexColor.default("#ff3d9a"),
+    // Optional override for body text; null derives it from the mode and brand.
+    textColor: hexColor.nullable().default(null),
+  }),
 } as const;
 
 export type SettingKey = keyof typeof settingSchemas;
@@ -92,4 +106,4 @@ export type Settings = { [K in SettingKey]: z.infer<(typeof settingSchemas)[K]> 
 export const SETTING_KEYS = Object.keys(settingSchemas) as SettingKey[];
 
 /** Settings safe to expose to anonymous storefront visitors. */
-export const PUBLIC_SETTING_KEYS = ["store", "pricing", "shipping", "checkout", "returns"] as const;
+export const PUBLIC_SETTING_KEYS = ["store", "pricing", "shipping", "checkout", "returns", "appearance"] as const;

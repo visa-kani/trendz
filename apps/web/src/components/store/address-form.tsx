@@ -127,7 +127,7 @@ export function AddressForm({ initial, onSaved, onCancel }: { initial?: Address;
         <button
           type="submit"
           disabled={isSubmitting}
-          className="inline-flex h-12 items-center justify-center gap-2 rounded-full bg-ink px-7 text-sm font-semibold text-white transition hover:bg-ink/85 focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-ink/20 disabled:cursor-not-allowed disabled:bg-ink/40"
+          className="inline-flex h-12 items-center justify-center gap-2 rounded-full bg-ink px-7 text-sm font-semibold text-white transition hover:bg-ink/85 focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-accent/35 disabled:cursor-not-allowed disabled:bg-ink/40"
         >
           {isSubmitting && <Loader2 size={16} className="animate-spin" />}
           Save address
@@ -136,7 +136,7 @@ export function AddressForm({ initial, onSaved, onCancel }: { initial?: Address;
           <button
             type="button"
             onClick={onCancel}
-            className="inline-flex h-12 items-center justify-center rounded-full px-6 text-sm font-semibold text-ink/60 transition hover:bg-black/5 hover:text-ink focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-ink/10"
+            className="inline-flex h-12 items-center justify-center rounded-full px-6 text-sm font-semibold text-ink/60 transition hover:bg-black/5 hover:text-ink focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-accent/25"
           >
             Cancel
           </button>

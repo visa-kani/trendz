@@ -70,7 +70,7 @@ function OptionList({ options, value, onToggle, empty, invalid }: { options: Opt
       {options.map((o) => (
         <li key={o.id}>
           <label className="flex cursor-pointer items-center gap-2.5 px-3.5 py-2 text-sm hover:bg-black/[0.02]" style={o.depth ? { paddingLeft: `${0.875 + o.depth * 1.1}rem` } : undefined}>
-            <input type="checkbox" className="h-4 w-4 shrink-0 accent-ink" checked={value.includes(o.id)} onChange={() => onToggle(o)} />
+            <input type="checkbox" className="h-4 w-4 shrink-0 accent-accent" checked={value.includes(o.id)} onChange={() => onToggle(o)} />
             <span className="min-w-0 flex-1 truncate">{o.label}</span>
             {o.hint && <span className="shrink-0 text-xs text-ink/40">{o.hint}</span>}
           </label>

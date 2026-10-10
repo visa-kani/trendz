@@ -52,7 +52,7 @@ export function ProductCard({ product, priority = false }: { product: Card; prio
   return (
     <article className="group relative">
       <Link href={`/products/${product.slug}`} className="block" aria-label={product.name}>
-        <div className="relative aspect-[4/5] overflow-hidden rounded-3xl bg-white shadow-neu transition-shadow duration-500 group-hover:shadow-neu-lg">
+        <div className="relative aspect-[4/5] overflow-hidden rounded-3xl border border-gold/15 bg-white shadow-neu transition-[box-shadow,border-color] duration-500 group-hover:border-gold/50 group-hover:shadow-neu-lg">
           <ProductImage
             image={product.image}
             alt={product.name}

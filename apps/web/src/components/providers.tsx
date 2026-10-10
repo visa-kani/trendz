@@ -5,6 +5,7 @@ import { useState, type ReactNode } from "react";
 import { ApiError } from "@/lib/api";
 import { AuthProvider } from "@/lib/auth";
 import { ToastProvider } from "@/components/ui/toast";
+import { ThemeSync } from "@/components/theme-sync";
 
 export function Providers({ children }: { children: ReactNode }) {
   const [client] = useState(
@@ -22,6 +23,7 @@ export function Providers({ children }: { children: ReactNode }) {
   );
   return (
     <QueryClientProvider client={client}>
+      <ThemeSync />
       <ToastProvider>
         <AuthProvider>{children}</AuthProvider>
       </ToastProvider>

@@ -107,7 +107,7 @@ function ModeTabs({ mode, onChange }: { mode: Mode; onChange: (m: Mode) => void 
               }
             }}
             className={clsx(
-              "relative isolate flex h-11 items-center justify-center gap-2 rounded-full text-sm font-semibold transition-colors duration-300 focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-ink/10",
+              "relative isolate flex h-11 items-center justify-center gap-2 rounded-full text-sm font-semibold transition-colors duration-300 focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-accent/25",
               selected ? "text-ink" : "text-ink/50 hover:text-ink",
             )}
           >
@@ -231,7 +231,7 @@ function OtpLogin() {
           type="button"
           onClick={request}
           disabled={cooldown > 0 || busy}
-          className="block w-full rounded-full py-1 text-center text-sm text-ink/55 tabular-nums transition hover:text-ink focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-ink/10 disabled:opacity-50"
+          className="block w-full rounded-full py-1 text-center text-sm text-ink/55 tabular-nums transition hover:text-ink focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-accent/25 disabled:opacity-50"
         >
           {cooldown > 0 ? `Resend code in ${cooldown}s` : "Resend code"}
         </button>

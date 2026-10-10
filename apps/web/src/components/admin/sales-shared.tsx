@@ -161,7 +161,7 @@ export function Notice({ tone = "info", children, className }: { tone?: "info" |
     <div
       className={clsx(
         "rounded-2xl px-4 py-3 text-sm",
-        tone === "info" && "bg-sky-600/[0.07] text-sky-900",
+        tone === "info" && "bg-info/[0.07] text-info",
         tone === "warning" && "bg-warning/10 text-warning",
         tone === "danger" && "bg-danger/10 text-danger",
         className,

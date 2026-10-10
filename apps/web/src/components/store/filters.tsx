@@ -174,7 +174,7 @@ function StockToggle() {
   return (
     <button type="button" role="switch" aria-checked={on} onClick={() => update({ inStock: on ? null : "true", page: null })} className={clsx("flex w-full items-center justify-between gap-3 rounded-xl py-1 text-sm", FOCUS_RING)}>
       <span>In stock only</span>
-      <span className={clsx("flex h-6 w-11 shrink-0 items-center rounded-full p-0.5 transition-colors duration-300", on ? "justify-end bg-ink" : "justify-start bg-black/15")}>
+      <span className={clsx("flex h-6 w-11 shrink-0 items-center rounded-full p-0.5 transition-colors duration-300", on ? "justify-end bg-accent" : "justify-start bg-black/15")}>
         <m.span layout transition={{ type: "spring", stiffness: 600, damping: 36 }} className="h-5 w-5 rounded-full bg-white shadow-sm" />
       </span>
     </button>
@@ -500,7 +500,7 @@ function FilterDrawer({ facets, total, onClose }: { facets: Facets; total: numbe
 
   return createPortal(
     <div className="fixed inset-0 z-[60] lg:hidden">
-      <m.div className="absolute inset-0 bg-ink/40 backdrop-blur-[2px]" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} transition={{ duration: 0.3 }} onClick={onClose} />
+      <m.div className="absolute inset-0 bg-night/70 backdrop-blur-[2px]" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} transition={{ duration: 0.3 }} onClick={onClose} />
       <m.div
         ref={panel}
         role="dialog"

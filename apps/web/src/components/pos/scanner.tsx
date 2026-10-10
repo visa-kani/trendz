@@ -87,7 +87,7 @@ export const ScannerInput = forwardRef<ScannerInputHandle, { onScan: (code: stri
         inputMode="text"
         aria-label="Scan a barcode or QR code, or type a SKU and press Enter"
         placeholder="Scan barcode / QR or type SKU + Enter   (3*SKU for quantity 3)"
-        className="h-14 w-full rounded-2xl border-2 border-ink/80 bg-white pl-12 pr-4 font-mono text-base tracking-wide outline-none transition placeholder:font-sans placeholder:text-sm placeholder:tracking-normal placeholder:text-ink/40 focus:border-ink focus:ring-4 focus:ring-ink/10"
+        className="h-14 w-full rounded-2xl border-2 border-ink/80 bg-white pl-12 pr-4 font-mono text-base tracking-wide outline-none transition placeholder:font-sans placeholder:text-sm placeholder:tracking-normal placeholder:text-ink/40 focus:border-ink focus:ring-4 focus:ring-accent/25"
       />
     </div>
   );
@@ -175,11 +175,11 @@ export function CameraScanner({ onScan, onClose }: { onScan: (code: string) => v
 
   return (
     <div className="space-y-3">
-      <div className={clsx("relative overflow-hidden rounded-2xl bg-black transition", flash && "ring-4 ring-success")}>
+      <div className={clsx("relative overflow-hidden rounded-2xl bg-night transition", flash && "ring-4 ring-success")}>
         <video ref={video} className="aspect-video w-full object-cover" muted playsInline />
         <div className="pointer-events-none absolute inset-x-10 top-1/2 h-0.5 -translate-y-1/2 bg-danger/70 shadow-[0_0_12px_rgba(220,38,38,0.8)]" />
         {error && (
-          <div className="absolute inset-0 flex flex-col items-center justify-center gap-2 bg-black/80 p-6 text-center text-sm text-white">
+          <div className="absolute inset-0 flex flex-col items-center justify-center gap-2 bg-night/85 p-6 text-center text-sm text-pearl">
             <CameraOff size={22} />
             {error}
           </div>

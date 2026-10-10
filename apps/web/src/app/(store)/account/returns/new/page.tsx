@@ -116,11 +116,11 @@ function NewReturn() {
                   key={r}
                   className={clsx(
                     "relative isolate cursor-pointer rounded-full border px-4 py-2 text-sm font-medium transition-colors duration-300 has-[:focus-visible]:ring-4 has-[:focus-visible]:ring-ink/10",
-                    active ? "border-ink text-white" : "border-black/10 text-ink/70 hover:border-ink/40 hover:text-ink",
+                    active ? "border-accent text-on-accent" : "border-black/10 text-ink/70 hover:border-accent/50 hover:text-ink",
                   )}
                 >
                   <input type="radio" name="reason" value={r} checked={active} onChange={() => setReason(r)} className="sr-only" />
-                  {active && <m.span layoutId="return-reason-pill" aria-hidden="true" className="absolute inset-0 -z-10 rounded-full bg-ink" transition={{ type: "spring", stiffness: 420, damping: 34 }} />}
+                  {active && <m.span layoutId="return-reason-pill" aria-hidden="true" className="absolute inset-0 -z-10 rounded-full bg-accent" transition={{ type: "spring", stiffness: 420, damping: 34 }} />}
                   {r}
                 </label>
               );
@@ -138,7 +138,7 @@ function NewReturn() {
           disabled={!selected || submit.isPending}
           aria-busy={submit.isPending || undefined}
           onClick={() => submit.mutate()}
-          className="group flex h-14 items-center gap-5 rounded-full bg-ink py-1.5 pl-7 pr-2 text-sm font-semibold text-white shadow-neu-lg transition-[background-color,box-shadow] duration-300 hover:bg-ink/90 focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-ink/20 disabled:cursor-not-allowed disabled:bg-ink/35 disabled:shadow-none"
+          className="group flex h-14 items-center gap-5 rounded-full bg-ink py-1.5 pl-7 pr-2 text-sm font-semibold text-white shadow-neu-lg transition-[background-color,box-shadow] duration-300 hover:bg-ink/90 focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-accent/35 disabled:cursor-not-allowed disabled:bg-ink/35 disabled:shadow-none"
         >
           <span>
             Request return (<RollingNumber value={selected} /> item{selected === 1 ? "" : "s"})

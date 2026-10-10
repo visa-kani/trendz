@@ -16,7 +16,9 @@ const pageQuery = paginationQuery.extend({ limit: z.coerce.number().int().min(1)
 
 storefrontRouter.get("/config", async (_req, res) => {
   const s = await getSettings();
-  res.setHeader("Cache-Control", "public, max-age=60");
+  // Checked with the server on every use (a cheap 304 when unchanged), so a saved
+  // setting or theme is never served stale from a browser cache.
+  res.setHeader("Cache-Control", "no-cache");
   ok(res, {
     store: { name: s.store.displayName, email: s.store.email, phone: s.store.phone, currency: s.store.currency },
     pricesIncludeTax: s.pricing.pricesIncludeTax,
@@ -24,6 +26,7 @@ storefrontRouter.get("/config", async (_req, res) => {
     returns: { windowDays: s.returns.windowDays },
     checkout: { allowGuestCheckout: s.checkout.allowGuestCheckout, maxQuantityPerLine: s.checkout.maxQuantityPerLine },
     payments: { provider: env.PAYMENT_PROVIDER, razorpayKeyId: env.PAYMENT_PROVIDER === "razorpay" ? env.RAZORPAY_KEY_ID : null },
+    appearance: s.appearance,
     states: INDIAN_STATES,
   });
 });

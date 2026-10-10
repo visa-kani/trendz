@@ -111,7 +111,7 @@ export default function CartPage() {
                       aria-label="Remove coupon"
                       onClick={() => removeCoupon.mutate()}
                       disabled={removeCoupon.isPending}
-                      className="grid h-9 w-9 shrink-0 place-items-center rounded-full text-ink/50 transition duration-300 hover:rotate-90 hover:bg-white hover:text-ink focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-ink/10 disabled:opacity-40"
+                      className="grid h-9 w-9 shrink-0 place-items-center rounded-full text-ink/50 transition duration-300 hover:rotate-90 hover:bg-white hover:text-ink focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-accent/25 disabled:opacity-40"
                     >
                       {removeCoupon.isPending ? <Loader2 size={15} className="animate-spin" /> : <X size={15} />}
                     </button>
@@ -151,7 +151,7 @@ export default function CartPage() {
                       <button
                         type="submit"
                         disabled={apply.isPending}
-                        className="absolute inset-y-1.5 right-1.5 flex items-center gap-1.5 rounded-full bg-ink px-5 text-xs font-semibold text-white transition hover:bg-ink/85 focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-ink/20 disabled:bg-ink/50"
+                        className="absolute inset-y-1.5 right-1.5 flex items-center gap-1.5 rounded-full bg-ink px-5 text-xs font-semibold text-white transition hover:bg-ink/85 focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-accent/35 disabled:bg-ink/50"
                       >
                         {apply.isPending && <Loader2 size={13} className="animate-spin" />}
                         Apply
@@ -281,7 +281,7 @@ function BagLine({
               type="button"
               aria-label={`Remove ${item.name}`}
               onClick={onRemove}
-              className="-mr-1 -mt-1 grid h-9 w-9 shrink-0 place-items-center rounded-full text-ink/40 transition hover:bg-danger/10 hover:text-danger focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-ink/10"
+              className="-mr-1 -mt-1 grid h-9 w-9 shrink-0 place-items-center rounded-full text-ink/40 transition hover:bg-danger/10 hover:text-danger focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-accent/25"
             >
               <Trash2 size={16} />
             </button>
@@ -311,7 +311,7 @@ function BagLine({
                 aria-label="Decrease"
                 disabled={updating}
                 onClick={onDecrease}
-                className="grid h-9 w-9 place-items-center rounded-full text-ink/60 transition hover:bg-white hover:text-ink focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-ink/10 disabled:cursor-not-allowed disabled:text-ink/25 disabled:hover:bg-transparent"
+                className="grid h-9 w-9 place-items-center rounded-full text-ink/60 transition hover:bg-white hover:text-ink focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-accent/25 disabled:cursor-not-allowed disabled:text-ink/25 disabled:hover:bg-transparent"
               >
                 <Minus size={14} />
               </button>
@@ -323,7 +323,7 @@ function BagLine({
                 aria-label="Increase"
                 disabled={updating || item.quantity >= item.maxQuantity}
                 onClick={onIncrease}
-                className="grid h-9 w-9 place-items-center rounded-full text-ink/60 transition hover:bg-white hover:text-ink focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-ink/10 disabled:cursor-not-allowed disabled:text-ink/25 disabled:hover:bg-transparent"
+                className="grid h-9 w-9 place-items-center rounded-full text-ink/60 transition hover:bg-white hover:text-ink focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-accent/25 disabled:cursor-not-allowed disabled:text-ink/25 disabled:hover:bg-transparent"
               >
                 <Plus size={14} />
               </button>

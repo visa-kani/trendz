@@ -106,7 +106,7 @@ export default function PermissionsPage() {
                           <div className="flex flex-wrap gap-1">
                             {holders.length ? (
                               holders.map((r) => (
-                                <Link key={r.id} href={`/admin/roles/${r.id}`} className="rounded-full focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ink/20">
+                                <Link key={r.id} href={`/admin/roles/${r.id}`} className="rounded-full focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/35">
                                   <Badge tone={r.isSystem ? "neutral" : "info"}>{r.name}</Badge>
                                 </Link>
                               ))

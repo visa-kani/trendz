@@ -110,6 +110,15 @@ The demo seed adds:
 - two warehouses: `WH-001` (online fulfilment) and `WH-002` (City Store, used for POS)
 - stock, one supplier and an approved purchase order
 
+### Appearance & theme
+
+Admin → Appearance (`/admin/appearance`, needs `settings.read`; saving needs `settings.write`) sets the look of the whole app: storefront, admin and POS.
+
+- **Two values are saved**: a mode (light or dark) and one brand colour, plus an optional text colour. They live in the `appearance` setting; the default is dark with brand pink `#ff3d9a`.
+- **Everything else is generated** from them in `apps/web/src/lib/theme.ts` (surfaces, hovers, soft tints, shadows, text on the brand colour) and set as CSS variables on `<html>`. `globals.css` holds the token names and the fallback values.
+- **A save is live immediately.** The root layout paints the saved theme on the server, and saving drops the cached pages, so no visitor sees the old colours.
+- **Writing new UI**: use the tokens (`bg-white` for cards, `text-ink`, `bg-accent`, `text-on-accent`, `border-black/10` …), never fixed colours, so it follows both modes. Blocks that must stay dark in light mode (footer, bands over photos) take the `on-dark` class.
+
 ### Development adapters (no credentials needed)
 
 | Integration | Local adapter | What it does |

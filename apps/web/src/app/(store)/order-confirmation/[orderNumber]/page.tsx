@@ -113,7 +113,7 @@ function Confirmation({ orderNumber }: { orderNumber: string }) {
             </p>
           </section>
         )}
-        <section className={`animate-rise rounded-3xl bg-ink p-6 text-white shadow-neu-lg sm:p-7 ${address ? "" : "md:col-span-2"}`} style={delay(1050)}>
+        <section className={`on-dark gold-frame animate-rise rounded-3xl bg-ink p-6 text-white shadow-neu-lg sm:p-7 ${address ? "" : "md:col-span-2"}`} style={delay(1050)}>
           <p className="eyebrow text-white/50">What happens next</p>
           <ol className="mt-4 space-y-3.5 text-sm">
             {NEXT_STEPS.map(({ icon: Icon, text }) => (

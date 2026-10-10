@@ -18,7 +18,7 @@ const FLOW: OrderStatus[] = ["CONFIRMED", "PACKED", "SHIPPED", "OUT_FOR_DELIVERY
 const LABEL: Partial<Record<OrderStatus, string>> = { CONFIRMED: "Confirmed", PACKED: "Packed", SHIPPED: "Shipped", OUT_FOR_DELIVERY: "Out for delivery", DELIVERED: "Delivered" };
 
 const outlineBtn =
-  "inline-flex h-11 items-center justify-center gap-2 rounded-full border border-black/15 px-5 text-sm font-semibold transition hover:border-ink hover:bg-white focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-ink/10";
+  "inline-flex h-11 items-center justify-center gap-2 rounded-full border border-black/15 px-5 text-sm font-semibold transition hover:border-ink hover:bg-white focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-accent/25";
 
 export default function OrderDetailPage({ params }: { params: Promise<{ orderNumber: string }> }) {
   const { orderNumber } = use(params);
@@ -92,7 +92,7 @@ export default function OrderDetailPage({ params }: { params: Promise<{ orderNum
                     href={s.trackingUrl}
                     target="_blank"
                     rel="noreferrer noopener"
-                    className="inline-flex items-center gap-1.5 rounded-full bg-ink px-3.5 py-1.5 text-xs font-semibold text-white transition hover:bg-ink/85 focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-ink/20"
+                    className="inline-flex items-center gap-1.5 rounded-full bg-ink px-3.5 py-1.5 text-xs font-semibold text-white transition hover:bg-ink/85 focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-accent/35"
                   >
                     Track <ExternalLink size={12} />
                   </a>

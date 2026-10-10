@@ -166,7 +166,7 @@ export async function Listing({
           {subcategories && subcategories.length > 0 && (
             <Stagger className="no-scrollbar -mx-4 mt-8 flex gap-2 overflow-x-auto px-4 py-1 sm:mx-0 sm:flex-wrap sm:overflow-visible sm:px-0" gap={0.04} amount={0}>
               <StaggerItem className="shrink-0">
-                <span aria-current="page" className="inline-flex h-10 items-center rounded-full bg-ink px-5 text-sm font-semibold text-white">
+                <span aria-current="page" className="ribbon inline-flex h-10 items-center rounded-full px-5 text-sm font-semibold text-pearl">
                   All {title}
                 </span>
               </StaggerItem>

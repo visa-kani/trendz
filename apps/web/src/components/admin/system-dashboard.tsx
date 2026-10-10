@@ -87,7 +87,7 @@ function LinkedStat({ href, permission, ...stat }: { href?: string; permission?:
   const { can } = useAuth();
   if (!href || (permission && !can(permission))) return <Stat {...stat} />;
   return (
-    <Link href={href} className="block rounded-2xl transition hover:-translate-y-0.5 focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-ink/15">
+    <Link href={href} className="block rounded-2xl transition hover:-translate-y-0.5 focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-accent/30">
       <Stat {...stat} />
     </Link>
   );
@@ -152,25 +152,25 @@ export function DashboardOverview() {
             <Stat label="Today's sales" value={money(s.todaySales)} hint="Since midnight IST" icon={<IndianRupee size={18} />} />
             <Stat label="This month" value={money(s.monthSales)} hint="Month to date" icon={<CalendarDays size={18} />} />
             <Stat label="All-time net sales" value={money(s.totalSales)} hint="After refunds" icon={<CircleDollarSign size={18} />} />
-            <LinkedStat href="/admin/orders" permission="orders.read" label="Paid orders" value={formatCount(s.totalOrders)} hint="All time" icon={<ShoppingBag size={18} />} />
+            <LinkedStat href="/admin/orders?paymentStatus=PAID" permission="orders.read" label="Paid orders" value={formatCount(s.totalOrders)} hint="All time" icon={<ShoppingBag size={18} />} />
           </div>
 
           <SectionTitle>Orders</SectionTitle>
           <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5">
             <LinkedStat href="/admin/orders" permission="orders.read" label="To fulfil" value={formatCount(s.pendingOrders)} hint="Confirmed, processing or packed" icon={<Truck size={18} />} />
-            <LinkedStat href="/admin/orders" permission="orders.read" label="Awaiting payment" value={formatCount(s.awaitingPayment)} hint="Placed, not yet paid" icon={<Clock size={18} />} />
-            <LinkedStat href="/admin/orders" permission="orders.read" label="Delivered" value={formatCount(s.deliveredOrders)} icon={<PackageCheck size={18} />} />
-            <LinkedStat href="/admin/orders" permission="orders.read" label="Cancelled" value={formatCount(s.cancelledOrders)} icon={<XCircle size={18} />} />
-            <LinkedStat href="/admin/returns" permission="returns.read" label="Return requests" value={formatCount(s.returnRequests)} hint="Waiting for review" icon={<RotateCcw size={18} />} />
+            <LinkedStat href="/admin/orders?status=PENDING" permission="orders.read" label="Awaiting payment" value={formatCount(s.awaitingPayment)} hint="Placed, not yet paid" icon={<Clock size={18} />} />
+            <LinkedStat href="/admin/orders?status=DELIVERED" permission="orders.read" label="Delivered" value={formatCount(s.deliveredOrders)} icon={<PackageCheck size={18} />} />
+            <LinkedStat href="/admin/orders?status=CANCELLED" permission="orders.read" label="Cancelled" value={formatCount(s.cancelledOrders)} icon={<XCircle size={18} />} />
+            <LinkedStat href="/admin/returns?status=REQUESTED" permission="returns.read" label="Return requests" value={formatCount(s.returnRequests)} hint="Waiting for review" icon={<RotateCcw size={18} />} />
           </div>
 
           <SectionTitle>Customers, catalogue and stock</SectionTitle>
           <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
             <LinkedStat href="/admin/customers" permission="customers.read" label="Customers" value={formatCount(s.totalCustomers)} hint="Registered accounts" icon={<Users size={18} />} />
-            <LinkedStat href="/admin/products" permission="products.read" label="Active products" value={formatCount(s.totalProducts)} icon={<Package size={18} />} />
+            <LinkedStat href="/admin/products?status=ACTIVE" permission="products.read" label="Active products" value={formatCount(s.totalProducts)} icon={<Package size={18} />} />
             <LinkedStat href="/admin/inventory" permission="inventory.read" label="Inventory value" value={money(s.inventoryValue)} hint="On hand × cost price" icon={<Boxes size={18} />} />
             <LinkedStat
-              href="/admin/inventory"
+              href="/admin/inventory?status=low"
               permission="inventory.read"
               label="Low-stock variants"
               value={formatCount(s.lowStockProducts)}
@@ -178,7 +178,7 @@ export function DashboardOverview() {
               icon={<AlertTriangle size={18} className={s.lowStockProducts > 0 ? "text-warning" : undefined} />}
             />
             <LinkedStat
-              href="/admin/inventory"
+              href="/admin/inventory?status=out"
               permission="inventory.read"
               label="Out-of-stock variants"
               value={formatCount(s.outOfStockProducts)}

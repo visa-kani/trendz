@@ -28,7 +28,7 @@ export function PayButton({ orderId, amount, onOutcome, label = "Pay now", size 
         setMockSession(session);
         return;
       }
-      onOutcome(await payWithRazorpay(session));
+      onOutcome(await payWithRazorpay(session, config?.appearance?.brandColor));
     } catch (err) {
       onOutcome({ status: "failed", message: errorMessage(err) });
     } finally {
@@ -57,7 +57,7 @@ export function PayButton({ orderId, amount, onOutcome, label = "Pay now", size 
         disabled={busy}
         aria-busy={busy || undefined}
         className={clsx(
-          "group relative flex w-full items-center justify-between gap-3 overflow-hidden rounded-full bg-ink pl-6 pr-1.5 text-sm font-semibold text-white shadow-neu-lg transition-[background-color,box-shadow] duration-300 hover:bg-ink/90 focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-ink/20 disabled:cursor-not-allowed disabled:bg-ink/60 disabled:shadow-none",
+          "group relative flex w-full items-center justify-between gap-3 overflow-hidden rounded-full bg-ink pl-6 pr-1.5 text-sm font-semibold text-white shadow-neu-lg transition-[background-color,box-shadow] duration-300 hover:bg-ink/90 focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-accent/35 disabled:cursor-not-allowed disabled:bg-ink/60 disabled:shadow-none",
           size === "lg" ? "h-14" : "h-12",
         )}
       >

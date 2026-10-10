@@ -64,7 +64,7 @@ export function AuthShell({
 
 function MobileBrand({ tagline }: { tagline: string }) {
   return (
-    <div className="relative animate-fade overflow-hidden rounded-[2rem] bg-ink px-6 py-5 text-white lg:hidden">
+    <div className="on-dark gold-frame relative animate-fade overflow-hidden rounded-[2rem] bg-ink px-6 py-5 text-white lg:hidden">
       <div aria-hidden="true" className="pointer-events-none absolute -right-10 -top-16 h-40 w-40 animate-float rounded-full bg-accent/40 blur-3xl" />
       <div className="relative flex items-center justify-between gap-4">
         <div className="min-w-0">
@@ -83,7 +83,7 @@ function MobileBrand({ tagline }: { tagline: string }) {
 
 function BrandPanel({ tagline }: { tagline: string }) {
   return (
-    <aside aria-label="Why join Trendz" className="relative hidden min-w-0 animate-fade overflow-hidden rounded-[2rem] bg-ink p-10 text-white shadow-neu-lg lg:flex lg:flex-col xl:p-14">
+    <aside aria-label="Why join Trendz" className="on-dark gold-frame relative hidden min-w-0 animate-fade overflow-hidden rounded-[2rem] bg-ink p-10 text-white shadow-neu-lg lg:flex lg:flex-col xl:p-14">
       {/* Slowly drifting colour fields + a fine dot texture. */}
       <div aria-hidden="true" className="pointer-events-none absolute -right-24 -top-24 h-96 w-96 animate-float rounded-full bg-accent/40 blur-3xl" />
       <div aria-hidden="true" className="pointer-events-none absolute -bottom-40 -left-24 h-112 w-112 animate-float rounded-full bg-sand/25 blur-3xl [animation-delay:-3s]" />
@@ -148,7 +148,7 @@ export function AuthSubmit({ loading, children, className, disabled, ...rest }: 
       disabled={disabled || loading}
       aria-busy={loading || undefined}
       className={clsx(
-        "group flex h-14 w-full items-center justify-between rounded-full bg-ink py-1.5 pl-7 pr-2 text-sm font-semibold text-white shadow-neu-lg transition-[background-color,box-shadow] duration-300 hover:bg-ink/90 focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-ink/20 disabled:cursor-not-allowed disabled:bg-ink/40 disabled:shadow-none",
+        "group flex h-14 w-full items-center justify-between rounded-full bg-ink py-1.5 pl-7 pr-2 text-sm font-semibold text-white shadow-neu-lg transition-[background-color,box-shadow] duration-300 hover:bg-ink/90 focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-accent/35 disabled:cursor-not-allowed disabled:bg-ink/40 disabled:shadow-none",
         className,
       )}
     >
