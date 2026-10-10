@@ -248,4 +248,20 @@ describe("storefront", () => {
     expect(detail.body.data.breadcrumb.map((b: { name: string }) => b.name)).toEqual(["Tops"]);
     await anon.get("/api/store/products/draft-item").expect(404);
   });
+
+  it("answers not-found as a 200 only when a GET asks for it (the storefront's page cache needs one)", async () => {
+    const anon = await client();
+    const plain = await anon.get("/api/store/products/no-such-product").expect(404);
+    expect(plain.body).toMatchObject({ success: false, code: "NOT_FOUND" });
+
+    const soft = await anon.get("/api/store/products/no-such-product").set("X-Not-Found-Status", "200").expect(200);
+    expect(soft.body).toMatchObject({ success: false, code: "NOT_FOUND", message: "Product not found" });
+    expect(soft.headers["cache-control"]).toBe("no-store");
+    await anon.get("/api/store/categories/no-such-category").set("X-Not-Found-Status", "200").expect(200);
+
+    // Other errors and other methods keep their status.
+    await anon.get("/api/users").set("X-Not-Found-Status", "200").expect(401);
+    const { client: admin } = await loginAs(["ADMIN"]);
+    await admin.delete("/api/categories/00000000-0000-4000-8000-000000000000").set("X-Not-Found-Status", "200").expect(404);
+  });
 });

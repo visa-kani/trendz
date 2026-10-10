@@ -34,6 +34,17 @@ function fromPrisma(err: Prisma.PrismaClientKnownRequestError): AppError | null 
   }
 }
 
+/**
+ * A GET that sends `X-Not-Found-Status: 200` gets "not found" as a 200; the
+ * body is unchanged (success: false, code NOT_FOUND …).
+ *
+ * The storefront's server-side fetches use it. Their cache (Next.js) only
+ * replaces a stored response with a 200 and serves the old copy until then,
+ * so with a plain 404 a product or category that was deleted would stay on
+ * the site indefinitely.
+ */
+const NOT_FOUND_STATUS_HEADER = "x-not-found-status";
+
 export const notFoundHandler: RequestHandler = (req, _res, next) => {
   next(new AppError(404, "NOT_FOUND", `Route ${req.method} ${req.path} not found`));
 };
@@ -68,5 +79,11 @@ export const errorHandler: ErrorRequestHandler = (err, req, res, _next) => {
   }
 
   if (appError) for (const [k, v] of Object.entries(appError.headers)) res.setHeader(k, v);
+  if (status === 404 && req.method === "GET" && req.get(NOT_FOUND_STATUS_HEADER) === "200") {
+    // Only the caller that asked may keep this answer; browsers and proxies must not.
+    res.setHeader("Cache-Control", "no-store");
+    res.status(200).json(body);
+    return;
+  }
   res.status(status).json(body);
 };

@@ -11,22 +11,42 @@ const API = process.env.API_INTERNAL_URL ?? "http://127.0.0.1:4100";
 
 export class NotFoundError extends Error {}
 
+/**
+ * Asks the API to answer "not found" with a 200 whose body still says so.
+ * Next only replaces a cached response with a 200 and serves the old copy
+ * until then, so a plain 404 would leave a deleted product or category on the
+ * site indefinitely. This way the "not found" answer itself is cached.
+ */
+const HEADERS = { Accept: "application/json", "X-Not-Found-Status": "200" };
+
+interface Envelope<T> {
+  success: boolean;
+  data: T;
+  message?: string;
+}
+
+async function read<B extends Envelope<unknown>>(res: Response, path: string): Promise<B> {
+  const body = (await res.json().catch(() => null)) as B | null;
+  // A 2xx that reports failure is the "not found as 200" answer requested above.
+  if (res.status === 404 || (res.ok && body?.success === false)) throw new NotFoundError(path);
+  if (!res.ok || !body?.success) throw new Error(body?.message ?? `API ${path} failed with ${res.status}`);
+  return body;
+}
+
 /** Cache tag of a GET path, so its cached copy can be dropped on demand (see updateTag). */
 const apiTag = (path: string) => `api:${path.split("?")[0]}`;
 export const STORE_CONFIG_TAG = apiTag("/store/config");
 
 export async function serverGet<T>(path: string, revalidate = 60): Promise<T> {
-  const res = await fetch(`${API}/api${path}`, { next: { revalidate, tags: [apiTag(path)] }, headers: { Accept: "application/json" } });
-  if (res.status === 404) throw new NotFoundError(path);
-  const body = (await res.json().catch(() => null)) as { success: boolean; data: T; message?: string } | null;
-  if (!res.ok || !body?.success) throw new Error(body?.message ?? `API ${path} failed with ${res.status}`);
-  return body.data;
+  const res = await fetch(`${API}/api${path}`, { next: { revalidate, tags: [apiTag(path)] }, headers: HEADERS });
+  return (await read<Envelope<T>>(res, path)).data;
 }
 
-export async function serverPage<T>(path: string, revalidate = 30): Promise<{ data: T; meta: { page: number; limit: number; total: number; totalPages: number } }> {
-  const res = await fetch(`${API}/api${path}`, { next: { revalidate }, headers: { Accept: "application/json" } });
-  const body = (await res.json().catch(() => null)) as { success: boolean; data: T; meta: { page: number; limit: number; total: number; totalPages: number }; message?: string } | null;
-  if (!res.ok || !body?.success) throw new Error(body?.message ?? `API ${path} failed with ${res.status}`);
+type PageMeta = { page: number; limit: number; total: number; totalPages: number };
+
+export async function serverPage<T>(path: string, revalidate = 30): Promise<{ data: T; meta: PageMeta }> {
+  const res = await fetch(`${API}/api${path}`, { next: { revalidate }, headers: HEADERS });
+  const body = await read<Envelope<T> & { meta: PageMeta }>(res, path);
   return { data: body.data, meta: body.meta };
 }
 

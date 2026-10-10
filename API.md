@@ -26,6 +26,11 @@ Base path: `/api`. JSON in, JSON out (except PDFs, images and exports).
 | 422 | `COUPON_INVALID`, `PAYMENT_VERIFICATION_FAILED` |
 | 429 | `RATE_LIMITED` (with `Retry-After`) |
 
+**Not found as 200** — a `GET` sent with `X-Not-Found-Status: 200` receives a
+404 as HTTP 200 with the same error body. The storefront's server-side fetches
+use it: their page cache (Next.js) only replaces a stored response with a 200,
+so with a plain 404 a deleted product or category would stay on the site.
+
 **Authentication** — httpOnly cookies `access_token` (15 min JWT) and
 `refresh_token` (rotating, 30 days, stored hashed). `POST /api/auth/refresh`
 rotates both.
