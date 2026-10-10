@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { ArrowUpRight, RotateCcw, ShieldCheck, Sparkles, Truck } from "lucide-react";
-import { Magnetic, Marquee, Parallax, Reveal, SplitWords, Stagger, StaggerItem } from "@/components/store/motion";
+import { Magnetic, Parallax, Reveal, SplitWords, Stagger, StaggerItem } from "@/components/store/motion";
 import { ProductGrid, ProductImage } from "@/components/store/product-card";
 import { ProductRail } from "@/components/store/product-rail";
 import { BRAND } from "@/lib/brand";
@@ -145,18 +145,6 @@ export default async function HomePage() {
             </div>
           )}
         </div>
-      </section>
-
-      {/* ------------------------------------------------- Collections ribbon */}
-      <section aria-label="Our collections" className="on-dark ribbon -rotate-1 overflow-hidden py-5 text-white">
-        <Marquee>
-          {BRAND.collections.map((w, i) => (
-            <span key={w} className="flex items-center gap-10 pr-10 font-display text-[clamp(1.75rem,4.4vw,3.5rem)] font-bold uppercase leading-none tracking-wide">
-              <span className={i % 2 ? "text-transparent [-webkit-text-stroke:1.5px_rgba(255,255,255,0.92)]" : "drop-shadow-[0_2px_0_rgba(0,0,0,0.25)]"}>{w}</span>
-              <span className="text-gold-bright">❖</span>
-            </span>
-          ))}
-        </Marquee>
       </section>
 
       {/* -------------------------------------------------------- Categories */}

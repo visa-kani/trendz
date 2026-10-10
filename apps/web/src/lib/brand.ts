@@ -8,7 +8,7 @@ export const BRAND = {
   fullName: "Trendz Women's Wear",
   tagline: "Luxury in Every Stitch.",
   promise: "Fashion for every you",
-  /** Collections the boutique is known for (also used in the marquee). */
+  /** Collections the boutique is known for. */
   collections: ["Kurti Sets", "Anarkali", "Western Wear", "Lehenga", "Party Wear", "Kids Wear"],
   phone: "+91 93607 34597",
   phoneHref: "tel:+919360734597",
