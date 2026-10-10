@@ -11,7 +11,7 @@
  * production.
  */
 import { prisma } from "../src/database/prisma";
-import { redis } from "../src/database/redis";
+import { closeRedis } from "../src/database/redis";
 import { closeQueues } from "../src/jobs/queues";
 import { systemContext } from "../src/modules/audit/audit.service";
 import type { ProductInput } from "../src/modules/catalog/products.schemas";
@@ -128,7 +128,7 @@ async function main() {
     const total = await prisma.product.count();
     console.log(`✔ ${created} products / ${variantIds.length} variants in ${seconds}s — catalogue now has ${total} products`);
   } finally {
-    await Promise.allSettled([prisma.$disconnect(), redis.quit(), closeQueues()]);
+    await Promise.allSettled([prisma.$disconnect(), closeRedis(), closeQueues()]);
   }
 }
 

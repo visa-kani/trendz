@@ -1,6 +1,6 @@
 import type { Request, RequestHandler } from "express";
 import { RateLimiterMemory, RateLimiterRedis, RateLimiterRes } from "rate-limiter-flexible";
-import { markRedisFailure, redis, redisAvailable } from "../../database/redis";
+import { cacheRedis, markRedisFailure, redisAvailable } from "../../database/redis";
 import { tooManyRequests } from "../errors/app-error";
 
 interface LimitOptions {
@@ -21,7 +21,7 @@ function makeLimiter(o: LimitOptions) {
   // If Redis is unavailable the in-memory limiter keeps protecting this node.
   const insurance = new RateLimiterMemory({ points: o.points, duration: o.durationSeconds, blockDuration: o.blockSeconds ?? 0 });
   const shared = new RateLimiterRedis({
-    storeClient: redis,
+    storeClient: cacheRedis,
     keyPrefix: `rl:${o.name}`,
     points: o.points,
     duration: o.durationSeconds,

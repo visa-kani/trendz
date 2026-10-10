@@ -3,7 +3,7 @@ import IORedis from "ioredis";
 import { env } from "./config/env";
 import { logger } from "./config/logger";
 import { prisma } from "./database/prisma";
-import { redis } from "./database/redis";
+import { closeRedis } from "./database/redis";
 import { closeQueues, getQueue, type QueueName } from "./jobs/queues";
 import { handlersFor, registeredQueues, schedules } from "./jobs/registry";
 import "./jobs";
@@ -54,7 +54,7 @@ async function main() {
   const shutdown = async (signal: string) => {
     logger.info({ signal }, "shutting down worker");
     await Promise.allSettled(workers.map((w) => w.close()));
-    await Promise.allSettled([closeQueues(), prisma.$disconnect(), redis.quit()]);
+    await Promise.allSettled([closeQueues(), prisma.$disconnect(), closeRedis()]);
     process.exit(0);
   };
   process.on("SIGTERM", () => void shutdown("SIGTERM"));

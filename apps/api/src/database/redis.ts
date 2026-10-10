@@ -2,28 +2,43 @@ import IORedis, { type RedisOptions } from "ioredis";
 import { env } from "../config/env";
 import { logger } from "../config/logger";
 
-/** Connection options shared by the app client and BullMQ connections. */
+/** Connection options shared by the app clients and BullMQ connections. */
 export function redisOptions(): RedisOptions {
   return {
-    // Required by BullMQ for blocking connections; harmless for the app client.
+    // Required by BullMQ for blocking connections; harmless for the app clients.
     maxRetriesPerRequest: null,
     enableReadyCheck: true,
     lazyConnect: false,
   };
 }
 
-// The app client fails fast: if Redis stops answering, cache reads fall back to the
-// database and rate limits to their in-memory insurance limiter instead of hanging
-// every request. (BullMQ connections use redisOptions() without a command timeout,
-// because blocking queue commands legitimately wait.)
-export const redis = new IORedis(env.REDIS_URL, { ...redisOptions(), maxRetriesPerRequest: 3, commandTimeout: 1500, connectTimeout: 5000 });
+/*
+ * Two app connections (BullMQ opens its own, without command timeouts, because
+ * blocking queue commands legitimately wait):
+ *
+ *  - `redis`: general purpose (cache invalidation, de-duplication keys, the
+ *    development payment/shipping simulators). A generous timeout: these
+ *    commands matter, but must never hang a request forever.
+ *  - `cacheRedis`: best-effort reads/writes of cached values and rate-limit
+ *    counters. Fails fast, because every caller has a fallback (the database,
+ *    or an in-memory limiter).
+ */
+export const redis = new IORedis(env.REDIS_URL, { ...redisOptions(), maxRetriesPerRequest: 3, commandTimeout: 10_000, connectTimeout: 5000 });
+export const cacheRedis = new IORedis(env.REDIS_URL, { ...redisOptions(), maxRetriesPerRequest: 1, commandTimeout: 1500, connectTimeout: 5000 });
 redis.on("error", (err) => logger.error({ err: err.message }, "redis error"));
+cacheRedis.on("error", (err) => logger.error({ err: err.message }, "redis (cache) error"));
+
+/** Closes both app connections (call on shutdown and at the end of scripts). */
+export async function closeRedis(): Promise<void> {
+  await Promise.allSettled([redis.quit(), cacheRedis.quit()]);
+}
 
 /*
- * Circuit breaker: after a Redis failure (error or command timeout) cache reads
- * and rate limiting skip Redis for a short while and go straight to the source,
- * so a struggling Redis costs one timeout instead of one per call.
- * Cache invalidations are always attempted, so no stale data survives recovery.
+ * Circuit breaker for the best-effort connection: after a failure (error or
+ * command timeout) cache reads and rate limiting skip Redis for a short while
+ * and go straight to the source, so a struggling Redis costs one timeout
+ * instead of one per call. Cache invalidations are always attempted on the
+ * general connection, so no stale data survives a recovery.
  */
 const BYPASS_MS = 30_000;
 let bypassUntil = 0;
@@ -40,7 +55,7 @@ export function markRedisFailure(err: unknown, context: string) {
 export async function cached<T>(key: string, ttlSeconds: number, load: () => Promise<T>): Promise<T> {
   if (!redisAvailable()) return load();
   try {
-    const hit = await redis.get(key);
+    const hit = await cacheRedis.get(key);
     if (hit !== null) return JSON.parse(hit) as T;
   } catch (err) {
     markRedisFailure(err, `cache read ${key}`);
@@ -48,7 +63,7 @@ export async function cached<T>(key: string, ttlSeconds: number, load: () => Pro
   }
   const value = await load();
   try {
-    await redis.set(key, JSON.stringify(value), "EX", ttlSeconds);
+    await cacheRedis.set(key, JSON.stringify(value), "EX", ttlSeconds);
   } catch (err) {
     markRedisFailure(err, `cache write ${key}`);
   }
@@ -60,7 +75,6 @@ export async function invalidate(...keys: string[]): Promise<void> {
   try {
     await redis.del(...keys);
   } catch (err) {
-    markRedisFailure(err, "cache invalidation");
     logger.warn({ err: (err as Error).message, keys }, "cache invalidation failed");
   }
 }

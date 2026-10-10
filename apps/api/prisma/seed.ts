@@ -9,7 +9,7 @@ import { PrismaClient } from "@prisma/client";
 import dotenv from "dotenv";
 import { seedCore } from "./seed-core";
 import { seedDemoData } from "./seed-demo";
-import { redis } from "../src/database/redis";
+import { closeRedis } from "../src/database/redis";
 import { closeQueues } from "../src/jobs/queues";
 
 dotenv.config({ quiet: true });
@@ -28,4 +28,4 @@ main()
     process.exit(1);
   })
   // Close every connection opened by app modules so the process can exit.
-  .finally(() => Promise.allSettled([prisma.$disconnect(), redis.quit(), closeQueues()]));
+  .finally(() => Promise.allSettled([prisma.$disconnect(), closeRedis(), closeQueues()]));
