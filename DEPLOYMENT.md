@@ -226,6 +226,7 @@ Setup:
 
 1. Exports the commit to `/srv/trendz/releases/<time>-<sha>` and links the shared env files.
 2. Runs `npm ci`, `prisma generate` and `npm run build`. The live site keeps running the old release during this.
+   The web build writes its own identifier to `apps/web/.deployment-id` in the release (`deploymentId` in `apps/web/next.config.ts`); `next start` reads it from there. A browser tab that is still open on the previous release reloads itself on its next click instead of mixing old code with the new stylesheet.
 3. **Backs up the database** (`pre-deploy-<sha>`).
 4. Runs `prisma migrate deploy`. This applies committed migrations only, and never resets, drops or pushes the schema.
    When a release adds permissions (for example `reviews.read` and `reviews.moderate`), run the seed once afterwards (`npm run db:seed --workspace apps/api`): it registers them and grants them to the system roles that have them by default. It is safe to re-run and never touches roles a shop has edited beyond that first grant.

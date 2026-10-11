@@ -12,7 +12,6 @@ interface AuthContextValue {
   user: SessionUser | null;
   can: (permission: string) => boolean;
   login: (identifier: string, password: string) => Promise<SessionUser>;
-  verifyOtp: (phone: string, code: string) => Promise<SessionUser>;
   register: (input: { email: string; password: string; firstName: string; lastName?: string; phone?: string }) => Promise<SessionUser>;
   logout: () => Promise<void>;
   reload: () => Promise<SessionUser | null>;
@@ -95,7 +94,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       user,
       can: (p) => !!user?.permissions.includes(p),
       login: async (identifier, password) => afterSignIn((await api.post<{ user: SessionUser }>("/auth/login", { identifier, password })).user),
-      verifyOtp: async (phone, code) => afterSignIn((await api.post<{ user: SessionUser }>("/auth/otp/verify", { phone, code, purpose: "LOGIN" })).user),
       register: async (input) => afterSignIn((await api.post<{ user: SessionUser }>("/auth/register", input)).user),
       logout: async () => {
         await api.post("/auth/logout").catch(() => undefined);

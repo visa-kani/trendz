@@ -6,14 +6,14 @@ import { systemContext } from "../src/modules/audit/audit.service";
 import { priceLines } from "../src/modules/pricing/pricing.service";
 import { createCoupon } from "../src/modules/promotions/coupons.service";
 import { createDiscount } from "../src/modules/promotions/discounts.service";
-import { updateSetting } from "../src/modules/settings/settings.service";
+import { SETTINGS_CACHE_KEY, updateSetting } from "../src/modules/settings/settings.service";
 import { allocate, inclusiveTax } from "../src/common/utils/money";
 import { resetDatabase } from "./helpers";
 import { makeProduct } from "./fixtures";
 
 beforeEach(async () => {
   await resetDatabase();
-  await invalidate("tax:classes", "promotions:discounts:active", "settings:all");
+  await invalidate("tax:classes", "promotions:discounts:active", SETTINGS_CACHE_KEY);
 });
 afterAll(closeQueues);
 

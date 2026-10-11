@@ -6,12 +6,14 @@ import { Controller, useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { clsx } from "clsx";
-import { Eye, EyeOff, Lock, ShieldAlert } from "lucide-react";
-import { Badge, Button, Card, ConfirmDialog, ErrorState, Field, Input, Modal, Select, Spinner, StatusBadge } from "@/components/ui";
+import { Lock, ShieldAlert } from "lucide-react";
+import { Badge, Button, Card, ConfirmDialog, ErrorState, Field, Input, Modal, PasswordInput, Select, Spinner, StatusBadge } from "@/components/ui";
+import { PhoneInput } from "@/components/ui/phone-input";
 import { useToast } from "@/components/ui/toast";
 import { api, errorMessage } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
 import { pluralize } from "@/lib/format";
+import { isMobileNumber } from "@/lib/phone";
 import { applyApiErrors, CUSTOMER_ROLE, SUPER_ADMIN, useRoles, useWarehouseOptions, userName, type AdminUser, type RoleView } from "./system-data";
 import { plainText } from "@/lib/rich-text";
 
@@ -84,7 +86,7 @@ export function RolePicker({
 
 const createSchema = z.object({
   email: z.email("Enter a valid email address").max(254),
-  phone: z.string().trim().max(20).regex(/^$|^[+\d\s-]{10,20}$/, "Enter a valid mobile number"),
+  phone: z.string().trim().refine((v) => !v || isMobileNumber(v), "Enter a valid mobile number"),
   firstName: z.string().trim().min(1, "Required").max(60),
   lastName: z.string().trim().max(60),
   password: z
@@ -103,7 +105,6 @@ export function CreateStaffModal({ onClose, onCreated }: { onClose: () => void; 
   const toast = useToast();
   const roles = useRoles();
   const warehouses = useWarehouseOptions();
-  const [showPassword, setShowPassword] = useState(false);
   const {
     register,
     control,
@@ -164,21 +165,11 @@ export function CreateStaffModal({ onClose, onCreated }: { onClose: () => void; 
           <Field label="Email" htmlFor="email" error={errors.email?.message} hint="Used to sign in" required>
             <Input id="email" type="email" autoComplete="off" invalid={!!errors.email} {...register("email")} />
           </Field>
-          <Field label="Mobile number" htmlFor="phone" error={errors.phone?.message} hint="Optional · enables OTP sign-in">
-            <Input id="phone" type="tel" inputMode="tel" placeholder="98765 43210" invalid={!!errors.phone} {...register("phone")} />
+          <Field label="Mobile number" htmlFor="phone" error={errors.phone?.message} hint="Optional · they can sign in with it instead of the email">
+            <Controller control={control} name="phone" render={({ field }) => <PhoneInput id="phone" invalid={!!errors.phone} {...field} />} />
           </Field>
           <Field label="Temporary password" htmlFor="password" error={errors.password?.message} hint="8+ characters with letters and numbers. Share it securely." required>
-            <div className="relative">
-              <Input id="password" type={showPassword ? "text" : "password"} autoComplete="new-password" className="pr-10" invalid={!!errors.password} {...register("password")} />
-              <button
-                type="button"
-                onClick={() => setShowPassword((s) => !s)}
-                aria-label={showPassword ? "Hide password" : "Show password"}
-                className="absolute right-2 top-1/2 -translate-y-1/2 rounded-full p-1.5 text-ink/45 hover:bg-black/5 hover:text-ink"
-              >
-                {showPassword ? <EyeOff size={15} /> : <Eye size={15} />}
-              </button>
-            </div>
+            <PasswordInput id="password" autoComplete="new-password" invalid={!!errors.password} {...register("password")} />
           </Field>
           <Field label="Default warehouse" htmlFor="defaultWarehouseId" error={errors.defaultWarehouseId?.message} hint={warehouses.error ? "Warehouses could not be loaded" : "Used for POS billing and stock actions"}>
             <Select id="defaultWarehouseId" disabled={!warehouses.data} {...register("defaultWarehouseId")}>
@@ -217,7 +208,7 @@ export function CreateStaffModal({ onClose, onCreated }: { onClose: () => void; 
 const profileSchema = z.object({
   firstName: z.string().trim().min(1, "Required").max(60),
   lastName: z.string().trim().max(60),
-  phone: z.string().trim().max(20).regex(/^$|^[+\d\s-]{10,20}$/, "Enter a valid mobile number"),
+  phone: z.string().trim().refine((v) => !v || isMobileNumber(v), "Enter a valid mobile number"),
   defaultWarehouseId: z.string(),
 });
 type ProfileValues = z.infer<typeof profileSchema>;
@@ -230,6 +221,7 @@ export function UserProfileCard({ user, canEdit }: { user: AdminUser; canEdit: b
   const warehouses = useWarehouseOptions();
   const {
     register,
+    control,
     handleSubmit,
     setError,
     reset,
@@ -274,7 +266,7 @@ export function UserProfileCard({ user, canEdit }: { user: AdminUser; canEdit: b
             <Input id="p-email" value={user.email ?? ""} disabled readOnly />
           </Field>
           <Field label="Mobile number" htmlFor="p-phone" error={errors.phone?.message}>
-            <Input id="p-phone" type="tel" inputMode="tel" invalid={!!errors.phone} {...register("phone")} />
+            <Controller control={control} name="phone" render={({ field }) => <PhoneInput id="p-phone" invalid={!!errors.phone} {...field} />} />
           </Field>
           <Field label="Default warehouse" htmlFor="p-wh" error={errors.defaultWarehouseId?.message} hint={warehouses.error ? "Warehouses could not be loaded" : undefined} className="sm:col-span-2">
             <Select id="p-wh" {...register("defaultWarehouseId")}>

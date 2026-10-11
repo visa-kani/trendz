@@ -3,7 +3,7 @@ import { ArrowUpRight, AtSign, Clock, Mail, MapPin, MessageCircle, Phone, type L
 import { Reveal, Stagger, StaggerItem } from "@/components/store/motion";
 import { Breadcrumbs } from "@/components/store/shop-breadcrumbs";
 import { MaskedHeading } from "@/components/store/shop-heading";
-import { contactDetails, instagramHref, lines, localize, phoneHref, whatsappHref } from "@/lib/cms";
+import { contactDetails, displayPhone, instagramHref, lines, localize, phoneHref, whatsappHref } from "@/lib/cms";
 import { getI18n } from "@/lib/i18n/server";
 import { serverGet } from "@/lib/server-api";
 import type { StoreConfig } from "@/lib/types";
@@ -26,8 +26,8 @@ export default async function ContactPage() {
 
   // One card per way of reaching the shop that has been filled in.
   const channels: { icon: LucideIcon; label: string; value: string; href: string; external?: boolean }[] = [];
-  if (contact.whatsapp) channels.push({ icon: MessageCircle, label: t("Message us on WhatsApp"), value: contact.whatsapp, href: whatsappHref(contact.whatsapp), external: true });
-  if (contact.phone) channels.push({ icon: Phone, label: t("Call the shop"), value: contact.phone, href: phoneHref(contact.phone) });
+  if (contact.whatsapp) channels.push({ icon: MessageCircle, label: t("Message us on WhatsApp"), value: displayPhone(contact.whatsapp), href: whatsappHref(contact.whatsapp), external: true });
+  if (contact.phone) channels.push({ icon: Phone, label: t("Call the shop"), value: displayPhone(contact.phone), href: phoneHref(contact.phone) });
   if (contact.email) channels.push({ icon: Mail, label: t("Email us"), value: contact.email, href: `mailto:${contact.email}` });
   if (contact.instagram) channels.push({ icon: AtSign, label: t("Follow us on Instagram"), value: contact.instagram, href: instagramHref(contact.instagram), external: true });
 

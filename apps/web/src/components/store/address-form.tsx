@@ -1,12 +1,13 @@
 "use client";
 
-import { useForm } from "react-hook-form";
+import { Controller, useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { useQuery } from "@tanstack/react-query";
 import { AnimatePresence, m } from "motion/react";
 import { CircleAlert, Loader2 } from "lucide-react";
 import { Field, Input, Select } from "@/components/ui";
+import { PhoneInput } from "@/components/ui/phone-input";
 import { api, ApiError } from "@/lib/api";
 import { msg } from "@/lib/i18n";
 import { useI18n } from "@/lib/i18n/client";
@@ -31,6 +32,7 @@ export function AddressForm({ initial, onSaved, onCancel }: { initial?: Address;
   const { t, tx } = useI18n();
   const {
     register,
+    control,
     handleSubmit,
     setError,
     formState: { errors, isSubmitting },
@@ -38,7 +40,7 @@ export function AddressForm({ initial, onSaved, onCancel }: { initial?: Address;
     resolver: zodResolver(schema),
     defaultValues: {
       fullName: initial?.fullName ?? "",
-      phone: initial?.phone?.replace(/^\+91/, "") ?? "",
+      phone: initial?.phone ?? "",
       line1: initial?.line1 ?? "",
       line2: initial?.line2 ?? "",
       landmark: initial?.landmark ?? "",
@@ -68,7 +70,7 @@ export function AddressForm({ initial, onSaved, onCancel }: { initial?: Address;
         <Input id="fullName" autoComplete="name" invalid={!!errors.fullName} {...register("fullName")} />
       </Field>
       <Field label={t("Mobile number")} error={tx(errors.phone?.message)} htmlFor="phone" required>
-        <Input id="phone" type="tel" autoComplete="tel" inputMode="numeric" invalid={!!errors.phone} {...register("phone")} />
+        <Controller control={control} name="phone" render={({ field }) => <PhoneInput id="phone" invalid={!!errors.phone} {...field} />} />
       </Field>
 
       <p className="eyebrow mt-2 sm:col-span-2">{t("Address")}</p>

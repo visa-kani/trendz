@@ -1,8 +1,8 @@
 "use client";
 
-import { forwardRef, useEffect, type ButtonHTMLAttributes, type InputHTMLAttributes, type ReactNode, type TextareaHTMLAttributes } from "react";
+import { forwardRef, useEffect, useState, type ButtonHTMLAttributes, type InputHTMLAttributes, type ReactNode, type TextareaHTMLAttributes } from "react";
 import { clsx } from "clsx";
-import { Loader2, X, ChevronLeft, ChevronRight, Inbox } from "lucide-react";
+import { Loader2, X, ChevronLeft, ChevronRight, Eye, EyeClosed, Inbox } from "lucide-react";
 import type { PageMeta } from "@/lib/api";
 import { useI18n } from "@/lib/i18n/client";
 
@@ -87,6 +87,30 @@ export function Field({ label, error, hint, className, children, htmlFor, requir
 
 export const Input = forwardRef<HTMLInputElement, InputHTMLAttributes<HTMLInputElement> & { invalid?: boolean }>(function Input({ className, invalid, ...rest }, ref) {
   return <input ref={ref} className={clsx("input", invalid && "border-danger/60 focus:border-danger", className)} aria-invalid={invalid || undefined} {...rest} />;
+});
+
+/**
+ * A password field with an eye button at its right edge: a closed eye while
+ * the password is hidden, an open eye while it is shown. Takes what <Input>
+ * takes, except `type`. Used for every password in the application.
+ */
+export const PasswordInput = forwardRef<HTMLInputElement, Omit<InputHTMLAttributes<HTMLInputElement>, "type"> & { invalid?: boolean }>(function PasswordInput({ className, ...rest }, ref) {
+  const { t } = useI18n();
+  const [shown, setShown] = useState(false);
+  return (
+    <div className="relative">
+      <Input ref={ref} type={shown ? "text" : "password"} className={clsx("pr-12", className)} {...rest} />
+      <button
+        type="button"
+        onClick={() => setShown((s) => !s)}
+        aria-label={shown ? t("Hide password") : t("Show password")}
+        aria-pressed={shown}
+        className="absolute right-1.5 top-1/2 grid h-9 w-9 -translate-y-1/2 place-items-center rounded-full text-ink/50 transition-colors hover:bg-black/5 hover:text-ink focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/40"
+      >
+        {shown ? <Eye size={17} aria-hidden="true" /> : <EyeClosed size={17} aria-hidden="true" />}
+      </button>
+    </div>
+  );
 });
 
 export const Textarea = forwardRef<HTMLTextAreaElement, TextareaHTMLAttributes<HTMLTextAreaElement> & { invalid?: boolean }>(function Textarea({ className, invalid, ...rest }, ref) {

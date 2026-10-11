@@ -4,7 +4,7 @@ import { prisma } from "../src/database/prisma";
 import { redis } from "../src/database/redis";
 import { closeQueues } from "../src/jobs/queues";
 import { systemContext } from "../src/modules/audit/audit.service";
-import { getSetting, getSettings, updateSetting } from "../src/modules/settings/settings.service";
+import { getSetting, getSettings, SETTINGS_CACHE_KEY, updateSetting } from "../src/modules/settings/settings.service";
 import { addAddress, makeProduct } from "./fixtures";
 import { client, loginAs, resetDatabase } from "./helpers";
 
@@ -168,12 +168,12 @@ describe("around the review", () => {
   it("still has its settings right after a release, when the cached settings were written by the version before", async () => {
     // What the previous version left in the cache: every group except the new one.
     const { reviews: _added, ...older } = await getSettings();
-    await redis.set("settings:all", JSON.stringify(older), "EX", 300);
+    await redis.set(SETTINGS_CACHE_KEY, JSON.stringify(older), "EX", 300);
 
     expect(await getSetting("reviews")).toEqual({ enabled: true, requireApproval: true });
     const made = await makeProduct({ price: 99900, stock: 1 });
     const anon = await client();
-    await redis.set("settings:all", JSON.stringify(older), "EX", 300);
+    await redis.set(SETTINGS_CACHE_KEY, JSON.stringify(older), "EX", 300);
     expect((await anon.get(`/api/store/products/${made.product.slug}/reviews`).expect(200)).body.data.enabled).toBe(true);
   });
 

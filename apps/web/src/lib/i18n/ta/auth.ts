@@ -12,6 +12,9 @@ export const auth = {
 
   // Form fields shared by these pages
   Password: "கடவுச்சொல்",
+  // The eye button inside every password field.
+  "Show password": "கடவுச்சொல்லைக் காட்டு",
+  "Hide password": "கடவுச்சொல்லை மறை",
   "Confirm password": "கடவுச்சொல்லை உறுதிசெய்",
   "Passwords do not match": "கடவுச்சொற்கள் பொருந்தவில்லை",
 
@@ -21,18 +24,10 @@ export const auth = {
   "Good to see you again.": "உங்களை மீண்டும் பார்ப்பதில் மகிழ்ச்சி.",
   "New here? {link}": "இங்கு புதியவரா? {link}",
   "Create an account": "கணக்கை உருவாக்குங்கள்",
-  "Sign-in method": "உள்நுழையும் முறை",
-  "Mobile OTP": "மொபைல் OTP",
   "Email or mobile number": "மின்னஞ்சல் அல்லது மொபைல் எண்",
   "Enter your email or mobile number": "உங்கள் மின்னஞ்சல் அல்லது மொபைல் எண்ணை உள்ளிடவும்",
   "Enter your password": "உங்கள் கடவுச்சொல்லை உள்ளிடவும்",
   "Forgot password?": "கடவுச்சொல் மறந்துவிட்டதா?",
-  "We will send a 6-digit code by SMS.": "6 இலக்கக் குறியீட்டை SMS மூலம் அனுப்புவோம்.",
-  "Verification code": "சரிபார்ப்புக் குறியீடு",
-  "Send code": "குறியீட்டை அனுப்பு",
-  "Verify and sign in": "சரிபார்த்து உள்நுழை",
-  "Resend code": "குறியீட்டை மீண்டும் அனுப்பு",
-  "Resend code in {seconds}s": "{seconds} வினாடிகளில் குறியீட்டை மீண்டும் அனுப்பலாம்",
 
   // Registration
   "Join Trendz": "Trendz-ல் இணையுங்கள்",

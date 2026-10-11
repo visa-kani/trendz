@@ -87,6 +87,7 @@ export function LinkSelect({ id, label, value, onChange, categories, disabled }:
 export function PictureField({
   label = "Picture",
   hint,
+  logo,
   imageKey,
   imageUrl,
   onChange,
@@ -94,6 +95,8 @@ export function PictureField({
 }: {
   label?: string;
   hint?: string;
+  /** Preview it the way the store shows a logo: whole, on a dark tile (a photo is cropped to a square instead). */
+  logo?: boolean;
   imageKey: string | null;
   imageUrl: string | null;
   onChange: (picture: { imageKey: string | null; imageUrl: string | null }) => void;
@@ -118,7 +121,11 @@ export function PictureField({
   return (
     <Field label={label} hint={[hint, `${IMAGE_RULES}.`].filter(Boolean).join(" ")}>
       <div className="flex flex-wrap items-center gap-3">
-        {imageUrl ? <img src={imageUrl} alt="" className="h-16 w-16 rounded-xl bg-offwhite object-cover" /> : <span className="h-16 w-16 rounded-xl bg-offwhite" />}
+        {imageUrl ? (
+          <img src={imageUrl} alt="" className={logo ? "h-16 w-24 rounded-xl bg-night object-contain p-1.5" : "h-16 w-16 rounded-xl bg-offwhite object-cover"} />
+        ) : (
+          <span className={logo ? "h-16 w-24 rounded-xl bg-night" : "h-16 w-16 rounded-xl bg-offwhite"} />
+        )}
         <label className={`inline-flex items-center gap-2 rounded-full border border-black/15 px-3 py-1.5 text-xs font-semibold ${disabled ? "opacity-50" : "cursor-pointer hover:bg-black/[0.03]"}`}>
           {uploading ? <Loader2 size={14} className="animate-spin" /> : <ImagePlus size={14} />} {uploading ? "Uploading…" : imageKey ? "Change" : "Upload"}
           <input

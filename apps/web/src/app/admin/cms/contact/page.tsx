@@ -4,6 +4,7 @@ import { ContentActions, ContentSection, useContentEditor } from "@/components/a
 import { TextPair } from "@/components/admin/home-offers-fields";
 import { PageHeader } from "@/components/admin/page";
 import { ErrorState, Field, Input, Spinner } from "@/components/ui";
+import { PhoneInput } from "@/components/ui/phone-input";
 import type { ContactDetails } from "@/lib/types";
 
 export default function ContactEditor() {
@@ -33,11 +34,11 @@ export default function ContactEditor() {
 
         <ContentSection title="Ways to reach you" note="These are what shoppers see. The legal name, GSTIN and address printed on invoices are under Settings.">
           <div className="grid gap-4 sm:grid-cols-2">
-            <Field label="Phone" htmlFor="contact-phone" hint="As it should be printed, e.g. +91 93607 34597.">
-              <Input id="contact-phone" type="tel" value={draft.phone} maxLength={20} disabled={locked} onChange={(e) => edit({ phone: e.target.value })} />
+            <Field label="Phone" htmlFor="contact-phone" hint="Shown on the store as +91 93607 34597.">
+              <PhoneInput id="contact-phone" value={draft.phone} disabled={locked} onChange={(phone) => edit({ phone })} />
             </Field>
-            <Field label="WhatsApp number" htmlFor="contact-whatsapp" hint="With the country code (+91). Used for every WhatsApp button on the store.">
-              <Input id="contact-whatsapp" type="tel" value={draft.whatsapp} maxLength={20} disabled={locked} onChange={(e) => edit({ whatsapp: e.target.value })} />
+            <Field label="WhatsApp number" htmlFor="contact-whatsapp" hint="Used for every WhatsApp button on the store.">
+              <PhoneInput id="contact-whatsapp" value={draft.whatsapp} disabled={locked} onChange={(whatsapp) => edit({ whatsapp })} />
             </Field>
             <Field label="Email" htmlFor="contact-email">
               <Input id="contact-email" type="email" value={draft.email} maxLength={200} disabled={locked} onChange={(e) => edit({ email: e.target.value })} />

@@ -51,6 +51,18 @@ export default function HomePageEditor() {
       <div className="max-w-4xl space-y-6">
         <p className="text-right text-xs text-ink/45">{editor.savedLabel}</p>
 
+        <ContentSection title="Shop logo" note="Shown at the top and at the foot of every page of the store, and in the closing band of this page.">
+          <PictureField
+            label="Logo"
+            logo
+            hint="Optional. The store shows the logo on dark panels, so one drawn for a black or transparent background looks best. Without one, the logo that came with the store is shown."
+            imageKey={draft.logo.imageKey}
+            imageUrl={draft.logo.imageUrl}
+            onChange={(picture) => set("logo", picture)}
+            disabled={locked}
+          />
+        </ContentSection>
+
         <ContentSection title="Banner" note="The top of the page: the headline and two links, with one picture beside them (above them on phones).">
           <TextPair id="hero-top" label="Headline, first line" hint="Shown in gold." value={hero.titleTop} onChange={(titleTop) => set("hero", { titleTop })} max={40} disabled={locked} />
           <TextPair id="hero-bottom" label="Headline, second line" hint="Shown in the brand colour." value={hero.titleBottom} onChange={(titleBottom) => set("hero", { titleBottom })} max={40} disabled={locked} />

@@ -23,6 +23,7 @@ import {
   type LucideIcon,
 } from "lucide-react";
 import { Button, Card, ConfirmDialog, Input, MoneyInput, Select, Textarea } from "@/components/ui";
+import { PhoneInput } from "@/components/ui/phone-input";
 import { useToast } from "@/components/ui/toast";
 import { api, ApiError, errorMessage } from "@/lib/api";
 import { money, percent } from "@/lib/format";
@@ -45,6 +46,7 @@ interface Base {
 }
 type FieldDef =
   | (Base & { kind: "text"; maxLength?: number; placeholder?: string; upper?: boolean; mono?: boolean; inputMode?: "email" | "tel" | "numeric" })
+  | (Base & { kind: "phone" })
   | (Base & { kind: "textarea"; maxLength?: number; rows?: number })
   | (Base & { kind: "switch" })
   | (Base & { kind: "int" | "decimal"; min?: number; max?: number; suffix?: string })
@@ -176,7 +178,7 @@ export const SETTING_GROUPS: GroupDef[] = [
           { kind: "text", name: "gstin", label: "GSTIN", hint: "15 characters. Leave empty if the business is not GST-registered.", upper: true, mono: true, maxLength: 15, money: true },
           { kind: "readonly", name: "currency", label: "Currency", hint: "All prices are in Indian rupees" },
           { kind: "text", name: "email", label: "Support email", inputMode: "email", maxLength: 200 },
-          { kind: "text", name: "phone", label: "Support phone", inputMode: "tel", maxLength: 20 },
+          { kind: "phone", name: "phone", label: "Support phone" },
         ],
       },
       {
@@ -420,7 +422,7 @@ export const SETTING_GROUPS: GroupDef[] = [
       {
         fields: [
           { kind: "switch", name: "emailEnabled", label: "Send email notifications", hint: "Order, shipping and account updates. Sign-in codes and password resets are always sent." },
-          { kind: "switch", name: "smsEnabled", label: "Send SMS notifications", hint: "Order and delivery updates. OTP sign-in codes are always sent." },
+          { kind: "switch", name: "smsEnabled", label: "Send SMS notifications", hint: "Order and delivery updates." },
           { kind: "emails", name: "adminEmails", label: "Admin alert emails", hint: "New orders, payment issues and stock alerts. One per line or comma-separated.", wide: true },
         ],
       },
@@ -595,6 +597,8 @@ function SettingControl({ def, control, setValue, errors, states }: { def: Field
                   onChange={(e) => field.onChange(def.upper ? e.target.value.toUpperCase() : e.target.value)}
                 />
               );
+            case "phone":
+              return <PhoneInput {...common} value={(field.value as string) ?? ""} onChange={field.onChange} />;
             case "textarea":
               return <Textarea {...common} rows={def.rows ?? 3} className="min-h-0" maxLength={def.maxLength} value={(field.value as string) ?? ""} onChange={(e) => field.onChange(e.target.value)} />;
             case "int":

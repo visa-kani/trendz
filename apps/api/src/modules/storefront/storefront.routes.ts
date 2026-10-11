@@ -6,7 +6,7 @@ import { INDIAN_STATES } from "../../common/utils/india";
 import { publicBrands } from "../catalog/brands.routes";
 import { publicTree } from "../catalog/categories.service";
 import { notFound } from "../../common/errors/app-error";
-import { isPageSlug, PAGE_SETTINGS, publishedPages, withAboutImage, withHeroImage } from "../settings/cms";
+import { isPageSlug, PAGE_SETTINGS, publishedPages, withAboutImage, withHomePictures } from "../settings/cms";
 import { withImageUrls } from "../settings/home-offers";
 import { getSettingRecord, getSettings } from "../settings/settings.service";
 import * as store from "./storefront.service";
@@ -33,7 +33,7 @@ storefrontRouter.get("/config", async (_req, res) => {
     // Null while switched off, so unpublished offers are not readable from outside.
     homeOffers: s.homeOffers.enabled ? withImageUrls(s.homeOffers) : null,
     // Written in Admin → CMS. `pages` lists the legal pages that are published; their text is at /store/pages/:slug.
-    home: withHeroImage(s.homePage),
+    home: withHomePictures(s.homePage),
     contact: s.contact,
     pages: publishedPages(s),
     // Whether the About us page is switched on, for the links to it; the page itself is at /store/about.

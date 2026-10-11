@@ -5,8 +5,10 @@ import { Controller, useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { Button, Field, Input, Modal, Select, Textarea } from "@/components/ui";
+import { PhoneInput } from "@/components/ui/phone-input";
 import { useToast } from "@/components/ui/toast";
 import { api } from "@/lib/api";
+import { isPhoneNumber } from "@/lib/phone";
 import { applyApiErrors, FormError, GSTIN_PATTERN, orNull, PIN_PATTERN, StateOptions, useIndianStates } from "./inventory-shared";
 import type { Supplier } from "./inventory-types";
 import { gstinStateIssue } from "./inventory-warehouse-form";
@@ -16,7 +18,7 @@ const schema = z.object({
   name: z.string().trim().min(2, "At least 2 characters").max(120),
   companyName: z.string().trim().max(200),
   contactPerson: z.string().trim().max(100),
-  phone: z.string().trim().regex(/^$|^[0-9+\-\s()]{6,20}$/, "Enter a valid phone number"),
+  phone: z.string().trim().refine((v) => !v || isPhoneNumber(v), "Enter a valid phone number"),
   email: z.union([z.literal(""), z.email("Enter a valid email")]),
   gstin: z.string().trim().refine((v) => v === "" || GSTIN_PATTERN.test(v.toUpperCase()), "Enter a valid 15-character GSTIN"),
   addressLine1: z.string().trim().max(200),
@@ -141,7 +143,7 @@ export function SupplierFormModal({ supplier, onClose, onSaved }: { supplier: Su
               <Input id="sup-person" autoComplete="name" {...register("contactPerson")} />
             </Field>
             <Field label="Phone" htmlFor="sup-phone" error={errors.phone?.message}>
-              <Input id="sup-phone" type="tel" inputMode="tel" invalid={!!errors.phone} {...register("phone")} />
+              <Controller control={control} name="phone" render={({ field }) => <PhoneInput id="sup-phone" invalid={!!errors.phone} {...field} />} />
             </Field>
             <Field label="Email" htmlFor="sup-email" error={errors.email?.message}>
               <Input id="sup-email" type="email" invalid={!!errors.email} {...register("email")} />

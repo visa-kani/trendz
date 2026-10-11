@@ -2,7 +2,7 @@ import { DoodleField } from "@/components/store/doodles";
 import { Navbar } from "@/components/store/navbar";
 import { Footer } from "@/components/store/footer";
 import { StoreProviders } from "@/components/store/store-providers";
-import { contactDetails } from "@/lib/cms";
+import { contactDetails, shopLogo } from "@/lib/cms";
 import { money } from "@/lib/format";
 import { getI18n } from "@/lib/i18n/server";
 import { serverGet } from "@/lib/server-api";
@@ -24,18 +24,20 @@ export default async function StoreLayout({ children }: { children: React.ReactN
   ];
   // The About us page can be switched off in Admin → CMS; the links to it go with it.
   const about = config?.aboutPublished ?? false;
+  // Uploaded in Admin → CMS → Home page; null keeps the logo that ships with the app.
+  const logo = shopLogo(config);
   return (
     <StoreProviders locale={locale}>
       <a href="#main" className="sr-only focus:not-sr-only focus:fixed focus:left-4 focus:top-4 focus:z-[70] focus:rounded-full focus:bg-ink focus:px-4 focus:py-2 focus:text-sm focus:text-white">
         {t("Skip to content")}
       </a>
-      <Navbar categories={categories} announcements={announcements} about={about} />
+      <Navbar categories={categories} announcements={announcements} about={about} logo={logo} />
       <main id="main" className="relative overflow-x-clip">
         {/* Big line-art doodles behind every storefront page. */}
         <DoodleField />
         {children}
       </main>
-      <Footer categories={categories} contact={contactDetails(config)} pages={config?.pages ?? []} about={about} />
+      <Footer categories={categories} contact={contactDetails(config)} pages={config?.pages ?? []} about={about} logo={logo} />
     </StoreProviders>
   );
 }

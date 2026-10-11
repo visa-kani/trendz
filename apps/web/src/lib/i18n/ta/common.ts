@@ -8,6 +8,7 @@ export const common = {
   "My account": "என் கணக்கு",
   "Your account": "உங்கள் கணக்கு",
   "Sign in": "உள்நுழை",
+  Login: "உள்நுழை",
   "Sign out": "வெளியேறு",
   "Admin panel": "நிர்வாகப் பலகம்",
   Search: "தேடு",

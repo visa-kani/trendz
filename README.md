@@ -102,7 +102,9 @@ On a slow machine, skip watch mode: `npx tsx src/server.ts` and `npx tsx src/wor
 | --- | --- |
 | Super admin | `admin@trendz.local` / `ChangeMe!2026` (from `SEED_ADMIN_*` in `apps/api/.env`, **local only**) → http://localhost:3100/admin |
 | Cashier / staff | Create them in Admin → Users, with the `CASHIER`, `MANAGER`, `INVENTORY_MANAGER`, `SALES_MANAGER` or `SUPPORT` role |
-| Customer | Register at `/register`. The verification email lands in Mailpit. For phone OTP sign-in, the code is printed in the API console (console SMS adapter) |
+| Customer | Register at `/register`, then sign in with the email (or mobile number) and password. The verification email lands in Mailpit |
+
+The storefront header follows the session: a signed-in shopper sees the wishlist, the bag and a round mark with their initials (it opens My account); a visitor sees one Login button instead. On phones the wishlist link is in the menu, where the bar has no room for it. A visitor can still add to the bag (the bag opens when they do) and is asked to sign in at checkout, as before.
 
 The demo seed adds:
 
@@ -120,6 +122,7 @@ Admin → Appearance (`/admin/appearance`, needs `settings.read`; saving needs `
 - **A save is live immediately.** The root layout paints the saved theme on the server, and saving drops the cached pages, so no visitor sees the old colours.
 - **Shoppers can pick light or dark for themselves** with the sun / moon icon in the storefront header. The choice is kept in that browser's `localStorage` (key `trendz_theme`) and applies to storefront pages only: the saved mode is just what everyone sees first, and the admin and POS always use it. A small script at the top of `<body>` applies the choice before the first paint.
 - **Writing new UI**: use the tokens (`bg-white` for cards, `text-ink`, `bg-accent`, `text-on-accent`, `border-black/10` …), never fixed colours, so it follows both modes. Blocks that must stay dark in light mode (footer, bands over photos) take the `on-dark` class.
+- **Scrollbars** are thin and themed everywhere (storefront, admin, POS): 4px wide, or 4px high for sideways scrolling, in the brand colour, so they follow Appearance and light / dark mode, with rounded ends (`globals.css`; the curve is stretched along the bar, because a 4px bar is too narrow for an ordinary rounded corner to show). Firefox cannot size a scrollbar in pixels and shows its own thin one in the same colour. Carousels marked `no-scrollbar` still hide theirs.
 - **Doodles (storefront only)**: big line drawings of a hanger, a dress, a needle and thread and so on sit behind every storefront page. `DoodleField` (`apps/web/src/components/store/doodles.tsx`) is rendered once by the store layout; cards and photographs cover it, so it shows in the open parts of a page. The not-found and error pages sit outside that layout and are also shown for admin and POS addresses, so they use `StandaloneDoodles`, which adds the doodles in the browser for storefront addresses only. Where a large panel would hide it (the category and About banners, the sign-in card, the empty bag, the offers banner, the footer; the home page banner is kept plain) a single `<Doodle art="hanger" className="absolute w-64 text-gold/30 …" />` from `doodle.tsx` is placed inside the panel. They are drawn in the theme's gold and brand colour, are hidden from screen readers and never take a click. The admin and POS do not have them. To add a drawing, add it to `SHEET` (a 200 × 200 grid) and to the `DoodleArt` type.
 - **Select inputs**: every dropdown in the storefront, admin and POS is `Select` from `@/components/ui`, drawn with [react-select](https://react-select.com) (`apps/web/src/components/ui/select.tsx`). Use it like a native `<select>`: `<option>` children, `value` / `onChange={(e) => e.target.value}`, or react-hook-form's `{...register("field")}`. A hidden native `<select>` stays the real form control, so nothing else is needed. Size it with utilities on the component (`className="w-40"`, `h-8 text-xs`); lists of nine or more options can be typed into.
 
@@ -168,7 +171,7 @@ The CMS group in the admin sidebar holds what the storefront says. Every screen 
 
 | Admin screen | Edits | Storefront |
 |---|---|---|
-| Home page (`/admin/cms/home`) | The home page sections from top to bottom: banner (headline, tagline, buttons, optional picture), Shop by category, Popular picks, the "about the collection" card, the delivery / returns / payment cards, New arrivals and the closing band. Each section below the banner can be switched off | `/` |
+| Home page (`/admin/cms/home`) | The shop's logo (shown on every storefront page), then the home page sections from top to bottom: banner (headline, tagline, buttons, optional picture), Shop by category, Popular picks, the "about the collection" card, the delivery / returns / payment cards, New arrivals and the closing band. Each section below the banner can be switched off | `/` |
 | Home page offers (`/admin/home-offers`) | The offers section under the banner (next heading) | `/` |
 | About us (`/admin/cms/about`) | The About us page: the banner (small heading, heading, introduction, optional picture; the logo is shown without one) and the page text, written in a rich text editor. The page can be switched off | `/about` and its links in the header menu and the footer |
 | Contact us (`/admin/cms/contact`) | Phone, WhatsApp number, email, Instagram handle, address, opening hours, a directions link and the contact page's heading | `/contact`, the footer of every page and every WhatsApp button |
@@ -177,6 +180,7 @@ The CMS group in the admin sidebar holds what the storefront says. Every screen 
 - **Two languages.** Every text is entered in English and Tamil; a shopper sees their language, and an empty one falls back to the other. A text left empty in both is left out of the page.
 - **Legal pages start empty and unpublished.** Until a page is published, `/terms` or `/privacy` answers "not found" and the footer does not link to it. The shop writes its own wording; nothing is pre-filled.
 - **The About us page starts written and shown.** Its starting text only repeats what the store already says (the collections, weekly arrivals, WhatsApp help, the shop and home delivery); the shop's own history is for the shop to add. Switched off, `/about` answers "not found" and the header and footer links disappear.
+- **The shop's logo is uploaded on the Home page screen.** It replaces the logo that ships with the app in the header, the footer, the home page's closing band and the About banner (when that has no picture of its own); removing it brings the built-in one back. The store shows the logo on dark panels, so one drawn for a black or transparent background looks best. JPEG, PNG, WebP or AVIF, up to 2 MB, like every other picture. The admin and POS screens and the emails do not show a logo picture.
 - **It is content only.** The delivery and returns headings on the home page state the free-shipping amount and the return window, so they are built from Settings rather than typed here, and can never disagree with checkout.
 - **Contact details are not the invoice identity.** The legal name, GSTIN and address printed on invoices stay under Admin → Settings (`store`).
 - **Where it lives**: the `homePage`, `contact`, `termsPage`, `privacyPage` and `aboutPage` settings (`apps/api/src/modules/settings/cms.ts`). Their defaults are the text the storefront had before it became editable. The home page and contact details reach the storefront through `/store/config`; a legal page's text through `/store/pages/:slug` and the About us page through `/store/about`. Links are limited to paths on this site, pictures to files uploaded through the editor, and page text to an allow-list of tags (`apps/api/src/common/utils/html.ts`).
@@ -193,6 +197,16 @@ Admin → CMS → Home page offers (`/admin/home-offers`, needs `settings.read`;
 - **Where it lives**: the `homeOffers` setting (`apps/api/src/modules/settings/home-offers.ts`, whose defaults are the shop's grand-opening flyer), served to the storefront through `/store/config`. Links are limited to paths on this site and pictures to files uploaded through the editor. A save shows on the home page straight away.
 - The section itself is `apps/web/src/components/store/home-offers.tsx`. It is laid out with container queries, so the editor's preview and the home page render the same component.
 
+### Product lists (infinite scroll)
+
+Shop all, the category pages and search results load their products as the shopper scrolls (`apps/web/src/components/store/listing-products.tsx`).
+
+- **The first 24 products come with the page** (server-rendered, so they are there without JavaScript and for search engines). The next 24 are fetched from `/api/store/products` when the end of the list is about one screen away, and so on to the end.
+- **The "Load more products" link under the list is a real link** to `?page=2`, `?page=3` …: it loads the next page on click, works without JavaScript, and gives search engines a path through the whole list. A page opened that way starts at that page and offers "Show products from the start".
+- **Coming back from a product returns to the same place.** The loaded pages are kept by React Query (five minutes), so the list is as long as it was and the browser can restore the scroll position.
+- **The counter in the toolbar** ("Showing 1–48 of 120") follows what is on the page, and the end of the list says so. A page that fails to load shows "Try again" instead of retrying by itself.
+- Changing a filter or the sort order starts the list again from the top. The page size is the `limit` set in `components/store/listing.tsx`.
+
 ### Customer reviews
 
 Customers rate and review products they have received.
@@ -203,6 +217,16 @@ Customers rate and review products they have received.
 - **Moderation**: Admin → Reviews (permissions `reviews.read` and `reviews.moderate`; store manager, sales manager and support have them by default). Staff publish, reject (with an internal note) or delete; the customer is notified either way and can edit a rejected review and send it again.
 - **Two settings**, Admin → Settings → Reviews: switch reviews on or off, and whether a review needs approval before it is shown (default: it does).
 - After pulling this change run `npm run db:migrate` (new `product_reviews` table) and `npm run db:seed` (registers the two permissions and grants them to the system roles above).
+
+### Phone numbers
+
+Every phone field in the storefront, admin and billing screen is the same component, `PhoneInput` (`apps/web/src/components/ui/phone-input.tsx`), built on the `react-phone-number-input` package.
+
+- **India only.** The country is fixed: the flag and `+91` are always in the field and cannot be removed. Digits are spaced as they are typed (`+91 98765 43210`), and a pasted number may come with or without the country code.
+- **One stored form.** A field gives the form `+919876543210`, which is what the API keeps for customers and staff. A number saved earlier in another way (`98765 43210`, `0421 2241234`) is shown in the field's own form and left as it is until someone edits it.
+- **Where a mobile is required** (sign-up, sign-in by code, addresses, staff users) the number must be an Indian mobile; supplier and warehouse contacts may be landlines.
+- **Size.** Only India's numbering rules are shipped, in `apps/web/src/lib/phone-metadata.in.json` (5 KB instead of the library's 80–150 KB for every country). After upgrading the package, run `npm run phone:metadata -w apps/web` to write that file again.
+- Pages that only print a number (footer, contact, about) space it with `displayPhone` in `apps/web/src/lib/cms.ts`.
 
 ### Development adapters (no credentials needed)
 
@@ -276,6 +300,7 @@ CI (`.github/workflows/ci.yml`) runs the same suite on every push.
 | `npm run db:deploy --workspace apps/api` | Apply committed migrations only (what production runs), then close the tables to Supabase's REST API when the database is on Supabase |
 | `npm run db:seed` | Seed core data, plus demo data outside production |
 | `npm run db:studio --workspace apps/api` | Prisma Studio |
+| `npm run phone:metadata --workspace apps/web` | Write India's phone numbering rules for the phone fields again (after upgrading `react-phone-number-input`) |
 | `npm run build` | Production build of both apps |
 
 ## Repository layout
@@ -300,8 +325,9 @@ infra/   nginx, pm2, provisioning / deploy / backup scripts
 | --- | --- |
 | `Can't reach database server` | Check that the PostgreSQL service is running (Windows Services → `postgresql-x64-18`) and that `infra/postgres/local-setup.sql` has been run. Use `127.0.0.1` rather than `localhost`. |
 | Port already in use | Another project is using 3100, 4100 or the Docker ports. Change the port mapping in `docker-compose.yml` and the matching URLs in both env files. |
+| Controls look broken right after a rebuild (for example dropdowns with repeated arrows) | The tab was opened before the rebuild and is still running the old code. Reload it. Each web build has its own identifier (`deploymentId` in `apps/web/next.config.ts`, kept in `apps/web/.deployment-id`), so a tab opened on an identified build reloads itself on its next click after a newer build |
 | Images stay "Processing" | The worker is not running (`npm run dev:worker`), or MinIO is down |
-| No verification or OTP message | Email: check Mailpit at http://localhost:8125. SMS: check the API console output. |
+| No verification email or SMS | Email: check Mailpit at http://localhost:8125. SMS: check the API console output. |
 | Camera scanning does not start on another device | Browsers allow the camera only on `https://` or `localhost`. Use a tunnel with HTTPS, or a USB scanner. |
 | Prisma client out of date after pulling | `npm run db:generate --workspace apps/api` |
 | `next build` fails on Windows with `node process exited … 0xc0000142` | Turbopack could not start its CSS worker process (seen under heavy memory pressure). Build with webpack instead: `npm run build:webpack --workspace apps/web` |

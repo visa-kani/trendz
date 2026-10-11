@@ -1,4 +1,7 @@
+import { existsSync, readFileSync, writeFileSync } from "node:fs";
+import { join } from "node:path";
 import type { NextConfig } from "next";
+import { PHASE_PRODUCTION_BUILD, PHASE_PRODUCTION_SERVER } from "next/constants";
 
 /**
  * The browser always talks to the API through this origin (/api/*), so auth
@@ -27,8 +30,35 @@ const csp = [
   "frame-ancestors 'none'",
 ].join("; ");
 
-const config: NextConfig = {
+/*
+ * One identifier per production build. A browser tab that was opened before a
+ * new build still runs the old code; with the identifier, Next notices on the
+ * tab's next click that the site has changed and reloads the page, instead of
+ * drawing the new page and stylesheet with the old components (which showed as
+ * broken controls: dropdowns with repeated arrows).
+ *
+ * `next build` makes the identifier and keeps it in .deployment-id beside this
+ * file; `next start` reads it back, so the pages and the server agree. A deploy
+ * pipeline can set NEXT_DEPLOYMENT_ID for both instead.
+ */
+const DEPLOYMENT_FILE = join(process.cwd(), ".deployment-id");
+
+function deploymentId(phase: string): string | undefined {
+  if (phase === PHASE_PRODUCTION_BUILD) {
+    const id = process.env.NEXT_DEPLOYMENT_ID ?? Date.now().toString(36);
+    // The build's worker processes load this file too and must get the same answer.
+    process.env.NEXT_DEPLOYMENT_ID = id;
+    writeFileSync(DEPLOYMENT_FILE, id);
+    return id;
+  }
+  if (phase === PHASE_PRODUCTION_SERVER) return process.env.NEXT_DEPLOYMENT_ID ?? (existsSync(DEPLOYMENT_FILE) ? readFileSync(DEPLOYMENT_FILE, "utf8").trim() || undefined : undefined);
+  // Development: there are no builds to tell apart.
+  return undefined;
+}
+
+const config = (phase: string): NextConfig => ({
   reactStrictMode: true,
+  deploymentId: deploymentId(phase),
   poweredByHeader: false,
   // Product images are already optimised to WebP/AVIF sizes and served by image storage (R2 or Cloudinary) and its CDN.
   images: { unoptimized: true },
@@ -50,6 +80,6 @@ const config: NextConfig = {
       },
     ];
   },
-};
+});
 
 export default config;

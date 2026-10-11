@@ -3,11 +3,12 @@
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Suspense } from "react";
-import { useForm } from "react-hook-form";
+import { Controller, useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { AuthFallback, AuthShell, AuthSubmit, FormAlert } from "@/components/store/auth-shell";
-import { Field, Input } from "@/components/ui";
+import { Field, Input, PasswordInput } from "@/components/ui";
+import { PhoneInput } from "@/components/ui/phone-input";
 import { ApiError, errorMessage } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
 import { msg } from "@/lib/i18n";
@@ -39,6 +40,7 @@ function Register() {
   const params = useSearchParams();
   const {
     register,
+    control,
     handleSubmit,
     setError,
     formState: { errors, isSubmitting },
@@ -80,13 +82,13 @@ function Register() {
           <Input id="email" type="email" autoComplete="email" className="h-12" invalid={!!errors.email} {...register("email")} />
         </Field>
         <Field label={t("Mobile number")} error={tx(errors.phone?.message)} htmlFor="phone" className="sm:col-span-2" hint={t("Optional — for delivery updates by SMS")}>
-          <Input id="phone" type="tel" inputMode="numeric" autoComplete="tel" className="h-12" invalid={!!errors.phone} {...register("phone")} />
+          <Controller control={control} name="phone" render={({ field }) => <PhoneInput id="phone" className="h-12" invalid={!!errors.phone} {...field} />} />
         </Field>
         <Field label={t("Password")} error={tx(errors.password?.message)} htmlFor="password" required>
-          <Input id="password" type="password" autoComplete="new-password" className="h-12" invalid={!!errors.password} {...register("password")} />
+          <PasswordInput id="password" autoComplete="new-password" className="h-12" invalid={!!errors.password} {...register("password")} />
         </Field>
         <Field label={t("Confirm password")} error={tx(errors.confirm?.message)} htmlFor="confirm" required>
-          <Input id="confirm" type="password" autoComplete="new-password" className="h-12" invalid={!!errors.confirm} {...register("confirm")} />
+          <PasswordInput id="confirm" autoComplete="new-password" className="h-12" invalid={!!errors.confirm} {...register("confirm")} />
         </Field>
         <FormAlert message={errors.root?.message} className="sm:col-span-2" />
         <AuthSubmit loading={isSubmitting} className="sm:col-span-2">

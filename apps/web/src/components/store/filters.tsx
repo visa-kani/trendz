@@ -43,6 +43,9 @@ interface ListingState {
   pending: boolean;
   update: (changes: Record<string, string | null>) => void;
   clearAll: () => void;
+  /** How many products the list has put on the page so far (it loads more as the shopper scrolls); null until it says. */
+  shown: number | null;
+  reportShown: (count: number) => void;
 }
 
 const ListingContext = createContext<ListingState | null>(null);
@@ -62,6 +65,10 @@ export function ListingProvider({ query, children }: { query: string; children: 
   const pathname = usePathname();
   const [pending, startTransition] = useTransition();
   const [optimisticQuery, setOptimisticQuery] = useOptimistic(query);
+  // Remembered with the results it belongs to, so a count from the previous filters is never shown against the new ones.
+  const [progress, setProgress] = useState<{ query: string; count: number } | null>(null);
+  const reportShown = useCallback((count: number) => setProgress({ query, count }), [query]);
+  const shown = progress?.query === query ? progress.count : null;
 
   const value = useMemo<ListingState>(() => {
     const params = new URLSearchParams(optimisticQuery);
@@ -78,8 +85,8 @@ export function ListingProvider({ query, children }: { query: string; children: 
       });
     };
     const clearAll = () => update(Object.fromEntries([...params.keys()].filter((k) => !["q", "sort"].includes(k)).map((k) => [k, null])));
-    return { params, pending, update, clearAll };
-  }, [optimisticQuery, pending, pathname, router, setOptimisticQuery]);
+    return { params, pending, update, clearAll, shown, reportShown };
+  }, [optimisticQuery, pending, pathname, router, setOptimisticQuery, shown, reportShown]);
 
   return <ListingContext.Provider value={value}>{children}</ListingContext.Provider>;
 }
@@ -730,10 +737,14 @@ export function SortSelect() {
 /* Results                                                                     */
 /* -------------------------------------------------------------------------- */
 
-/** "Showing 1–24 of 120", with a spinner while new results load. */
-export function ListingCount({ from, to, total }: { from: number; to: number; total: number }) {
+/** For the product list: tells the listing how many products are on the page now. */
+export const useListingProgress = () => useListing().reportShown;
+
+/** "Showing 1–24 of 120", with a spinner while new results load. The end of the range grows as the list loads more. */
+export function ListingCount({ from, to: firstTo, total }: { from: number; to: number; total: number }) {
   const { t, tr } = useI18n();
-  const { pending } = useListing();
+  const { pending, shown } = useListing();
+  const to = shown === null ? firstTo : Math.min(total, from - 1 + shown);
   return (
     <p className="hidden items-center gap-2 text-sm text-ink/55 sm:flex" aria-live="polite">
       {pending ? (

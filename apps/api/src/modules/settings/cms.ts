@@ -27,6 +27,9 @@ const listing = (eyebrow: [string, string], title: [string, string], linkLabel: 
   z.object({ enabled: shown, eyebrow: words(40, ...eyebrow), title: words(80, ...title), linkLabel: words(40, ...linkLabel) }).prefault({});
 
 export const homePageSchema = z.object({
+  // The shop's logo, uploaded here and shown on every storefront page (header, footer) and in the
+  // closing band below; null keeps the logo that ships with the application.
+  logo: z.object({ imageKey: contentImageKey }).prefault({}),
   // The banner at the top. Always shown.
   hero: z
     .object({
@@ -105,8 +108,12 @@ export const homePageSchema = z.object({
 
 export type HomePage = z.infer<typeof homePageSchema>;
 
-/** The stored home page with the banner picture's address worked out from its storage key. */
-export const withHeroImage = (home: HomePage) => ({ ...home, hero: { ...home.hero, imageUrl: contentImageUrl(home.hero.imageKey) } });
+/** The stored home page with the addresses of its pictures (the logo and the banner picture) worked out from their storage keys. */
+export const withHomePictures = (home: HomePage) => ({
+  ...home,
+  logo: { ...home.logo, imageUrl: contentImageUrl(home.logo.imageKey) },
+  hero: { ...home.hero, imageUrl: contentImageUrl(home.hero.imageKey) },
+});
 
 // ---------------------------------------------------------------------------
 // Contact

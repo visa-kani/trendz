@@ -8,7 +8,7 @@ import { CircleAlert } from "lucide-react";
 import { AuthFallback, AuthMedallion, AuthShell, AuthSubmit, FormAlert } from "@/components/store/auth-shell";
 import { CtaLink, DrawnCheck } from "@/components/store/checkout-ui";
 import { EASE_OUT } from "@/components/store/motion";
-import { Field, Input } from "@/components/ui";
+import { Field, PasswordInput } from "@/components/ui";
 import { api, errorMessage } from "@/lib/api";
 import { useI18n } from "@/lib/i18n/client";
 
@@ -68,10 +68,10 @@ function Reset() {
         ) : (
           <m.form key="form" onSubmit={submit} className="space-y-5" exit={{ opacity: 0, y: -10 }} transition={{ duration: 0.3, ease: EASE_OUT }}>
             <Field label={t("New password")} htmlFor="password" hint={t("At least 8 characters with letters and numbers")}>
-              <Input id="password" type="password" autoComplete="new-password" className="h-12" value={password} onChange={(e) => setPassword(e.target.value)} required minLength={8} />
+              <PasswordInput id="password" autoComplete="new-password" className="h-12" value={password} onChange={(e) => setPassword(e.target.value)} required minLength={8} />
             </Field>
             <Field label={t("Confirm password")} htmlFor="confirm">
-              <Input id="confirm" type="password" autoComplete="new-password" className="h-12" value={confirm} onChange={(e) => setConfirm(e.target.value)} required />
+              <PasswordInput id="confirm" autoComplete="new-password" className="h-12" value={confirm} onChange={(e) => setConfirm(e.target.value)} required />
             </Field>
             <FormAlert message={error} />
             <AuthSubmit loading={busy}>{t("Update password")}</AuthSubmit>

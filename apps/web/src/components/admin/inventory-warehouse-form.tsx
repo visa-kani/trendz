@@ -5,8 +5,10 @@ import { Controller, useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { Button, Checkbox, Field, Input, Modal, Select } from "@/components/ui";
+import { PhoneInput } from "@/components/ui/phone-input";
 import { useToast } from "@/components/ui/toast";
 import { api } from "@/lib/api";
+import { isPhoneNumber } from "@/lib/phone";
 import { applyApiErrors, FormError, GSTIN_PATTERN, orNull, PIN_PATTERN, StateOptions, useIndianStates } from "./inventory-shared";
 import type { IndianState, WarehouseBase, WarehouseLocation } from "./inventory-types";
 import { RichTextEditor } from "@/components/ui/rich-text-editor";
@@ -36,7 +38,7 @@ const warehouseSchema = z.object({
   state: z.string().min(1, "Select a state"),
   postalCode: z.string().trim().regex(PIN_PATTERN, "Enter a valid 6-digit PIN code"),
   contactName: z.string().trim().max(100),
-  contactPhone: z.string().trim().regex(/^$|^[0-9+\-\s()]{6,20}$/, "Enter a valid phone number"),
+  contactPhone: z.string().trim().refine((v) => !v || isPhoneNumber(v), "Enter a valid phone number"),
   contactEmail: optionalEmail,
   gstin: optionalGstin,
   status: z.enum(["ACTIVE", "INACTIVE"]),
@@ -175,7 +177,7 @@ export function WarehouseFormModal({ warehouse, onClose, onSaved }: { warehouse:
               <Input id="wh-cname" {...register("contactName")} />
             </Field>
             <Field label="Phone" htmlFor="wh-cphone" error={errors.contactPhone?.message}>
-              <Input id="wh-cphone" type="tel" inputMode="tel" invalid={!!errors.contactPhone} {...register("contactPhone")} />
+              <Controller control={control} name="contactPhone" render={({ field }) => <PhoneInput id="wh-cphone" invalid={!!errors.contactPhone} {...field} />} />
             </Field>
             <Field label="Email" htmlFor="wh-cemail" error={errors.contactEmail?.message}>
               <Input id="wh-cemail" type="email" invalid={!!errors.contactEmail} {...register("contactEmail")} />

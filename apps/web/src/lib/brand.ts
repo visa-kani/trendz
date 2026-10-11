@@ -18,6 +18,8 @@ export const BRAND = {
   instagram: "trendz_womenswear_",
   instagramHref: "https://www.instagram.com/trendz_womenswear_/",
   address: ["Shop No. 724, Uthukuli Road", "Kunnathur – 638 103"],
+  // The logo that ships with the app (the full logo, and a tighter crop for the header). Both give way to
+  // the logo uploaded in Admin → CMS → Home page, when there is one (see shopLogo in lib/cms.ts).
   logo: "/brand/trendz-logo.webp",
   emblem: "/brand/trendz-emblem.webp",
 } as const;

@@ -4,6 +4,7 @@ import { useState } from "react";
 import { ChevronDown, TicketPercent, UserRound, X } from "lucide-react";
 import { clsx } from "clsx";
 import { Button, Field, Input, Modal, MoneyInput } from "@/components/ui";
+import { PhoneInput } from "@/components/ui/phone-input";
 import { errorMessage } from "@/lib/api";
 import { money, percent } from "@/lib/format";
 import type { PosCart, PosConfig } from "./types";
@@ -48,7 +49,7 @@ export function CustomerSection({ cart, onPatch, disabled }: { cart: PosCart; on
           }}
         >
           <Input aria-label="Customer name" placeholder="Name" value={name} onChange={(e) => setName(e.target.value)} maxLength={100} disabled={disabled} />
-          <Input aria-label="Customer mobile" placeholder="Mobile (10 digits)" inputMode="tel" value={phone} onChange={(e) => setPhone(e.target.value)} maxLength={20} disabled={disabled} />
+          <PhoneInput aria-label="Customer mobile" value={phone} onChange={setPhone} disabled={disabled} />
           <Input aria-label="Customer email" placeholder="Email for the e-invoice (optional)" type="email" value={email} onChange={(e) => setEmail(e.target.value)} disabled={disabled} />
           {error && <p className="text-xs text-danger">{error}</p>}
           <div className="flex items-center justify-between gap-2">

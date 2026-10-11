@@ -1,3 +1,4 @@
+import { createHash } from "node:crypto";
 import { Prisma } from "@prisma/client";
 import { prisma, type Db } from "../../database/prisma";
 import { cached, invalidate } from "../../database/redis";
@@ -5,7 +6,13 @@ import { audit, type AuditContext } from "../audit/audit.service";
 import { checkAttachedImages } from "../media/upload-limit";
 import { settingSchemas, SETTING_KEYS, type SettingKey, type Settings } from "./settings.schemas";
 
-const CACHE_KEY = "settings:all";
+// The cached copy is only good for the version of the settings that wrote it: a release that adds a
+// field would otherwise read a copy without it (and without its default) until the cache expired. The
+// key therefore carries a fingerprint of every setting's defaults, which changes whenever one is added.
+export const SETTINGS_CACHE_KEY = `settings:all:${createHash("sha1")
+  .update(JSON.stringify(SETTING_KEYS.map((key) => settingSchemas[key].parse({}))))
+  .digest("hex")
+  .slice(0, 10)}`;
 const CACHE_TTL_SECONDS = 300;
 
 async function loadAll(db: Db = prisma): Promise<Settings> {
@@ -21,11 +28,11 @@ async function loadAll(db: Db = prisma): Promise<Settings> {
 }
 
 export async function getSettings(): Promise<Settings> {
-  const settings = await cached(CACHE_KEY, CACHE_TTL_SECONDS, () => loadAll());
+  const settings = await cached(SETTINGS_CACHE_KEY, CACHE_TTL_SECONDS, () => loadAll());
   // Right after a release that adds a settings group, the cached copy (written by the previous
   // version) does not have it yet. Read from the database instead of handing out `undefined`.
   if (SETTING_KEYS.every((key) => settings[key] !== undefined)) return settings;
-  await invalidate(CACHE_KEY);
+  await invalidate(SETTINGS_CACHE_KEY);
   return loadAll();
 }
 
@@ -58,7 +65,7 @@ export async function getSettingFresh<K extends SettingKey>(db: Db, key: K): Pro
 function pictureKeys<K extends SettingKey>(key: K, value: Settings[K]): string[] {
   const keys =
     key === "homePage"
-      ? [(value as Settings["homePage"]).hero.imageKey]
+      ? [(value as Settings["homePage"]).logo.imageKey, (value as Settings["homePage"]).hero.imageKey]
       : key === "homeOffers"
         ? (value as Settings["homeOffers"]).cards.map((card) => card.imageKey)
         : key === "aboutPage"
@@ -85,6 +92,6 @@ export async function updateSetting<K extends SettingKey>(
     });
     await audit(tx, ctx, { action: "settings.update", entityType: "setting", entityId: key, oldValue: before?.value, newValue: parsed });
   });
-  await invalidate(CACHE_KEY);
+  await invalidate(SETTINGS_CACHE_KEY);
   return parsed;
 }

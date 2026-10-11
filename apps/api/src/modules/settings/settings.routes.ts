@@ -4,7 +4,7 @@ import { authenticate, requireStaff } from "../../common/middleware/authenticate
 import { requirePermission } from "../../common/guards/permissions";
 import { ok } from "../../common/utils/http";
 import { auditContext } from "../audit/audit.service";
-import { withAboutImage, withHeroImage } from "./cms";
+import { withAboutImage, withHomePictures } from "./cms";
 import { withImageUrls } from "./home-offers";
 import { SETTING_KEYS, type SettingKey, type Settings } from "./settings.schemas";
 import { getSettingRecord, getSettings, updateSetting } from "./settings.service";
@@ -21,7 +21,7 @@ const present = (key: SettingKey, value: unknown) =>
   key === "homeOffers"
     ? withImageUrls(value as Settings["homeOffers"])
     : key === "homePage"
-      ? withHeroImage(value as Settings["homePage"])
+      ? withHomePictures(value as Settings["homePage"])
       : key === "aboutPage"
         ? withAboutImage(value as Settings["aboutPage"])
         : value;

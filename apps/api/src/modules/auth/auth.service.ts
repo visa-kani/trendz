@@ -140,37 +140,38 @@ export async function login(identifierRaw: string, password: string, meta: Clien
 }
 
 // ---------------------------------------------------------------------------
-// OTP (mobile)
+// OTP (mobile): a code by SMS that confirms the mobile number of a signed-in
+// account. It does not sign anyone in; signing in is by password.
 // ---------------------------------------------------------------------------
 
-const otpHash = (phone: string, purpose: string, code: string) => hmacSha256Hex(env.OTP_SECRET, `${phone}:${purpose}:${code}`);
+const OTP_PURPOSE = "VERIFY_PHONE";
+const otpHash = (phone: string, code: string) => hmacSha256Hex(env.OTP_SECRET, `${phone}:${OTP_PURPOSE}:${code}`);
 
-export async function requestOtp(phone: string, purpose: "LOGIN" | "VERIFY_PHONE", requesterId: string | null) {
-  if (purpose === "VERIFY_PHONE" && !requesterId) throw unauthenticated();
-  await otpCooldown.consume(`${phone}:${purpose}`);
+export async function requestOtp(phone: string) {
+  await otpCooldown.consume(`${phone}:${OTP_PURPOSE}`);
   await otpHourly.consume(phone);
 
   const code = randomDigits(6);
   await prisma.$transaction([
     // Only the newest code is valid.
-    prisma.otpCode.updateMany({ where: { identifier: phone, purpose, consumedAt: null }, data: { consumedAt: new Date() } }),
+    prisma.otpCode.updateMany({ where: { identifier: phone, purpose: OTP_PURPOSE, consumedAt: null }, data: { consumedAt: new Date() } }),
     prisma.otpCode.create({
-      data: { identifier: phone, purpose, codeHash: otpHash(phone, purpose, code), maxAttempts: OTP_MAX_ATTEMPTS, expiresAt: new Date(Date.now() + OTP_TTL_MINUTES * 60_000) },
+      data: { identifier: phone, purpose: OTP_PURPOSE, codeHash: otpHash(phone, code), maxAttempts: OTP_MAX_ATTEMPTS, expiresAt: new Date(Date.now() + OTP_TTL_MINUTES * 60_000) },
     }),
   ]);
   await sendTransientSms("OTP", phone, { otp: code, minutes: String(OTP_TTL_MINUTES) });
   return { sent: true, expiresInSeconds: OTP_TTL_MINUTES * 60 };
 }
 
-async function consumeOtp(phone: string, purpose: "LOGIN" | "VERIFY_PHONE", code: string) {
+async function consumeOtp(phone: string, code: string) {
   const otp = await prisma.otpCode.findFirst({
-    where: { identifier: phone, purpose, consumedAt: null, expiresAt: { gt: new Date() } },
+    where: { identifier: phone, purpose: OTP_PURPOSE, consumedAt: null, expiresAt: { gt: new Date() } },
     orderBy: { createdAt: "desc" },
   });
   if (!otp) throw badRequest("The code has expired. Request a new one.", "OTP_EXPIRED");
   if (otp.attempts >= otp.maxAttempts) throw badRequest("Too many incorrect attempts. Request a new code.", "OTP_EXPIRED");
 
-  if (!safeEqual(otp.codeHash, otpHash(phone, purpose, code))) {
+  if (!safeEqual(otp.codeHash, otpHash(phone, code))) {
     await prisma.otpCode.update({ where: { id: otp.id }, data: { attempts: { increment: 1 } } });
     throw badRequest("Incorrect code", "OTP_INVALID");
   }
@@ -179,37 +180,8 @@ async function consumeOtp(phone: string, purpose: "LOGIN" | "VERIFY_PHONE", code
   if (consumed.count === 0) throw badRequest("The code has already been used. Request a new one.", "OTP_EXPIRED");
 }
 
-export async function verifyOtpLogin(phone: string, code: string, meta: ClientMeta): Promise<AuthResult> {
-  await consumeOtp(phone, "LOGIN", code);
-  const roleId = await customerRoleId();
-
-  const tokens = await withTransaction(async (tx) => {
-    let user = await tx.user.findUnique({ where: { phone }, select: { id: true, status: true, phoneVerifiedAt: true, isStaff: true } });
-    if (!user) {
-      // New mobile number: create a customer account (phone verified by the OTP).
-      user = await tx.user.create({
-        data: { phone, phoneVerifiedAt: new Date(), profile: { create: {} }, roles: { create: { roleId } } },
-        select: { id: true, status: true, phoneVerifiedAt: true, isStaff: true },
-      });
-    }
-    if (user.status !== "ACTIVE") throw forbidden("This account is disabled. Contact support.", "ACCOUNT_DISABLED");
-    await tx.user.update({
-      where: { id: user.id },
-      data: { lastLoginAt: new Date(), phoneVerifiedAt: user.phoneVerifiedAt ?? new Date(), failedLoginCount: 0, lockedUntil: null },
-    });
-    if (user.isStaff) {
-      await audit(tx, { userId: user.id, ipAddress: meta.ipAddress, userAgent: meta.userAgent }, { action: "auth.login_otp", entityType: "user", entityId: user.id });
-    }
-    return createSession(tx, user.id, meta);
-  });
-  const userId = tokens.userId;
-  await invalidatePrincipal(userId);
-  await recordAttempt(phone, userId, "OTP", true, null, meta);
-  return { ...tokens, user: await publicUser(userId, tokens.sessionId) };
-}
-
 export async function verifyPhoneForUser(userId: string, phone: string, code: string) {
-  await consumeOtp(phone, "VERIFY_PHONE", code);
+  await consumeOtp(phone, code);
   const owner = await prisma.user.findUnique({ where: { phone }, select: { id: true } });
   if (owner && owner.id !== userId) throw conflict("This mobile number is already linked to another account.", "PHONE_TAKEN");
   await prisma.user.update({ where: { id: userId }, data: { phone, phoneVerifiedAt: new Date() } });

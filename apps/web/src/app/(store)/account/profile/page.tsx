@@ -4,10 +4,11 @@ import { useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Loader2, LogOut, Monitor, ShieldCheck } from "lucide-react";
 import { AccountHeader, DetailSkeleton, Panel, StaggerList, StaggerRow } from "@/components/store/account-ui";
-import { Badge, Checkbox, Field, Input } from "@/components/ui";
+import { Badge, Checkbox, Field, Input, PasswordInput } from "@/components/ui";
 import { useToast } from "@/components/ui/toast";
 import { api, errorMessage } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
+import { displayPhone } from "@/lib/cms";
 import { dateTime } from "@/lib/format";
 import { useI18n } from "@/lib/i18n/client";
 
@@ -102,7 +103,7 @@ export default function ProfilePage() {
           </Field>
           <Field label={t("Mobile")}>
             <div className="relative">
-              <Input value={p.phone ?? "—"} disabled className="h-12 pr-24" />
+              <Input value={p.phone ? displayPhone(p.phone) : "—"} disabled className="h-12 pr-24" />
               {p.phone && (
                 <Badge tone={p.phoneVerifiedAt ? "success" : "warning"} className="absolute right-3 top-1/2 -translate-y-1/2">
                   {p.phoneVerifiedAt ? t("Verified") : t("Unverified")}
@@ -132,11 +133,11 @@ export default function ProfilePage() {
         >
           {p.hasPassword && (
             <Field label={t("Current password")} htmlFor="cur">
-              <Input id="cur" type="password" autoComplete="current-password" className="h-12" value={pw.currentPassword} onChange={(e) => setPw({ ...pw, currentPassword: e.target.value })} required />
+              <PasswordInput id="cur" autoComplete="current-password" className="h-12" value={pw.currentPassword} onChange={(e) => setPw({ ...pw, currentPassword: e.target.value })} required />
             </Field>
           )}
           <Field label={t("New password")} htmlFor="new" hint={t("At least 8 characters with letters and numbers")}>
-            <Input id="new" type="password" autoComplete="new-password" className="h-12" value={pw.newPassword} onChange={(e) => setPw({ ...pw, newPassword: e.target.value })} required minLength={8} />
+            <PasswordInput id="new" autoComplete="new-password" className="h-12" value={pw.newPassword} onChange={(e) => setPw({ ...pw, newPassword: e.target.value })} required minLength={8} />
           </Field>
           <div className="sm:col-span-2">
             <button type="submit" disabled={change.isPending} className={outlineBtn}>

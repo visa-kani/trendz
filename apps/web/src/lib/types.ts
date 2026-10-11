@@ -134,6 +134,8 @@ export interface HomeListing {
 
 /** The home page sections other than the offers (Admin → CMS → Home page). Empty text is left out on the page. */
 export interface HomePageContent {
+  /** The shop's logo, uploaded on the home page editor. Null shows the logo that ships with the app. */
+  logo: { imageKey: string | null; imageUrl: string | null };
   hero: {
     titleTop: LocalizedText;
     titleBottom: LocalizedText;

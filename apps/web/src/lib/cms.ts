@@ -19,6 +19,8 @@ export const lines = (text: string) =>
     .map((line) => line.trim())
     .filter(Boolean);
 
+/** A stored Indian mobile number as people read it: "+919360734597" → "+91 93607 34597". Anything else is shown as it was typed. */
+export const displayPhone = (phone: string) => phone.replace(/^\+91(\d{5})(\d{5})$/, "+91 $1 $2");
 export const phoneHref = (phone: string) => `tel:${phone.replace(/[^\d+]/g, "")}`;
 export const whatsappHref = (number: string) => `https://wa.me/${number.replace(/\D/g, "")}`;
 export const instagramHref = (handle: string) => `https://www.instagram.com/${handle}/`;
@@ -33,6 +35,7 @@ const bilingual = (en: Message): LocalizedText => ({ en, ta: ta[en] });
  * same either way.
  */
 const DEFAULT_HOME_PAGE: HomePageContent = {
+  logo: { imageKey: null, imageUrl: null },
   hero: {
     titleTop: bilingual("Luxury in"),
     titleBottom: bilingual("Every Stitch."),
@@ -84,4 +87,9 @@ const DEFAULT_CONTACT: ContactDetails = {
 };
 
 export const homeContent = (config: StoreConfig | null): HomePageContent => config?.home ?? DEFAULT_HOME_PAGE;
+/**
+ * The logo uploaded in Admin → CMS → Home page, or null to show the one that ships with the app.
+ * A store config cached before the logo could be uploaded has no `logo` at all, hence the careful reading.
+ */
+export const shopLogo = (config: StoreConfig | null): string | null => (config?.home as Partial<HomePageContent> | undefined)?.logo?.imageUrl ?? null;
 export const contactDetails = (config: StoreConfig | null): ContactDetails => config?.contact ?? DEFAULT_CONTACT;

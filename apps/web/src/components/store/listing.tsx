@@ -1,10 +1,11 @@
 import Link from "next/link";
 import { clsx } from "clsx";
-import { ArrowLeft, ArrowRight, ArrowUpRight } from "lucide-react";
+import { ArrowUpRight } from "lucide-react";
 import { Doodle } from "./doodle";
 import { ActiveFilters, FilterSidebar, ListingCount, ListingEmpty, ListingProvider, ListingResults, MobileFilters, SortSelect, type Facets } from "./filters";
+import { ListingProducts } from "./listing-products";
 import { Reveal, Stagger, StaggerItem } from "./motion";
-import { ProductGrid, ProductImage } from "./product-card";
+import { ProductImage } from "./product-card";
 import { Breadcrumbs, type Crumb } from "./shop-breadcrumbs";
 import { MaskedHeading } from "./shop-heading";
 import { getI18n } from "@/lib/i18n/server";
@@ -29,78 +30,11 @@ function apiQuery(sp: SearchParams, category?: string) {
   return q;
 }
 
-/** The page's own query string (plain string params), used for filter state and pagination links. */
+/** The page's own query string (plain string params), used for filter state and the links to further pages. */
 function pageParams(sp: SearchParams) {
   const p = new URLSearchParams();
   for (const [k, v] of Object.entries(sp)) if (typeof v === "string" && v) p.set(k, v);
   return p;
-}
-
-/** Page numbers around the current one, with gaps: 1 … 4 5 6 … 12. */
-function pageWindow(page: number, total: number): (number | "gap")[] {
-  const pages = [...new Set([1, total, page - 1, page, page + 1])].filter((n) => n >= 1 && n <= total).sort((a, b) => a - b);
-  const out: (number | "gap")[] = [];
-  let prev = 0;
-  for (const n of pages) {
-    if (n - prev === 2) out.push(prev + 1);
-    else if (n - prev > 2) out.push("gap");
-    out.push(n);
-    prev = n;
-  }
-  return out;
-}
-
-const ROUND_LINK =
-  "grid h-11 w-11 place-items-center rounded-full border border-black/10 bg-white transition duration-300 hover:border-ink hover:bg-ink hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ink focus-visible:ring-offset-2 focus-visible:ring-offset-offwhite";
-
-async function Pagination({ page, totalPages, href }: { page: number; totalPages: number; href: (page: number) => string }) {
-  const { t, tr } = await getI18n();
-  return (
-    <nav aria-label={t("Pages")} className="mt-16 flex items-center justify-center gap-3">
-      {page > 1 ? (
-        <Link href={href(page - 1)} rel="prev" aria-label={t("Previous page")} className={ROUND_LINK}>
-          <ArrowLeft size={16} />
-        </Link>
-      ) : (
-        <span aria-hidden="true" className={clsx(ROUND_LINK, "pointer-events-none opacity-35")}>
-          <ArrowLeft size={16} />
-        </span>
-      )}
-      <ol className="hidden items-center gap-1 rounded-full bg-white p-1 shadow-neu sm:flex">
-        {pageWindow(page, totalPages).map((n, i) =>
-          n === "gap" ? (
-            <li key={`gap-${i}`} aria-hidden="true" className="px-1.5 text-sm text-ink/30">
-              …
-            </li>
-          ) : (
-            <li key={n}>
-              <Link
-                href={href(n)}
-                aria-label={t("Page {page}", { page: n })}
-                aria-current={n === page ? "page" : undefined}
-                className={clsx(
-                  "grid h-9 min-w-9 place-items-center rounded-full px-2.5 text-sm font-semibold tabular-nums transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ink",
-                  n === page ? "bg-ink text-white" : "text-ink/55 hover:bg-black/5 hover:text-ink",
-                )}
-              >
-                {n}
-              </Link>
-            </li>
-          ),
-        )}
-      </ol>
-      <span className="px-2 text-sm tabular-nums text-ink/55 sm:hidden">{tr("Page {page} of {pages}", { page: <strong className="text-ink">{page}</strong>, pages: totalPages })}</span>
-      {page < totalPages ? (
-        <Link href={href(page + 1)} rel="next" aria-label={t("Next page")} className={ROUND_LINK}>
-          <ArrowRight size={16} />
-        </Link>
-      ) : (
-        <span aria-hidden="true" className={clsx(ROUND_LINK, "pointer-events-none opacity-35")}>
-          <ArrowRight size={16} />
-        </span>
-      )}
-    </nav>
-  );
 }
 
 export async function Listing({
@@ -136,11 +70,11 @@ export async function Listing({
   ]);
 
   const current = pageParams(searchParams);
-  const pageHref = (page: number) => {
-    const p = new URLSearchParams(current);
-    p.set("page", String(page));
-    return `?${p.toString()}`;
-  };
+  // The list loads further pages itself, so it gets both queries without a page number.
+  const listQuery = new URLSearchParams(query);
+  listQuery.delete("page");
+  const pageQuery = new URLSearchParams(current);
+  pageQuery.delete("page");
   const from = meta.total ? (meta.page - 1) * meta.limit + 1 : 0;
   const to = Math.min(meta.page * meta.limit, meta.total);
 
@@ -250,10 +184,13 @@ export async function Listing({
               {/* Keyed by the query: each new result set fades in (CSS) and gets fresh scroll reveals. */}
               <div key={current.toString()} className="animate-fade">
                 {/* The first row loads at once where it opens the page; under a category banner it is below the fold, so it waits like the rest. */}
-                {products.length ? <ProductGrid products={products} priorityCount={picture !== undefined ? 0 : 3} columns={3} /> : <ListingEmpty />}
+                {products.length ? (
+                  <ListingProducts apiQuery={listQuery.toString()} pageQuery={pageQuery.toString()} first={{ data: products, meta }} priorityCount={picture !== undefined ? 0 : 3} />
+                ) : (
+                  <ListingEmpty />
+                )}
               </div>
             </ListingResults>
-            {meta.totalPages > 1 && <Pagination page={meta.page} totalPages={meta.totalPages} href={pageHref} />}
           </div>
         </div>
       </div>

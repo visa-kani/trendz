@@ -3,12 +3,12 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { cache } from "react";
 import { ArrowUpRight, MapPin, MessageCircle, Phone } from "lucide-react";
+import { BrandLogo } from "@/components/store/brand-logo";
 import { Doodle } from "@/components/store/doodle";
 import { Breadcrumbs } from "@/components/store/shop-breadcrumbs";
 import { MaskedHeading } from "@/components/store/shop-heading";
 import { RichText } from "@/components/ui/rich-text";
-import { BRAND } from "@/lib/brand";
-import { contactDetails, lines, localize, phoneHref, whatsappHref } from "@/lib/cms";
+import { contactDetails, displayPhone, lines, localize, phoneHref, shopLogo, whatsappHref } from "@/lib/cms";
 import { getI18n } from "@/lib/i18n/server";
 import { NotFoundError, serverGet, STORE_CONFIG_TAG } from "@/lib/server-api";
 import type { CategoryNode, PublishedAbout, StoreConfig } from "@/lib/types";
@@ -63,7 +63,7 @@ export default async function AboutPage() {
           </div>
         ) : (
           <div className="on-dark order-first grid place-items-center bg-night p-6 md:order-none md:p-10">
-            <img src={BRAND.logo} alt={`${BRAND.fullName} — ${BRAND.tagline}`} width={1030} height={724} className="w-full max-w-xs mix-blend-screen lg:max-w-sm" />
+            <BrandLogo src={shopLogo(config)} className="max-h-72 w-full max-w-xs lg:max-w-sm" />
           </div>
         )}
       </header>
@@ -116,7 +116,7 @@ export default async function AboutPage() {
                 <li>
                   <a href={whatsappHref(contact.whatsapp)} target="_blank" rel="noopener noreferrer" className="flex items-center gap-3">
                     <MessageCircle size={16} className="shrink-0 text-accent" aria-hidden="true" />
-                    <span className="link-draw">WhatsApp {contact.whatsapp}</span>
+                    <span className="link-draw">WhatsApp {displayPhone(contact.whatsapp)}</span>
                   </a>
                 </li>
               )}
@@ -124,7 +124,7 @@ export default async function AboutPage() {
                 <li>
                   <a href={phoneHref(contact.phone)} className="flex items-center gap-3">
                     <Phone size={16} className="shrink-0 text-accent" aria-hidden="true" />
-                    <span className="link-draw">{t("Call {phone}", { phone: contact.phone })}</span>
+                    <span className="link-draw">{t("Call {phone}", { phone: displayPhone(contact.phone) })}</span>
                   </a>
                 </li>
               )}

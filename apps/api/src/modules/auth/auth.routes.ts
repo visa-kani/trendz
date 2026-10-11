@@ -68,20 +68,18 @@ authRouter.post("/login", limits.login, async (req, res) => {
   await respondWithSession(req, res, result, { user: result.user });
 });
 
+// Codes by SMS confirm the mobile number of the account that is signed in. Nobody signs in with one.
 authRouter.post("/otp", limits.otp, async (req, res) => {
-  const { phone, purpose } = otpRequestSchema.parse(req.body);
-  ok(res, await auth.requestOtp(phone, purpose, req.auth?.userId ?? null));
+  const { phone } = otpRequestSchema.parse(req.body);
+  if (!req.auth) throw unauthenticated();
+  ok(res, await auth.requestOtp(phone));
 });
 
 authRouter.post("/otp/verify", limits.otpVerify, async (req, res) => {
-  const { phone, code, purpose } = otpVerifySchema.parse(req.body);
-  if (purpose === "VERIFY_PHONE") {
-    if (!req.auth) throw unauthenticated();
-    await auth.verifyPhoneForUser(req.auth.userId, phone, code);
-    return ok(res, { user: await auth.publicUser(req.auth.userId, req.auth.sessionId) });
-  }
-  const result = await auth.verifyOtpLogin(phone, code, meta(req));
-  await respondWithSession(req, res, result, { user: result.user });
+  const { phone, code } = otpVerifySchema.parse(req.body);
+  if (!req.auth) throw unauthenticated();
+  await auth.verifyPhoneForUser(req.auth.userId, phone, code);
+  ok(res, { user: await auth.publicUser(req.auth.userId, req.auth.sessionId) });
 });
 
 authRouter.post("/refresh", limits.refresh, async (req, res) => {

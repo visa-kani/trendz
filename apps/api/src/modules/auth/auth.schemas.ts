@@ -36,15 +36,19 @@ export const loginSchema = z.object({
   password: z.string().min(1).max(128),
 });
 
+// A code by SMS only confirms the mobile number of a signed-in account. Signing in is by
+// password: the LOGIN purpose these two requests once took is refused.
+const otpPurpose = z.literal("VERIFY_PHONE", "Signing in with a code is not available. Sign in with your password.").default("VERIFY_PHONE");
+
 export const otpRequestSchema = z.object({
   phone: phoneSchema,
-  purpose: z.enum(["LOGIN", "VERIFY_PHONE"]).default("LOGIN"),
+  purpose: otpPurpose,
 });
 
 export const otpVerifySchema = z.object({
   phone: phoneSchema,
   code: z.string().trim().regex(/^\d{6}$/, "Enter the 6-digit code"),
-  purpose: z.enum(["LOGIN", "VERIFY_PHONE"]).default("LOGIN"),
+  purpose: otpPurpose,
 });
 
 export const tokenSchema = z.object({ token: z.string().min(20).max(200) });

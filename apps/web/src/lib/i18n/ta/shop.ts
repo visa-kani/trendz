@@ -30,11 +30,6 @@ export const shop = {
   "Search: {query}": "தேடல்: {query}",
   "All {title}": "அனைத்து {title}",
   "Product filters": "பொருள் வடிகட்டிகள்",
-  Pages: "பக்கங்கள்",
-  "Previous page": "முந்தைய பக்கம்",
-  "Next page": "அடுத்த பக்கம்",
-  "Page {page}": "பக்கம் {page}",
-  "Page {page} of {pages}": "பக்கம் {page} / {pages}",
 
   // Sort menu
   Sort: "வரிசை",
@@ -81,6 +76,11 @@ export const shop = {
   "{n} products found": "{n} பொருட்கள் கிடைத்தன",
   "No products": "பொருட்கள் இல்லை",
   "Showing {range} of {total}": "{range} / {total} பொருட்கள்",
+  "Loading more products": "மேலும் பொருட்கள் ஏற்றப்படுகின்றன",
+  "Load more products": "மேலும் பொருட்களைக் காட்டு",
+  "Could not load more products.": "மேலும் பொருட்களை ஏற்ற முடியவில்லை.",
+  "You have seen all {count} products.": "அனைத்து {count} பொருட்களையும் பார்த்துவிட்டீர்கள்.",
+  "Show products from the start": "தொடக்கத்திலிருந்து பொருட்களைக் காட்டு",
   "No products match": "பொருத்தமான பொருட்கள் இல்லை",
   "Try removing a filter or searching for something else.": "ஒரு வடிகட்டியை அகற்றிப் பாருங்கள் அல்லது வேறு ஏதாவது தேடுங்கள்.",
 

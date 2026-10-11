@@ -14,5 +14,7 @@ coverage/
 
 # Generated
 apps/web/next-env.d.ts
+# Written by each web build (apps/web/next.config.ts)
+.deployment-id
 *.tsbuildinfo
 storage/

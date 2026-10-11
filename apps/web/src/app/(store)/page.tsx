@@ -1,12 +1,12 @@
 import Link from "next/link";
 import { clsx } from "clsx";
 import { ArrowUpRight, RotateCcw, ShieldCheck, Sparkles, Truck } from "lucide-react";
+import { BrandLogo } from "@/components/store/brand-logo";
 import { HomeOffers, offersHiddenReason } from "@/components/store/home-offers";
 import { Magnetic, Parallax, Reveal, SplitWords, Stagger, StaggerItem } from "@/components/store/motion";
 import { ProductGrid, ProductImage } from "@/components/store/product-card";
 import { ProductRail } from "@/components/store/product-rail";
-import { BRAND } from "@/lib/brand";
-import { contactDetails, homeContent, localize, whatsappHref } from "@/lib/cms";
+import { contactDetails, homeContent, localize, shopLogo, whatsappHref } from "@/lib/cms";
 import { getI18n } from "@/lib/i18n/server";
 import { serverGet, serverPage } from "@/lib/server-api";
 import { money } from "@/lib/format";
@@ -281,7 +281,7 @@ export default async function HomePage() {
             <div className="on-dark gold-frame relative overflow-hidden rounded-[2.5rem] bg-ink px-8 py-14 text-center text-white md:px-16 md:py-20">
               <div aria-hidden="true" className="absolute -left-24 -top-24 h-80 w-80 animate-float rounded-full bg-accent/35 blur-[90px]" />
               <div aria-hidden="true" className="absolute -bottom-28 -right-20 h-80 w-80 animate-float rounded-full bg-gold/20 blur-[90px] [animation-delay:-3s]" />
-              <img src={BRAND.logo} alt={`${BRAND.fullName} — ${BRAND.tagline}`} width={1030} height={724} loading="lazy" className="relative mx-auto w-full max-w-sm mix-blend-screen" />
+              <BrandLogo src={shopLogo(config)} lazy className="relative mx-auto max-h-72 w-full max-w-sm" />
               <p className="ornament relative mt-2">❖</p>
               {say(home.closing.title) && <h2 className="relative mx-auto mt-6 max-w-2xl text-[clamp(2rem,5vw,3.75rem)] leading-[1.05]">{say(home.closing.title)}</h2>}
               <div className="relative mt-9 flex flex-wrap justify-center gap-4">

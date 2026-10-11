@@ -118,31 +118,49 @@ describe("sessions", () => {
   });
 });
 
-describe("OTP login", () => {
-  it("creates an account for a new number and never stores the code in plaintext", async () => {
+describe("codes by SMS", () => {
+  it("do not sign anyone in", async () => {
     const c = await client();
+    // Without a session there is no code to ask for or to enter, and the old LOGIN purpose is refused outright.
+    await c.post("/api/auth/otp").send({ phone: "9123456789" }).expect(401);
+    await c.post("/api/auth/otp/verify").send({ phone: "9123456789", code: "123456" }).expect(401);
+    const refused = await c.post("/api/auth/otp").send({ phone: "9123456789", purpose: "LOGIN" }).expect(400);
+    expect(JSON.stringify(refused.body)).toContain("Signing in with a code is not available");
+    await c.post("/api/auth/otp/verify").send({ phone: "9123456789", code: "123456", purpose: "LOGIN" }).expect(400);
+
+    expect(await prisma.otpCode.count()).toBe(0);
+    expect(await prisma.user.count({ where: { phone: "+919123456789" } })).toBe(0);
+    await c.get("/api/auth/me").expect(401);
+  });
+
+  it("confirm the mobile number of a signed-in account, and are never stored in plaintext", async () => {
+    const user = await createUser({ password: "Secret123" });
+    const c = await client();
+    await c.post("/api/auth/login").send({ identifier: user.email, password: "Secret123" }).expect(200);
     await c.post("/api/auth/otp").send({ phone: "9123456789" }).expect(200);
 
     const job = await latestJob("notifications", "transient");
     const code = job!.data.variables.otp as string;
     expect(job!.data.to).toBe("+919123456789");
     const stored = await prisma.otpCode.findFirstOrThrow({ where: { identifier: "+919123456789" } });
+    expect(stored.purpose).toBe("VERIFY_PHONE");
     expect(stored.codeHash).not.toContain(code);
 
     const wrong = await c.post("/api/auth/otp/verify").send({ phone: "9123456789", code: code === "000000" ? "111111" : "000000" }).expect(400);
     expect(wrong.body.code).toBe("OTP_INVALID");
 
     const ok = await c.post("/api/auth/otp/verify").send({ phone: "+91 91234 56789", code }).expect(200);
-    expect(ok.body.data.user).toMatchObject({ phone: "+919123456789", phoneVerified: true, roles: ["CUSTOMER"] });
+    expect(ok.body.data.user).toMatchObject({ id: user.id, phone: "+919123456789", phoneVerified: true });
 
     // Codes are single use.
-    const c2 = await client();
-    const reused = await c2.post("/api/auth/otp/verify").send({ phone: "9123456789", code }).expect(400);
+    const reused = await c.post("/api/auth/otp/verify").send({ phone: "9123456789", code }).expect(400);
     expect(reused.body.code).toBe("OTP_EXPIRED");
   });
 
-  it("enforces a resend cooldown", async () => {
+  it("enforce a resend cooldown", async () => {
+    const user = await createUser({ password: "Secret123" });
     const c = await client();
+    await c.post("/api/auth/login").send({ identifier: user.email, password: "Secret123" }).expect(200);
     await c.post("/api/auth/otp").send({ phone: "9000000001" }).expect(200);
     const again = await c.post("/api/auth/otp").send({ phone: "9000000001" }).expect(429);
     expect(again.headers["retry-after"]).toBeDefined();

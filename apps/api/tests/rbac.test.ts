@@ -147,6 +147,8 @@ describe("authorization", () => {
     const before = (await anonymous.get("/api/store/config").expect(200)).body.data;
     expect(before.home.hero).toMatchObject({ titleTop: { en: "Luxury in", ta: expect.any(String) }, primaryHref: "/products", imageKey: null, imageUrl: null });
     expect(before.home.editorial.points).toHaveLength(3);
+    // No logo uploaded yet: the storefront shows the one that ships with it.
+    expect(before.home.logo).toEqual({ imageKey: null, imageUrl: null });
     expect(before.contact).toMatchObject({ phone: "+91 93607 34597", instagram: "trendz_womenswear_", email: "" });
     // Legal pages start as empty drafts: not listed and not readable.
     expect(before.pages).toEqual([]);
@@ -165,6 +167,11 @@ describe("authorization", () => {
       .send({ ...home, hero: { ...home.hero, titleTop: { en: "Festive", ta: "பண்டிகை" }, imageKey: "public/content/hero.webp" }, popular: { ...home.popular, enabled: false } })
       .expect(200);
     expect(savedHome.body.data.hero.imageUrl).toMatch(/\/public\/content\/hero\.webp$/);
+    // The shop's logo is uploaded on the same screen and reaches every storefront page through the store config.
+    await admin.put("/api/settings/homePage").send({ ...home, logo: { imageKey: "https://evil.example/logo.png" } }).expect(400);
+    const withLogo = await admin.put("/api/settings/homePage").send({ ...home, logo: { imageKey: "public/content/logo.png" } }).expect(200);
+    expect(withLogo.body.data.logo.imageUrl).toMatch(/\/public\/content\/logo\.png$/);
+    expect((await anonymous.get("/api/store/config").expect(200)).body.data.home.logo).toEqual({ imageKey: "public/content/logo.png", imageUrl: withLogo.body.data.logo.imageUrl });
     // A section saved before a field existed still gets that field's default.
     await admin.put("/api/settings/homePage").send({ closing: { enabled: false } }).expect(200);
     const afterHome = (await anonymous.get("/api/store/config").expect(200)).body.data.home;

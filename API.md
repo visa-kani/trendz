@@ -69,8 +69,8 @@ response; reusing the key with a different body returns `409 IDEMPOTENCY_CONFLIC
 | GET | `/auth/csrf` | Issues CSRF cookie + token |
 | POST | `/auth/register` | Email + password (+ optional phone). Sends verification email |
 | POST | `/auth/login` | Email or phone + password. Rate limited, lockout after repeated failures |
-| POST | `/auth/otp` | Request OTP `{ phone, purpose }`. Rate limited |
-| POST | `/auth/otp/verify` | Verify OTP; `LOGIN` purpose signs in (creates a customer account for a new number) |
+| POST | `/auth/otp` | Signed in: send a 6-digit code by SMS to `{ phone }`, to confirm that number on the account. Rate limited. 401 without a session |
+| POST | `/auth/otp/verify` | Signed in: `{ phone, code }` marks the number as verified on the account. A code never signs anyone in: sign-in is by password, and `purpose: "LOGIN"` is answered with 400 |
 | POST | `/auth/refresh` | Rotate tokens (reuse detection revokes the session) |
 | POST | `/auth/logout` | Revoke current session |
 | POST | `/auth/logout-all` | Revoke all sessions |

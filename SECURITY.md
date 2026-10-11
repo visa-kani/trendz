@@ -20,9 +20,9 @@ Rotate a secret by changing it in `/srv/trendz/shared/api.env` and running `pm2 
 
 - **Passwords** are hashed with argon2id (19 MiB, 2 iterations, OWASP baseline). They must be 8–128 characters and contain letters and digits.
   - Unknown accounts still run a dummy hash, so response timing does not reveal which emails exist.
-  - Messages on forgot-password and OTP requests are identical whether or not the account exists.
+  - The message on a forgot-password request is identical whether or not the account exists.
 - **Lockout**: 5 wrong passwords lock the account for 15 minutes. Every attempt is recorded in `login_attempts`.
-- **OTP**: 6-digit codes are stored only as `HMAC-SHA256(OTP_SECRET, phone:purpose:code)` and are never stored in plaintext. Each code expires after 5 minutes and allows at most 5 attempts. A resend has a 30-second cooldown, and each number has an hourly cap.
+- **OTP**: nobody signs in with a code. A code by SMS only confirms the mobile number of an account that is already signed in (`/auth/otp` and `/auth/otp/verify` answer 401 without a session). 6-digit codes are stored only as `HMAC-SHA256(OTP_SECRET, phone:purpose:code)` and are never stored in plaintext. Each code expires after 5 minutes and allows at most 5 attempts. A resend has a 30-second cooldown, and each number has an hourly cap.
   - The SMS is sent through a transient Redis job, so the code is never written to the notifications table.
   - SMS logs mask the code.
 - **Tokens**:
