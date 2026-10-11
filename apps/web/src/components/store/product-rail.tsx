@@ -3,12 +3,14 @@
 import { useRef } from "react";
 import { m, useScroll } from "motion/react";
 import { ArrowLeft, ArrowRight } from "lucide-react";
+import { useI18n } from "@/lib/i18n/client";
 import type { ProductCard as Card } from "@/lib/types";
 import { Reveal } from "./motion";
 import { ProductCard } from "./product-card";
 
 /** Horizontal, swipeable product carousel with arrow buttons and a scroll progress bar. */
 export function ProductRail({ products, label }: { products: Card[]; label: string }) {
+  const { t } = useI18n();
   const track = useRef<HTMLDivElement>(null);
   const { scrollXProgress } = useScroll({ container: track });
   const page = (dir: 1 | -1) => track.current?.scrollBy({ left: dir * track.current.clientWidth * 0.8, behavior: "smooth" });
@@ -33,10 +35,10 @@ export function ProductRail({ products, label }: { products: Card[]; label: stri
           <m.div className="h-full origin-left rounded-full bg-accent" style={{ scaleX: scrollXProgress }} />
         </div>
         <div className="flex gap-2">
-          <button onClick={() => page(-1)} aria-label="Previous products" className="grid h-11 w-11 place-items-center rounded-full border border-black/10 bg-white transition hover:border-ink hover:bg-ink hover:text-white">
+          <button onClick={() => page(-1)} aria-label={t("Previous products")} className="grid h-11 w-11 place-items-center rounded-full border border-black/10 bg-white transition hover:border-ink hover:bg-ink hover:text-white">
             <ArrowLeft size={16} />
           </button>
-          <button onClick={() => page(1)} aria-label="More products" className="grid h-11 w-11 place-items-center rounded-full border border-black/10 bg-white transition hover:border-ink hover:bg-ink hover:text-white">
+          <button onClick={() => page(1)} aria-label={t("More products")} className="grid h-11 w-11 place-items-center rounded-full border border-black/10 bg-white transition hover:border-ink hover:bg-ink hover:text-white">
             <ArrowRight size={16} />
           </button>
         </div>

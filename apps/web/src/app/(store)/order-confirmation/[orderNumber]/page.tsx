@@ -9,6 +9,8 @@ import { EASE_OUT, SplitWords } from "@/components/store/motion";
 import { RequireAuth } from "@/components/require-auth";
 import { api } from "@/lib/api";
 import { money } from "@/lib/format";
+import { msg } from "@/lib/i18n";
+import { useI18n } from "@/lib/i18n/client";
 import type { Order } from "@/lib/types";
 
 export default function ConfirmationPage({ params }: { params: Promise<{ orderNumber: string }> }) {
@@ -28,15 +30,17 @@ const BURST = Array.from({ length: 10 }, (_, i) => {
 });
 
 const NEXT_STEPS = [
-  { icon: Mail, text: "Your confirmation is on its way by email or SMS." },
-  { icon: Package, text: "We pack your order with care." },
-  { icon: Truck, text: "Track every step from your account." },
+  { icon: Mail, text: msg("Your confirmation is on its way by email or SMS.") },
+  { icon: Package, text: msg("We pack your order with care.") },
+  { icon: Truck, text: msg("Track every step from your account.") },
 ];
 
 function Confirmation({ orderNumber }: { orderNumber: string }) {
   const { data: order, isLoading } = useQuery({ queryKey: ["order", orderNumber], queryFn: () => api.get<Order>(`/account/orders/${orderNumber}`) });
+  const { t, tn, tr } = useI18n();
   if (isLoading || !order) return <ConfirmationSkeleton />;
   const address = order.shippingAddress;
+  const contact = order.customerEmail ?? order.customerPhone;
 
   // The order details use CSS entrances (never hidden waiting for JavaScript);
   // only the decorative check mark and its burst are driven by motion.
@@ -61,27 +65,27 @@ function Confirmation({ orderNumber }: { orderNumber: string }) {
         </div>
 
         <p className="eyebrow relative mt-8 animate-rise" style={delay(300)}>
-          Order confirmed
+          {t("Order confirmed")}
         </p>
         <h1 className="relative mx-auto mt-3 max-w-xl text-[clamp(2rem,5.5vw,3.25rem)] font-bold leading-[1.02] tracking-tighter">
-          <SplitWords text="Thank you! Your order is confirmed." delay={0.35} />
+          <SplitWords text={t("Thank you! Your order is confirmed.")} delay={0.35} />
         </h1>
         <p className="relative mx-auto mt-5 max-w-md animate-rise text-sm leading-relaxed text-ink/60" style={delay(650)}>
-          Order <strong className="text-ink">{order.orderNumber}</strong> · {money(order.grandTotal)} paid. A confirmation has been sent to {order.customerEmail ?? order.customerPhone ?? "you"}.
+          {contact != null
+            ? tr("Order {number} · {amount} paid. A confirmation has been sent to {contact}.", { number: <strong className="text-ink">{order.orderNumber}</strong>, amount: money(order.grandTotal), contact })
+            : tr("Order {number} · {amount} paid. A confirmation has been sent to you.", { number: <strong className="text-ink">{order.orderNumber}</strong>, amount: money(order.grandTotal) })}
         </p>
       </section>
 
       <section className="mt-6 animate-rise rounded-3xl bg-white p-6 shadow-neu sm:p-8" style={delay(800)}>
         <div className="flex items-baseline justify-between gap-3">
-          <p className="eyebrow">Your order</p>
-          <p className="text-xs text-ink/45">
-            {order.items.length} {order.items.length === 1 ? "item" : "items"}
-          </p>
+          <p className="eyebrow">{t("Your order")}</p>
+          <p className="text-xs text-ink/45">{tn(order.items.length, "{n} item", "{n} items")}</p>
         </div>
         <ul className="mt-3 divide-y divide-black/5">
           {order.items.map((i, idx) => (
             <li key={i.id} className="flex animate-rise items-center gap-4 py-3.5 text-sm" style={delay(900 + Math.min(idx, 6) * 60)}>
-              <div className="h-16 w-13 shrink-0 overflow-hidden rounded-xl bg-offwhite">{i.imageUrl && <img src={i.imageUrl} alt="" className="h-full w-full object-cover" />}</div>
+              <div className="h-16 w-13 shrink-0 overflow-hidden rounded-xl bg-offwhite">{i.imageUrl && <img src={i.imageUrl} alt="" loading="lazy" decoding="async" className="h-full w-full object-cover" />}</div>
               <span className="min-w-0 flex-1">
                 <span className="block truncate font-semibold">{i.productName}</span>
                 <span className="text-ink/50">
@@ -93,7 +97,7 @@ function Confirmation({ orderNumber }: { orderNumber: string }) {
           ))}
         </ul>
         <div className="mt-3 flex items-baseline justify-between border-t border-dashed border-black/10 pt-4">
-          <span className="text-sm font-semibold">Total</span>
+          <span className="text-sm font-semibold">{t("Total")}</span>
           <span className="text-xl font-bold tabular-nums">{money(order.grandTotal)}</span>
         </div>
       </section>
@@ -102,7 +106,7 @@ function Confirmation({ orderNumber }: { orderNumber: string }) {
         {address && (
           <section className="animate-rise rounded-3xl bg-white p-6 shadow-neu sm:p-7" style={delay(950)}>
             <p className="eyebrow flex items-center gap-2">
-              <MapPin size={13} /> Delivering to
+              <MapPin size={13} /> {t("Delivering to")}
             </p>
             <p className="mt-4 text-sm leading-relaxed text-ink/65">
               <span className="font-semibold text-ink">{address.fullName}</span>
@@ -114,14 +118,14 @@ function Confirmation({ orderNumber }: { orderNumber: string }) {
           </section>
         )}
         <section className={`on-dark gold-frame animate-rise rounded-3xl bg-ink p-6 text-white shadow-neu-lg sm:p-7 ${address ? "" : "md:col-span-2"}`} style={delay(1050)}>
-          <p className="eyebrow text-white/50">What happens next</p>
+          <p className="eyebrow text-white/50">{t("What happens next")}</p>
           <ol className="mt-4 space-y-3.5 text-sm">
             {NEXT_STEPS.map(({ icon: Icon, text }) => (
               <li key={text} className="flex items-center gap-3">
                 <span className="grid h-8 w-8 shrink-0 place-items-center rounded-full bg-white/10">
                   <Icon size={15} strokeWidth={1.75} />
                 </span>
-                <span className="text-white/80">{text}</span>
+                <span className="text-white/80">{t(text)}</span>
               </li>
             ))}
           </ol>
@@ -129,18 +133,19 @@ function Confirmation({ orderNumber }: { orderNumber: string }) {
       </div>
 
       <div className="mt-10 flex animate-rise flex-col items-stretch justify-center gap-3 sm:flex-row sm:items-center" style={delay(1150)}>
-        <CtaLink href={`/account/orders/${order.orderNumber}`}>Track this order</CtaLink>
-        <GhostLink href="/products">Continue shopping</GhostLink>
+        <CtaLink href={`/account/orders/${order.orderNumber}`}>{t("Track this order")}</CtaLink>
+        <GhostLink href="/products">{t("Continue shopping")}</GhostLink>
       </div>
     </div>
   );
 }
 
 function ConfirmationSkeleton() {
+  const { t } = useI18n();
   return (
     <div className="container-x max-w-3xl py-12 md:py-20" aria-busy="true">
       <p role="status" className="sr-only">
-        Loading your order…
+        {t("Loading your order…")}
       </p>
       <div className="flex flex-col items-center rounded-[2.5rem] bg-white px-6 py-14 shadow-neu">
         <div className="skeleton h-20 w-20 rounded-full" />

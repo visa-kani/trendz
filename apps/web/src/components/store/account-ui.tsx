@@ -12,6 +12,7 @@ import { clsx } from "clsx";
 import { ArrowLeft, ArrowUpRight, Check, ShoppingBag } from "lucide-react";
 import { StatusBadge } from "@/components/ui";
 import { money } from "@/lib/format";
+import { useI18n } from "@/lib/i18n/client";
 import type { OrderListItem } from "@/lib/types";
 import { delay, ProgressFill } from "./checkout-ui";
 import { SplitWords } from "./motion";
@@ -147,11 +148,12 @@ export function EmptyPanel({ icon, title, body, action, bare = false }: { icon: 
 }
 
 /** Loading placeholder for list panels. */
-export function RowsSkeleton({ rows = 3, thumb = true, label = "Loading" }: { rows?: number; thumb?: boolean; label?: string }) {
+export function RowsSkeleton({ rows = 3, thumb = true, label }: { rows?: number; thumb?: boolean; label?: string }) {
+  const { t } = useI18n();
   return (
     <div aria-busy="true" className="divide-y divide-black/5">
       <p role="status" className="sr-only">
-        {label}…
+        {label ?? t("Loading")}…
       </p>
       {Array.from({ length: rows }, (_, i) => (
         <div key={i} className="flex items-center gap-4 px-5 py-4 sm:px-7">
@@ -168,11 +170,12 @@ export function RowsSkeleton({ rows = 3, thumb = true, label = "Loading" }: { ro
 }
 
 /** Page-level loading placeholder for detail views. */
-export function DetailSkeleton({ label = "Loading" }: { label?: string }) {
+export function DetailSkeleton({ label }: { label?: string }) {
+  const { t } = useI18n();
   return (
     <div className="space-y-6" aria-busy="true">
       <p role="status" className="sr-only">
-        {label}…
+        {label ?? t("Loading")}…
       </p>
       <div className="skeleton h-8 w-28 rounded-full" />
       <div className="skeleton h-3 w-20" />
@@ -187,7 +190,7 @@ export function DetailSkeleton({ label = "Loading" }: { label?: string }) {
 export function Thumb({ src, className }: { src: string | null | undefined; className?: string }) {
   return (
     <div className={clsx("grid shrink-0 place-items-center overflow-hidden rounded-xl bg-offwhite text-ink/20", className ?? "h-16 w-13")}>
-      {src ? <img src={src} alt="" className="h-full w-full object-cover" /> : <ShoppingBag size={18} strokeWidth={1.5} />}
+      {src ? <img src={src} alt="" loading="lazy" decoding="async" className="h-full w-full object-cover" /> : <ShoppingBag size={18} strokeWidth={1.5} />}
     </div>
   );
 }
@@ -203,6 +206,7 @@ export function RowArrow({ className }: { className?: string }) {
 
 /** One order in a list: thumbnail, number, meta line, status, total and arrow. */
 export function OrderRow({ order: o, meta }: { order: OrderListItem; meta: ReactNode }) {
+  const { t } = useI18n();
   return (
     <Link
       href={`/account/orders/${o.orderNumber}`}
@@ -219,7 +223,7 @@ export function OrderRow({ order: o, meta }: { order: OrderListItem; meta: React
       <div className="min-w-0 flex-1">
         <p className="truncate text-sm font-semibold">{o.orderNumber}</p>
         <div className="truncate text-xs text-ink/55">{meta}</div>
-        {o.status === "PENDING" && o.paymentStatus !== "PAID" && <p className="mt-1 text-xs font-semibold text-warning">Payment pending</p>}
+        {o.status === "PENDING" && o.paymentStatus !== "PAID" && <p className="mt-1 text-xs font-semibold text-warning">{t("Payment pending")}</p>}
       </div>
       <div className="flex shrink-0 flex-col items-end gap-1.5 sm:flex-row sm:items-center sm:gap-4">
         <StatusBadge status={o.status} />
@@ -236,6 +240,7 @@ export function OrderRow({ order: o, meta }: { order: OrderListItem; meta: React
  * @starting-style, so the correct state is in the first paint.
  */
 export function StatusTrack({ steps, current, label }: { steps: string[]; current: number; label: string }) {
+  const { t } = useI18n();
   const n = steps.length;
   const progress = n > 1 ? Math.max(0, Math.min(current, n - 1)) / (n - 1) : 0;
   return (
@@ -270,9 +275,9 @@ export function StatusTrack({ steps, current, label }: { steps: string[]; curren
                   </>
                 )}
               </span>
-              <span className={clsx("text-[11px] font-semibold leading-tight sm:text-xs", reached ? "text-ink" : "text-ink/40")}>
+              <span className={clsx("text-[11px] font-semibold leading-tight ta:wrap-anywhere sm:text-xs", reached ? "text-ink" : "text-ink/40")}>
                 {s}
-                <span className="sr-only">{isCurrent ? " (current)" : reached ? " (done)" : ""}</span>
+                <span className="sr-only">{isCurrent ? ` ${t("(current)")}` : reached ? ` ${t("(done)")}` : ""}</span>
               </span>
             </li>
           );

@@ -8,27 +8,19 @@ import {
 } from "@aws-sdk/client-s3";
 import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
 import { env } from "../../config/env";
+import type { ObjectStorage, UploadTicket } from "./storage.types";
 
 /**
- * Object storage on Cloudflare R2 through its S3-compatible API.
+ * Image storage on Cloudflare R2 through its S3-compatible API.
  * Locally the same code talks to the MinIO container.
  *
- * Key layout
- *   uploads/...  private: raw uploads awaiting processing (deleted afterwards)
- *   public/...   publicly readable through R2_PUBLIC_URL (CDN cached)
- *   private/...  never public (e.g. invoice PDFs), served via signed URLs
+ * Only keys under `public/` are readable from outside (through R2_PUBLIC_URL,
+ * cached by the CDN); a product photo under `uploads/` stays private and is
+ * deleted once the worker has made its sizes.
  */
-export interface ObjectStorage {
-  presignPut(key: string, contentType: string, contentLength: number, expiresInSeconds?: number): Promise<string>;
-  presignGet(key: string, expiresInSeconds?: number, downloadName?: string): Promise<string>;
-  put(key: string, body: Buffer, contentType: string, cacheControl?: string): Promise<void>;
-  get(key: string): Promise<Buffer>;
-  head(key: string): Promise<{ size: number; contentType: string | null } | null>;
-  delete(keys: string[]): Promise<void>;
-  publicUrl(key: string): string;
-}
-
-class S3ObjectStorage implements ObjectStorage {
+export class R2Storage implements ObjectStorage {
+  readonly provider = "r2" as const;
+  readonly enforcesUploadSize = true;
   private readonly client: S3Client;
   private readonly bucket: string;
 
@@ -49,11 +41,12 @@ class S3ObjectStorage implements ObjectStorage {
     });
   }
 
-  presignPut(key: string, contentType: string, contentLength: number, expiresInSeconds = 600) {
+  async uploadTicket(key: string, contentType: string, contentLength: number, expiresInSeconds = 600): Promise<UploadTicket> {
     // ContentLength is part of the signature, so the client cannot upload a
     // different (larger) file than the one it declared.
     const cmd = new PutObjectCommand({ Bucket: this.bucket, Key: key, ContentType: contentType, ContentLength: contentLength });
-    return getSignedUrl(this.client, cmd, { expiresIn: expiresInSeconds, signableHeaders: new Set(["content-type", "content-length"]) });
+    const uploadUrl = await getSignedUrl(this.client, cmd, { expiresIn: expiresInSeconds, signableHeaders: new Set(["content-type", "content-length"]) });
+    return { uploadUrl, method: "PUT", headers: { "Content-Type": contentType } };
   }
 
   presignGet(key: string, expiresInSeconds = 300, downloadName?: string) {
@@ -103,14 +96,3 @@ class S3ObjectStorage implements ObjectStorage {
     return { client: this.client, bucket: this.bucket };
   }
 }
-
-let instance: S3ObjectStorage | null = null;
-export function storage(): S3ObjectStorage {
-  instance ??= new S3ObjectStorage();
-  return instance;
-}
-
-export const ALLOWED_IMAGE_TYPES = ["image/jpeg", "image/png", "image/webp", "image/avif"] as const;
-export type AllowedImageType = (typeof ALLOWED_IMAGE_TYPES)[number];
-export const MAX_PRODUCT_IMAGE_BYTES = 15 * 1024 * 1024;
-export const MAX_SIMPLE_IMAGE_BYTES = 3 * 1024 * 1024;

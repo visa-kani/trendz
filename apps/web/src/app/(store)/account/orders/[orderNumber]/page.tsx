@@ -12,10 +12,12 @@ import { ConfirmDialog, StatusBadge, Textarea } from "@/components/ui";
 import { useToast } from "@/components/ui/toast";
 import { api, download, errorMessage } from "@/lib/api";
 import { date, dateTime, money } from "@/lib/format";
+import { useI18n } from "@/lib/i18n/client";
 import type { Order, OrderStatus } from "@/lib/types";
+import { ReviewButton } from "@/components/store/reviews";
+import { reviewKeys, type AccountReviews } from "@/lib/reviews";
 
 const FLOW: OrderStatus[] = ["CONFIRMED", "PACKED", "SHIPPED", "OUT_FOR_DELIVERY", "DELIVERED"];
-const LABEL: Partial<Record<OrderStatus, string>> = { CONFIRMED: "Confirmed", PACKED: "Packed", SHIPPED: "Shipped", OUT_FOR_DELIVERY: "Out for delivery", DELIVERED: "Delivered" };
 
 const outlineBtn =
   "inline-flex h-11 items-center justify-center gap-2 rounded-full border border-black/15 px-5 text-sm font-semibold transition hover:border-ink hover:bg-white focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-accent/25";
@@ -23,8 +25,11 @@ const outlineBtn =
 export default function OrderDetailPage({ params }: { params: Promise<{ orderNumber: string }> }) {
   const { orderNumber } = use(params);
   const toast = useToast();
+  const { t, ts, locale } = useI18n();
   const qc = useQueryClient();
   const q = useQuery({ queryKey: ["order", orderNumber], queryFn: () => api.get<Order>(`/account/orders/${orderNumber}`) });
+  // Once the order is delivered its items can be reviewed from here; this is what the customer has written so far.
+  const reviews = useQuery({ queryKey: reviewKeys.account, queryFn: () => api.get<AccountReviews>("/account/reviews"), enabled: !!q.data?.deliveredAt });
   const [cancelOpen, setCancelOpen] = useState(false);
   const [reason, setReason] = useState("");
   const cancel = useMutation({
@@ -32,19 +37,19 @@ export default function OrderDetailPage({ params }: { params: Promise<{ orderNum
     onSuccess: (o) => {
       qc.setQueryData(["order", orderNumber], o);
       setCancelOpen(false);
-      toast(o.paymentStatus === "PAID" || o.amountRefunded ? "Order cancelled. Your refund has been initiated." : "Order cancelled");
+      toast(o.paymentStatus === "PAID" || o.amountRefunded ? t("Order cancelled. Your refund has been initiated.") : t("Order cancelled"));
     },
     onError: (e) => toast(errorMessage(e), "error"),
   });
 
-  if (q.isLoading || !q.data) return <DetailSkeleton label="Loading your order" />;
+  if (q.isLoading || !q.data) return <DetailSkeleton label={t("Loading your order")} />;
   const o = q.data;
   const reached = FLOW.indexOf(o.status);
   const cancelled = o.status === "CANCELLED";
 
   return (
     <div className="space-y-6">
-      <AccountHeader eyebrow="Order" title={o.orderNumber} long back={{ href: "/account/orders", label: "All orders" }} description={`Placed ${dateTime(o.placedAt)}`}>
+      <AccountHeader eyebrow={t("Order")} title={o.orderNumber} long back={{ href: "/account/orders", label: t("All orders") }} description={t("Placed {date}", { date: dateTime(o.placedAt, locale) })}>
         <div className="mt-4 flex flex-wrap gap-2">
           <StatusBadge status={o.status} />
           <StatusBadge status={o.paymentStatus} />
@@ -52,9 +57,11 @@ export default function OrderDetailPage({ params }: { params: Promise<{ orderNum
       </AccountHeader>
 
       {o.canPay && (
-        <Panel eyebrow="Action needed" title="Complete your payment" className="ring-2 ring-accent/30" delay={0}>
+        <Panel eyebrow={t("Action needed")} title={t("Complete your payment")} className="ring-2 ring-accent/30" delay={0}>
           <p className="mb-5 text-sm text-ink/60">
-            This order is reserved until {o.reservationExpiresAt ? dateTime(o.reservationExpiresAt) : "shortly"}. Pay now to confirm it.
+            {o.reservationExpiresAt
+              ? t("This order is reserved until {date}. Pay now to confirm it.", { date: dateTime(o.reservationExpiresAt, locale) })
+              : t("This order is reserved until shortly. Pay now to confirm it.")}
           </p>
           <div className="max-w-sm">
             <PayButton orderId={o.id} amount={o.grandTotal} onOutcome={(r) => (r.status === "paid" ? q.refetch() : r.status === "failed" ? toast(r.message, "error") : undefined)} />
@@ -69,23 +76,23 @@ export default function OrderDetailPage({ params }: { params: Promise<{ orderNum
               <CircleX size={20} strokeWidth={1.75} />
             </span>
             <div className="text-sm">
-              <p className="font-semibold">This order was cancelled{o.cancelledAt ? ` on ${date(o.cancelledAt)}` : ""}.</p>
-              {o.cancelReason && <p className="mt-1 text-ink/60">Reason: {o.cancelReason}</p>}
-              {o.amountRefunded > 0 && <p className="mt-1 text-ink/60">{money(o.amountRefunded)} has been refunded to your original payment method.</p>}
+              <p className="font-semibold">{o.cancelledAt ? t("This order was cancelled on {date}.", { date: date(o.cancelledAt, locale) }) : t("This order was cancelled.")}</p>
+              {o.cancelReason && <p className="mt-1 text-ink/60">{t("Reason: {reason}", { reason: o.cancelReason })}</p>}
+              {o.amountRefunded > 0 && <p className="mt-1 text-ink/60">{t("{amount} has been refunded to your original payment method.", { amount: money(o.amountRefunded) })}</p>}
             </div>
           </div>
         </Panel>
       )}
 
       {!cancelled && o.status !== "PENDING" && (
-        <Panel eyebrow="Progress" title={LABEL[o.status] ?? o.status.replace(/_/g, " ").toLowerCase().replace(/^\w/, (c) => c.toUpperCase())} delay={0.05}>
-          <StatusTrack steps={FLOW.map((s) => LABEL[s]!)} current={reached} label="Order progress" />
+        <Panel eyebrow={t("Progress")} title={ts(o.status)} delay={0.05}>
+          <StatusTrack steps={FLOW.map((s) => ts(s))} current={reached} label={t("Order progress")} />
           {o.shipments.map((s) => (
             <div key={s.id} className="mt-7 rounded-2xl bg-offwhite p-4 text-sm sm:p-5">
               <div className="flex flex-wrap items-center justify-between gap-3">
                 <p className="flex items-center gap-2">
                   <Truck size={16} strokeWidth={1.75} />
-                  <span className="font-semibold">{s.courierName ?? "Courier"}</span> <span className="text-ink/50">· AWB {s.awb ?? "pending"}</span>
+                  <span className="font-semibold">{s.courierName ?? t("Courier")}</span> <span className="text-ink/50">· {s.awb != null ? `AWB ${s.awb}` : t("AWB pending")}</span>
                 </p>
                 {s.trackingUrl && (
                   <a
@@ -94,7 +101,7 @@ export default function OrderDetailPage({ params }: { params: Promise<{ orderNum
                     rel="noreferrer noopener"
                     className="inline-flex items-center gap-1.5 rounded-full bg-ink px-3.5 py-1.5 text-xs font-semibold text-white transition hover:bg-ink/85 focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-accent/35"
                   >
-                    Track <ExternalLink size={12} />
+                    {t("Track")} <ExternalLink size={12} />
                   </a>
                 )}
               </div>
@@ -104,7 +111,7 @@ export default function OrderDetailPage({ params }: { params: Promise<{ orderNum
                     <StaggerRow key={e.id} className="relative text-xs">
                       <span aria-hidden="true" className={clsx("absolute -left-[27px] top-1 h-3 w-3 rounded-full border-2 border-offwhite", i === 0 ? "animate-pulse-dot bg-accent" : "bg-ink/25")} />
                       <span className="font-semibold">{e.rawStatus}</span>
-                      {e.location ? ` · ${e.location}` : ""} <span className="text-ink/45">· {dateTime(e.occurredAt)}</span>
+                      {e.location ? ` · ${e.location}` : ""} <span className="text-ink/45">· {dateTime(e.occurredAt, locale)}</span>
                     </StaggerRow>
                   ))}
                 </StaggerList>
@@ -114,7 +121,7 @@ export default function OrderDetailPage({ params }: { params: Promise<{ orderNum
         </Panel>
       )}
 
-      <Panel title="Items" padded={false} delay={0.1}>
+      <Panel title={t("Items")} padded={false} delay={0.1}>
         <StaggerList className="divide-y divide-black/5">
           {o.items.map((i) => (
             <StaggerRow key={i.id} className="flex items-center gap-4 px-5 py-4 sm:px-7">
@@ -122,27 +129,30 @@ export default function OrderDetailPage({ params }: { params: Promise<{ orderNum
               <div className="min-w-0 flex-1 text-sm">
                 <p className="font-semibold">{i.productName}</p>
                 <p className="text-ink/55">
-                  {i.variantTitle} · Qty {i.quantity} · SKU {i.sku}
+                  {i.variantTitle} · {t("Qty {n}", { n: i.quantity })} · SKU {i.sku}
                 </p>
-                {i.returnedQuantity > 0 && <p className="text-xs text-ink/50">{i.returnedQuantity} returned</p>}
+                {i.returnedQuantity > 0 && <p className="text-xs text-ink/50">{t("{n} returned", { n: i.returnedQuantity })}</p>}
+                {o.deliveredAt && reviews.data?.enabled && (
+                  <ReviewButton className="mt-2" target={{ productId: i.productId, productName: i.productName }} review={reviews.data.reviews.find((r) => r.productId === i.productId) ?? null} />
+                )}
               </div>
               <span className="text-sm font-semibold tabular-nums">{money(i.lineTotal)}</span>
             </StaggerRow>
           ))}
         </StaggerList>
         <dl className="space-y-2 border-t border-dashed border-black/10 px-5 py-5 text-sm sm:px-7">
-          <Row label="Subtotal" value={money(o.subtotal)} />
-          {o.discountTotal > 0 && <Row label={`Discounts${o.couponCode ? ` (${o.couponCode})` : ""}`} value={`− ${money(o.discountTotal)}`} />}
-          <Row label="Shipping" value={o.shippingTotal ? money(o.shippingTotal) : "Free"} />
-          <Row label="GST included" value={money(o.taxTotal)} />
-          <Row label="Total" value={money(o.grandTotal)} strong />
-          {o.amountRefunded > 0 && <Row label="Refunded" value={money(o.amountRefunded)} />}
+          <Row label={t("Subtotal")} value={money(o.subtotal)} />
+          {o.discountTotal > 0 && <Row label={o.couponCode ? t("Discounts ({code})", { code: o.couponCode }) : t("Discounts")} value={`− ${money(o.discountTotal)}`} />}
+          <Row label={t("Shipping")} value={o.shippingTotal ? money(o.shippingTotal) : t("Free")} />
+          <Row label={t("GST included")} value={money(o.taxTotal)} />
+          <Row label={t("Total")} value={money(o.grandTotal)} strong />
+          {o.amountRefunded > 0 && <Row label={t("Refunded")} value={money(o.amountRefunded)} />}
         </dl>
       </Panel>
 
       <div className="grid gap-6 md:grid-cols-2">
         {o.shippingAddress && (
-          <Panel eyebrow="Delivery address" delay={0.15}>
+          <Panel eyebrow={t("Delivery address")} delay={0.15}>
             <div className="flex gap-3 text-sm">
               <MapPin size={17} strokeWidth={1.75} className="mt-0.5 shrink-0 text-ink/40" />
               <p className="leading-relaxed text-ink/70">
@@ -157,12 +167,12 @@ export default function OrderDetailPage({ params }: { params: Promise<{ orderNum
             </div>
           </Panel>
         )}
-        <Panel eyebrow="Payment & documents" delay={0.2}>
+        <Panel eyebrow={t("Payment & documents")} delay={0.2}>
           <ul className="space-y-3 text-sm">
             {o.payments.map((p) => (
               <li key={p.id} className="flex items-center justify-between gap-3">
                 <span className="capitalize">
-                  {p.method ?? p.provider} {p.paidAt ? `· ${date(p.paidAt)}` : ""}
+                  {p.method ?? p.provider} {p.paidAt ? `· ${date(p.paidAt, locale)}` : ""}
                 </span>
                 <StatusBadge status={p.status} />
               </li>
@@ -170,7 +180,7 @@ export default function OrderDetailPage({ params }: { params: Promise<{ orderNum
             {o.refunds.map((r) => (
               <li key={r.id} className="flex items-center justify-between gap-3 text-ink/70">
                 <span>
-                  Refund {r.refundNumber} · {money(r.amount)}
+                  {t("Refund {number}", { number: r.refundNumber })} · {money(r.amount)}
                 </span>
                 <StatusBadge status={r.status} />
               </li>
@@ -183,12 +193,12 @@ export default function OrderDetailPage({ params }: { params: Promise<{ orderNum
               onClick={() => download(`/account/orders/${o.orderNumber}/invoice.pdf`, `${o.invoice!.invoiceNumber.replace(/\//g, "-")}.pdf`).catch((e) => toast(errorMessage(e), "error"))}
             >
               <Download size={14} className="shrink-0 transition-transform duration-300 group-hover:translate-y-0.5" />
-              <span className="truncate">Download invoice {o.invoice.invoiceNumber}</span>
+              <span className="truncate">{t("Download invoice {number}", { number: o.invoice.invoiceNumber })}</span>
             </button>
           )}
           {!o.payments.length && !o.refunds.length && !o.invoice && (
             <p className="flex items-center gap-2 text-sm text-ink/50">
-              <Receipt size={15} /> Nothing here yet.
+              <Receipt size={15} /> {t("Nothing here yet.")}
             </p>
           )}
         </Panel>
@@ -198,32 +208,32 @@ export default function OrderDetailPage({ params }: { params: Promise<{ orderNum
         <div className="flex animate-rise flex-wrap items-center gap-3" style={delay(300)}>
           {o.canReturn && (
             <Link href={`/account/returns/new?order=${o.orderNumber}`} className={outlineBtn}>
-              <RotateCcw size={15} /> Return items
+              <RotateCcw size={15} /> {t("Return items")}
             </Link>
           )}
           {o.canCancel && (
             <button type="button" className={clsx(outlineBtn, "hover:border-danger hover:text-danger")} onClick={() => setCancelOpen(true)}>
-              <XCircle size={15} /> Cancel order
+              <XCircle size={15} /> {t("Cancel order")}
             </button>
           )}
-          {o.returnWindowEnds && o.status === "DELIVERED" && <p className="text-xs text-ink/50">Returns accepted until {date(o.returnWindowEnds)}</p>}
+          {o.returnWindowEnds && o.status === "DELIVERED" && <p className="text-xs text-ink/50">{t("Returns accepted until {date}", { date: date(o.returnWindowEnds, locale) })}</p>}
         </div>
       )}
 
       <ConfirmDialog
         open={cancelOpen}
-        title="Cancel this order?"
-        body={o.paymentStatus === "PAID" ? "You will receive a full refund to your original payment method." : "Your reserved items will be released."}
-        confirmLabel="Cancel order"
+        title={t("Cancel this order?")}
+        body={o.paymentStatus === "PAID" ? t("You will receive a full refund to your original payment method.") : t("Your reserved items will be released.")}
+        confirmLabel={t("Cancel order")}
         tone="danger"
         loading={cancel.isPending}
-        onConfirm={() => (reason.trim().length >= 3 ? cancel.mutate() : toast("Tell us why you are cancelling", "info"))}
+        onConfirm={() => (reason.trim().length >= 3 ? cancel.mutate() : toast(t("Tell us why you are cancelling"), "info"))}
         onClose={() => setCancelOpen(false)}
       >
         <label htmlFor="reason" className="label mt-4">
-          Reason
+          {t("Reason")}
         </label>
-        <Textarea id="reason" value={reason} onChange={(e) => setReason(e.target.value)} placeholder="e.g. ordered the wrong size" className="min-h-16" />
+        <Textarea id="reason" value={reason} onChange={(e) => setReason(e.target.value)} placeholder={t("e.g. ordered the wrong size")} className="min-h-16" />
       </ConfirmDialog>
     </div>
   );

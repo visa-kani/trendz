@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { richText } from "../../common/utils/html";
 import { Prisma } from "@prisma/client";
 import { prisma, withTransaction } from "../../database/prisma";
 import { cached, invalidate } from "../../database/redis";
@@ -11,7 +12,7 @@ const CACHE_KEY = "promotions:discounts:active";
 export const discountSchema = z
   .object({
     name: z.string().trim().min(2).max(100),
-    description: z.string().trim().max(500).nullable().optional(),
+    description: richText(500),
     discountType: z.enum(["PERCENTAGE", "FIXED"]),
     value: z.number().int().positive(), // bps or paise
     scope: z.enum(["ALL", "PRODUCTS", "CATEGORIES", "BRANDS"]).default("ALL"),

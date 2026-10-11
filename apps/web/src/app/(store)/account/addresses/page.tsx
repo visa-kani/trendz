@@ -11,6 +11,7 @@ import { EASE_OUT } from "@/components/store/motion";
 import { ConfirmDialog } from "@/components/ui";
 import { useToast } from "@/components/ui/toast";
 import { api, errorMessage } from "@/lib/api";
+import { useI18n } from "@/lib/i18n/client";
 import type { Address } from "@/lib/types";
 
 const addButton =
@@ -19,6 +20,7 @@ const addButton =
 export default function AddressesPage() {
   const qc = useQueryClient();
   const toast = useToast();
+  const { t } = useI18n();
   const q = useQuery({ queryKey: ["addresses"], queryFn: () => api.get<Address[]>("/account/addresses") });
   const [editing, setEditing] = useState<Address | "new" | null>(null);
   const [deleting, setDeleting] = useState<Address | null>(null);
@@ -27,14 +29,14 @@ export default function AddressesPage() {
     onSuccess: () => {
       void qc.invalidateQueries({ queryKey: ["addresses"] });
       setDeleting(null);
-      toast("Address removed");
+      toast(t("Address removed"));
     },
     onError: (e) => toast(errorMessage(e), "error"),
   });
   const saved = () => {
     void qc.invalidateQueries({ queryKey: ["addresses"] });
     setEditing(null);
-    toast("Address saved");
+    toast(t("Address saved"));
   };
 
   const addAction = (
@@ -42,13 +44,13 @@ export default function AddressesPage() {
       <span className="grid h-6 w-6 place-items-center rounded-full bg-white/15 transition-transform duration-500 group-hover:rotate-90">
         <Plus size={14} />
       </span>
-      Add address
+      {t("Add address")}
     </button>
   );
 
   return (
     <div className="space-y-8">
-      <AccountHeader eyebrow="Address book" title="Addresses" description="Saved addresses make checkout a one-tap affair." actions={!editing ? addAction : undefined} />
+      <AccountHeader eyebrow={t("Address book")} title={t("Addresses")} description={t("Saved addresses make checkout a one-tap affair.")} actions={!editing ? addAction : undefined} />
 
       <AnimatePresence initial={false}>
         {editing && (
@@ -61,8 +63,8 @@ export default function AddressesPage() {
             transition={{ duration: 0.5, ease: EASE_OUT }}
           >
             <section className="rounded-3xl bg-white p-5 shadow-neu sm:p-7">
-              <p className="eyebrow">{editing === "new" ? "New address" : "Edit address"}</p>
-              <h2 className="mt-1 text-lg font-bold tracking-tight">{editing === "new" ? "Where should we deliver?" : editing.fullName}</h2>
+              <p className="eyebrow">{editing === "new" ? t("New address") : t("Edit address")}</p>
+              <h2 className="mt-1 text-lg font-bold tracking-tight">{editing === "new" ? t("Where should we deliver?") : editing.fullName}</h2>
               <div className="mt-6">
                 <AddressForm initial={editing === "new" ? undefined : editing} onSaved={saved} onCancel={() => setEditing(null)} />
               </div>
@@ -74,13 +76,13 @@ export default function AddressesPage() {
       {q.isLoading ? (
         <div className="grid gap-4 md:grid-cols-2" aria-busy="true">
           <p role="status" className="sr-only">
-            Loading your addresses…
+            {t("Loading your addresses")}…
           </p>
           <div className="skeleton h-52 rounded-3xl" />
           <div className="skeleton h-52 rounded-3xl" />
         </div>
       ) : !q.data?.length ? (
-        !editing && <EmptyPanel icon={<MapPin size={28} strokeWidth={1.5} />} title="No saved addresses" body="Add an address to check out faster." action={addAction} />
+        !editing && <EmptyPanel icon={<MapPin size={28} strokeWidth={1.5} />} title={t("No saved addresses")} body={t("Add an address to check out faster.")} action={addAction} />
       ) : (
         <ul className="relative grid gap-4 md:grid-cols-2">
           <AnimatePresence initial={false} mode="popLayout">
@@ -94,7 +96,7 @@ export default function AddressesPage() {
                       </span>
                       <span className="flex flex-wrap justify-end gap-1.5">
                         {a.label && <span className="rounded-full bg-black/5 px-2.5 py-1 text-[10px] font-semibold uppercase tracking-wider text-ink/60">{a.label}</span>}
-                        {a.isDefaultShipping && <span className="rounded-full bg-ink px-2.5 py-1 text-[10px] font-semibold uppercase tracking-wider text-white">Default</span>}
+                        {a.isDefaultShipping && <span className="rounded-full bg-ink px-2.5 py-1 text-[10px] font-semibold uppercase tracking-wider text-white">{t("Default")}</span>}
                       </span>
                     </div>
                     <p className="mt-5 font-semibold">{a.fullName}</p>
@@ -111,14 +113,14 @@ export default function AddressesPage() {
                         onClick={() => setEditing(a)}
                         className="inline-flex h-9 items-center gap-1.5 rounded-full border border-black/15 px-4 text-xs font-semibold transition hover:border-ink focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-accent/25"
                       >
-                        <Pencil size={13} /> Edit
+                        <Pencil size={13} /> {t("Edit")}
                       </button>
                       <button
                         type="button"
                         onClick={() => setDeleting(a)}
                         className="inline-flex h-9 items-center gap-1.5 rounded-full px-4 text-xs font-semibold text-ink/60 transition hover:bg-danger/10 hover:text-danger focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-accent/25"
                       >
-                        <Trash2 size={13} /> Remove
+                        <Trash2 size={13} /> {t("Remove")}
                       </button>
                     </div>
                   </article>
@@ -128,7 +130,7 @@ export default function AddressesPage() {
           </AnimatePresence>
         </ul>
       )}
-      <ConfirmDialog open={!!deleting} title="Remove this address?" confirmLabel="Remove" tone="danger" loading={remove.isPending} onConfirm={() => deleting && remove.mutate(deleting.id)} onClose={() => setDeleting(null)} />
+      <ConfirmDialog open={!!deleting} title={t("Remove this address?")} confirmLabel={t("Remove")} tone="danger" loading={remove.isPending} onConfirm={() => deleting && remove.mutate(deleting.id)} onClose={() => setDeleting(null)} />
     </div>
   );
 }

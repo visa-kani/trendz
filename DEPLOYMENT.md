@@ -70,6 +70,17 @@ Create two **R2 API tokens** ("Object Read & Write"), each limited to one bucket
 
 Uploaded originals and private files (invoices, labels) live outside `public/`, so the custom domain only serves optimised images under `public/`.
 
+### Cloudinary instead of R2 for images
+
+The pictures can be kept on Cloudinary instead of the `trendz-media` bucket (the `trendz-backups` bucket is still needed for database backups).
+
+1. In the Cloudinary console → Settings → API Keys, copy the cloud name, the API key and the API secret (or the single "API environment variable" line).
+2. In `api.env`: `STORAGE_PROVIDER=cloudinary`, `CLOUDINARY_URL=cloudinary://<api key>:<api secret>@<cloud name>` and `CLOUDINARY_FOLDER=trendz` (a different folder for staging).
+3. In the web env: `NEXT_PUBLIC_MEDIA_ORIGIN="https://res.cloudinary.com https://api.cloudinary.com"`, then rebuild the web app. These are the only outside addresses the browser may load pictures from and upload them to (Content-Security-Policy).
+4. `npm run storage:check -w apps/api` on the server. If the environment already has pictures on R2, keep the `R2_*` values and run `npm run storage:migrate -w apps/api -- --apply`.
+
+Nothing is set up on the Cloudinary side: no bucket, CORS rule or upload preset. Leave "Strict transformations" off (the default), because category, brand and content pictures are resized through their address.
+
 ## 4. Provision the server
 
 ```bash
@@ -103,7 +114,7 @@ Fill in the provider credentials (section 7) with `sudo -u trendz nano /srv/tren
 - a mock provider is configured
 - `COOKIE_SECURE` is not `true`
 - a webhook secret is missing
-- R2 settings are missing
+- the image storage settings are missing (the `R2_*` values, or the Cloudinary ones when `STORAGE_PROVIDER=cloudinary`)
 - the JWT/OTP secrets are placeholders
 
 PostgreSQL tuning for 4 GB (`/etc/postgresql/16/main/conf.d/trendz.conf`, then `systemctl restart postgresql`):
@@ -169,6 +180,7 @@ sudo nginx -t && sudo systemctl reload nginx
 | **MSG91 (SMS)** | Register a DLT entity, sender id and templates for the OTP, order and shipping messages. Register the three template texts listed in `apps/api/src/integrations/sms/sms.types.ts`, with the same variable names (`otp`, `minutes`, `order`, `message`, `status`, `url`). | `SMS_PROVIDER=msg91`, `SMS_API_KEY`, `SMS_SENDER_ID`, `SMS_TEMPLATE_*` |
 | **Brevo** or **Amazon SES** | Verify the sending domain and publish SPF, DKIM and DMARC records in Cloudflare DNS. SES also needs production access (out of the sandbox). | `EMAIL_PROVIDER=brevo` + `EMAIL_API_KEY`, or `EMAIL_PROVIDER=ses` + `AWS_*`; `EMAIL_FROM_ADDRESS` |
 | **R2** | Section 3 | `R2_ENDPOINT=https://<account>.r2.cloudflarestorage.com`, keys, `R2_BUCKET_NAME=trendz-media`, `R2_PUBLIC_URL=https://media.<domain>`, `R2_FORCE_PATH_STYLE=false` |
+| **Cloudinary** (images, instead of R2) | Section 3 → "Cloudinary instead of R2 for images" | `STORAGE_PROVIDER=cloudinary`, `CLOUDINARY_URL`, `CLOUDINARY_FOLDER` |
 
 After editing `api.env`, reload the processes:
 
@@ -216,9 +228,25 @@ Setup:
 2. Runs `npm ci`, `prisma generate` and `npm run build`. The live site keeps running the old release during this.
 3. **Backs up the database** (`pre-deploy-<sha>`).
 4. Runs `prisma migrate deploy`. This applies committed migrations only, and never resets, drops or pushes the schema.
+   When a release adds permissions (for example `reviews.read` and `reviews.moderate`), run the seed once afterwards (`npm run db:seed --workspace apps/api`): it registers them and grants them to the system roles that have them by default. It is safe to re-run and never touches roles a shop has edited beyond that first grant.
 5. Points `current` at the new release and runs `pm2 startOrReload`. API processes reload one by one with no downtime; the web process restarts in a second or two.
 6. Polls `/api/health/ready` and the home page for 60 seconds. If either check fails, it **switches back to the previous release automatically** and exits non-zero.
 7. Keeps the last 5 releases.
+
+### The database on Supabase instead of the instance
+
+PostgreSQL can run in a Supabase project instead of on the Lightsail instance. Nothing in the application changes; only `DATABASE_URL` does.
+
+1. Create the project in the region closest to the server (Mumbai, `ap-south-1`, for India) and keep the database password.
+2. In `api.env`: `DATABASE_URL` = the session pooler string (Connect → Session pooler, port 5432) with `?schema=public&connection_limit=5&connect_timeout=30`. With two API processes and one worker that is 15 connections, which is the session pooler's default limit on the smallest plan: raise the pool size in Supabase (Database → Connection pooling) or lower `connection_limit` before adding processes.
+3. `npm run db:deploy --workspace apps/api` creates the tables and closes them to Supabase's REST API (see README → Database on Supabase). `deploy.sh` runs the same command on every deploy.
+4. Do not use `prisma migrate dev`, `db push` or `migrate reset` against it; `npm run db:migrate` refuses a hosted database by design.
+
+Before using it for the live shop:
+
+- **Backups**: the Free plan has none. Either use a paid plan (daily backups, point-in-time recovery as an add-on) or keep `infra/scripts/backup-postgres.sh` running against the Supabase `DATABASE_URL` (it uses `pg_dump`, which works through the session pooler; the server's `pg_dump` must be at least the Supabase PostgreSQL version).
+- **Pausing**: Free projects are paused after about a week without activity, which takes the shop offline until someone resumes it.
+- **Latency**: every query crosses the network, so keep the server and the project in the same region.
 
 ### Migration rules
 
@@ -289,7 +317,7 @@ Rehearse a restore every quarter.
 ## 12. Performance
 
 - Cloudflare caches `/_next/static/*` (immutable) and R2 images (each upload gets a new, versioned key, so they can be cached forever).
-- The storefront uses Next.js ISR: catalogue pages revalidate every 30–60 s, so they rarely hit the API.
+- Storefront pages are rendered per request, because the shopper's language (English / Tamil) is a cookie; they are sent `private, no-store`, so Cloudflare never serves one shopper's language to another. The catalogue data behind them is still cached by Next.js for 30–60 s, so they rarely hit the API.
 - Search uses PostgreSQL `pg_trgm` GIN indexes. The API caches categories, settings and store config in Redis, and invalidates them on change.
 - Images are converted to WebP and AVIF in several sizes by the worker. Pages request only the size they need.
 - To grow, in order:
@@ -307,7 +335,7 @@ Rehearse a restore every quarter.
 | API won't start: "Unsafe production configuration" | The message lists what to fix in `api.env` |
 | 502 from Nginx | `pm2 status`; `pm2 logs trendz-api --lines 100` |
 | Payments stuck "pending" | Webhook URL and secret in Razorpay. Admin → Payments → Reconcile |
-| Images stuck "processing" | `pm2 logs trendz-worker`; R2 credentials and CORS |
+| Images stuck "processing" | `pm2 logs trendz-worker`; R2 credentials and CORS, or `npm run storage:check -w apps/api` on Cloudinary |
 | Emails or SMS not arriving | Admin → Notifications → failed rows show the provider error; check SPF/DKIM and DLT templates |
 | Wrong client IPs in audit logs | Run `cloudflare-ips.sh`; keep `TRUST_PROXY=1` |
 | Build killed on deploy | Out of memory: confirm swap is active (`swapon --show`) or move to 8 GB |

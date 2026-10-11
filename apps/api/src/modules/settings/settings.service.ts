@@ -2,6 +2,7 @@ import { Prisma } from "@prisma/client";
 import { prisma, type Db } from "../../database/prisma";
 import { cached, invalidate } from "../../database/redis";
 import { audit, type AuditContext } from "../audit/audit.service";
+import { checkAttachedImages } from "../media/upload-limit";
 import { settingSchemas, SETTING_KEYS, type SettingKey, type Settings } from "./settings.schemas";
 
 const CACHE_KEY = "settings:all";
@@ -19,8 +20,13 @@ async function loadAll(db: Db = prisma): Promise<Settings> {
   return out as Settings;
 }
 
-export function getSettings(): Promise<Settings> {
-  return cached(CACHE_KEY, CACHE_TTL_SECONDS, () => loadAll());
+export async function getSettings(): Promise<Settings> {
+  const settings = await cached(CACHE_KEY, CACHE_TTL_SECONDS, () => loadAll());
+  // Right after a release that adds a settings group, the cached copy (written by the previous
+  // version) does not have it yet. Read from the database instead of handing out `undefined`.
+  if (SETTING_KEYS.every((key) => settings[key] !== undefined)) return settings;
+  await invalidate(CACHE_KEY);
+  return loadAll();
 }
 
 export async function getSetting<K extends SettingKey>(key: K): Promise<Settings[K]> {
@@ -48,12 +54,28 @@ export async function getSettingFresh<K extends SettingKey>(db: Db, key: K): Pro
   return settingSchemas[key].parse(row?.value ?? {}) as Settings[K];
 }
 
+/** Storage keys of the pictures a content setting shows (none for every other setting). */
+function pictureKeys<K extends SettingKey>(key: K, value: Settings[K]): string[] {
+  const keys =
+    key === "homePage"
+      ? [(value as Settings["homePage"]).hero.imageKey]
+      : key === "homeOffers"
+        ? (value as Settings["homeOffers"]).cards.map((card) => card.imageKey)
+        : key === "aboutPage"
+          ? [(value as Settings["aboutPage"]).imageKey]
+          : [];
+  return keys.filter((k): k is string => !!k);
+}
+
 export async function updateSetting<K extends SettingKey>(
   key: K,
   value: unknown,
   ctx: AuditContext,
 ): Promise<Settings[K]> {
   const parsed = settingSchemas[key].parse(value) as Settings[K];
+  // A picture this save attaches was uploaded straight to storage: hold it to the upload limit before it goes live.
+  const pictures = pictureKeys(key, parsed);
+  if (pictures.length) await checkAttachedImages(pictures, pictureKeys(key, await getSetting(key)));
   await prisma.$transaction(async (tx) => {
     const before = await tx.setting.findUnique({ where: { key } });
     await tx.setting.upsert({

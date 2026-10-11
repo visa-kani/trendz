@@ -9,6 +9,7 @@ import { useToast } from "@/components/ui/toast";
 import { api, errorMessage } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
 import { dateTime } from "@/lib/format";
+import { useI18n } from "@/lib/i18n/client";
 
 interface Profile {
   email: string | null;
@@ -33,6 +34,7 @@ const outlineBtn =
 
 export default function ProfilePage() {
   const toast = useToast();
+  const { t, locale } = useI18n();
   const qc = useQueryClient();
   const { reload, logout } = useAuth();
   const profile = useQuery({ queryKey: ["profile"], queryFn: () => api.get<Profile>("/account/profile") });
@@ -50,7 +52,7 @@ export default function ProfilePage() {
   const save = useMutation({
     mutationFn: () => api.patch("/account/profile", { firstName: form.firstName, lastName: form.lastName || null, marketingOptIn: form.marketingOptIn }),
     onSuccess: () => {
-      toast("Profile updated");
+      toast(t("Profile updated"));
       void reload();
       void qc.invalidateQueries({ queryKey: ["profile"] });
     },
@@ -59,7 +61,7 @@ export default function ProfilePage() {
   const change = useMutation({
     mutationFn: () => api.post("/auth/password/change", pw),
     onSuccess: () => {
-      toast("Password changed. Other devices were signed out.");
+      toast(t("Password changed. Other devices were signed out."));
       setPw({ currentPassword: "", newPassword: "" });
       void qc.invalidateQueries({ queryKey: ["sessions"] });
     },
@@ -67,14 +69,14 @@ export default function ProfilePage() {
   });
   const revoke = useMutation({ mutationFn: (id: string) => api.delete(`/account/sessions/${id}`), onSuccess: () => qc.invalidateQueries({ queryKey: ["sessions"] }) });
 
-  if (profile.isLoading || !profile.data) return <DetailSkeleton label="Loading your profile" />;
+  if (profile.isLoading || !profile.data) return <DetailSkeleton label={t("Loading your profile")} />;
   const p = profile.data;
 
   return (
     <div className="space-y-6">
-      <AccountHeader eyebrow="Settings" title="Profile & security" description="Your personal details, password and the devices you're signed in on." />
+      <AccountHeader eyebrow={t("Settings")} title={t("Profile & security")} description={t("Your personal details, password and the devices you're signed in on.")} />
 
-      <Panel eyebrow="About you" title="Personal details">
+      <Panel eyebrow={t("About you")} title={t("Personal details")}>
         <form
           className="grid gap-x-4 gap-y-5 sm:grid-cols-2"
           onSubmit={(e) => {
@@ -82,45 +84,45 @@ export default function ProfilePage() {
             save.mutate();
           }}
         >
-          <Field label="First name" htmlFor="fn">
+          <Field label={t("First name")} htmlFor="fn">
             <Input id="fn" className="h-12" value={form.firstName} onChange={(e) => setForm({ ...form, firstName: e.target.value })} required />
           </Field>
-          <Field label="Last name" htmlFor="ln">
+          <Field label={t("Last name")} htmlFor="ln">
             <Input id="ln" className="h-12" value={form.lastName} onChange={(e) => setForm({ ...form, lastName: e.target.value })} />
           </Field>
-          <Field label="Email" className="sm:col-span-1">
+          <Field label={t("Email")} className="sm:col-span-1">
             <div className="relative">
               <Input value={p.email ?? "—"} disabled className="h-12 pr-24" />
               {p.email && (
                 <Badge tone={p.emailVerifiedAt ? "success" : "warning"} className="absolute right-3 top-1/2 -translate-y-1/2">
-                  {p.emailVerifiedAt ? "Verified" : "Unverified"}
+                  {p.emailVerifiedAt ? t("Verified") : t("Unverified")}
                 </Badge>
               )}
             </div>
           </Field>
-          <Field label="Mobile">
+          <Field label={t("Mobile")}>
             <div className="relative">
               <Input value={p.phone ?? "—"} disabled className="h-12 pr-24" />
               {p.phone && (
                 <Badge tone={p.phoneVerifiedAt ? "success" : "warning"} className="absolute right-3 top-1/2 -translate-y-1/2">
-                  {p.phoneVerifiedAt ? "Verified" : "Unverified"}
+                  {p.phoneVerifiedAt ? t("Verified") : t("Unverified")}
                 </Badge>
               )}
             </div>
           </Field>
           <div className="rounded-2xl bg-offwhite px-4 py-3.5 sm:col-span-2">
-            <Checkbox label="Send me offers and new arrivals by email" checked={form.marketingOptIn} onChange={(e) => setForm({ ...form, marketingOptIn: e.target.checked })} />
+            <Checkbox label={t("Send me offers and new arrivals by email")} checked={form.marketingOptIn} onChange={(e) => setForm({ ...form, marketingOptIn: e.target.checked })} />
           </div>
           <div className="sm:col-span-2">
             <button type="submit" disabled={save.isPending} className={primaryBtn}>
               {save.isPending && <Loader2 size={16} className="animate-spin" />}
-              Save changes
+              {t("Save changes")}
             </button>
           </div>
         </form>
       </Panel>
 
-      <Panel eyebrow="Security" title={p.hasPassword ? "Change password" : "Set a password"} delay={0.08}>
+      <Panel eyebrow={t("Security")} title={p.hasPassword ? t("Change password") : t("Set a password")} delay={0.08}>
         <form
           className="grid gap-x-4 gap-y-5 sm:grid-cols-2"
           onSubmit={(e) => {
@@ -129,25 +131,25 @@ export default function ProfilePage() {
           }}
         >
           {p.hasPassword && (
-            <Field label="Current password" htmlFor="cur">
+            <Field label={t("Current password")} htmlFor="cur">
               <Input id="cur" type="password" autoComplete="current-password" className="h-12" value={pw.currentPassword} onChange={(e) => setPw({ ...pw, currentPassword: e.target.value })} required />
             </Field>
           )}
-          <Field label="New password" htmlFor="new" hint="At least 8 characters with letters and numbers">
+          <Field label={t("New password")} htmlFor="new" hint={t("At least 8 characters with letters and numbers")}>
             <Input id="new" type="password" autoComplete="new-password" className="h-12" value={pw.newPassword} onChange={(e) => setPw({ ...pw, newPassword: e.target.value })} required minLength={8} />
           </Field>
           <div className="sm:col-span-2">
             <button type="submit" disabled={change.isPending} className={outlineBtn}>
               {change.isPending && <Loader2 size={16} className="animate-spin" />}
-              Update password
+              {t("Update password")}
             </button>
           </div>
         </form>
       </Panel>
 
       <Panel
-        eyebrow="Sessions"
-        title="Signed-in devices"
+        eyebrow={t("Sessions")}
+        title={t("Signed-in devices")}
         delay={0.16}
         actions={
           <button
@@ -158,7 +160,7 @@ export default function ProfilePage() {
             }}
             className="inline-flex h-9 items-center gap-1.5 rounded-full px-4 text-xs font-semibold text-ink/60 transition hover:bg-danger/10 hover:text-danger focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-accent/25"
           >
-            <LogOut size={13} /> Sign out everywhere
+            <LogOut size={13} /> {t("Sign out everywhere")}
           </button>
         }
       >
@@ -176,13 +178,13 @@ export default function ProfilePage() {
                     {s.current ? <ShieldCheck size={17} strokeWidth={1.75} className="text-success" /> : <Monitor size={17} strokeWidth={1.75} />}
                   </span>
                   <div className="min-w-0 flex-1">
-                    <p className="truncate">{s.userAgent ?? "Unknown device"}</p>
+                    <p className="truncate">{s.userAgent ?? t("Unknown device")}</p>
                     <p className="text-xs text-ink/45">
-                      {s.ipAddress ?? ""} · last active {dateTime(s.lastUsedAt)}
+                      {s.ipAddress ?? ""} · {t("last active {date}", { date: dateTime(s.lastUsedAt, locale) })}
                     </p>
                   </div>
                   {s.current ? (
-                    <Badge tone="success">This device</Badge>
+                    <Badge tone="success">{t("This device")}</Badge>
                   ) : (
                     <button
                       type="button"
@@ -191,7 +193,7 @@ export default function ProfilePage() {
                       className="inline-flex h-8 shrink-0 items-center gap-1.5 rounded-full border border-black/10 bg-white px-3 text-xs font-semibold transition hover:border-danger hover:text-danger focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-accent/25 disabled:opacity-50"
                     >
                       {revoke.isPending && revoke.variables === s.id && <Loader2 size={12} className="animate-spin" />}
-                      Sign out
+                      {t("Sign out")}
                     </button>
                   )}
                 </div>

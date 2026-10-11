@@ -31,6 +31,13 @@ Base path: `/api`. JSON in, JSON out (except PDFs, images and exports).
 use it: their page cache (Next.js) only replaces a stored response with a 200,
 so with a plain 404 a deleted product or category would stay on the site.
 
+**Rich text** — the admin's description fields (product `description` and
+`shortDescription`; `description` of a category, brand, discount, role, tax
+class and warehouse location) take HTML from its rich text editor. The API
+stores an allow-list only (`p br strong b em i u s ul ol li h3 h4 blockquote a
+span`, links limited to http, https and mailto) and returns that HTML. Length
+limits count the text, not the markup. An empty editor is stored as `null`.
+
 **Authentication** — httpOnly cookies `access_token` (15 min JWT) and
 `refresh_token` (rotating, 30 days, stored hashed). `POST /api/auth/refresh`
 rotates both.
@@ -78,7 +85,9 @@ response; reusing the key with a different body returns `409 IDEMPOTENCY_CONFLIC
 
 | Method | Path | Notes |
 |---|---|---|
-| GET | `/store/config` | Public settings (currency, free-shipping threshold, payment key id) and the saved theme (`appearance`). Sent with `Cache-Control: no-cache`, so browsers revalidate it on every use |
+| GET | `/store/config` | Public settings (currency, free-shipping threshold, payment key id), the saved theme (`appearance`), the home page offers block (`homeOffers`, null while switched off) and the CMS content: `home` (home page sections), `contact` (contact details), `pages` (slug and title of each published legal page) and `aboutPublished` (whether the About us page is shown). Sent with `Cache-Control: no-cache`, so browsers revalidate it on every use |
+| GET | `/store/pages/:slug` | A published legal page (`terms`, `privacy`): `{ slug, title, body, updatedAt }`, title and body in English and Tamil, body as sanitised HTML. 404 while it is a draft |
+| GET | `/store/about` | The About us page: `{ eyebrow, title, intro, body, imageUrl, updatedAt }`, text in English and Tamil, body as sanitised HTML, `imageUrl` null while it has no picture. 404 while it is switched off |
 | GET | `/store/products` | `q, category, brand, minPrice, maxPrice, inStock, sort (newest\|price_asc\|price_desc\|name\|relevance), page, limit` |
 | GET | `/store/products/:slug` | Product detail with variants, options, images, availability |
 | GET | `/store/search/suggest` | `q` — top matches by name / SKU |
@@ -104,10 +113,30 @@ response; reusing the key with a different body returns `409 IDEMPOTENCY_CONFLIC
 | GET | `/account/returns/:returnNumber` |
 | GET, POST | `/account/wishlist` |
 | DELETE | `/account/wishlist/:productId` |
+| GET | `/account/reviews` — the customer's reviews, and delivered products not reviewed yet |
+| GET | `/account/reviews/product/:productId` — may I review it, and my review if I wrote one |
+| PUT, DELETE | `/account/reviews/product/:productId` — body `{ rating: 1–5, title?, comment? }` |
 | GET | `/account/notifications` |
 | POST | `/account/notifications/:id/read` |
 | GET | `/account/sessions` |
 | DELETE | `/account/sessions/:id` |
+
+## Reviews
+
+A customer may review a product once an order containing it has been delivered
+(`403 REVIEW_NOT_ELIGIBLE` otherwise), so every review is a verified purchase.
+There is one review per customer and product; saving again replaces it and
+sends it back through moderation. Two settings in the `reviews` group decide
+the rest: `enabled` (off: `403 REVIEWS_DISABLED`, and nothing is shown) and
+`requireApproval` (on: a review is `PENDING` until staff publish it; off: it
+is `PUBLISHED` at once).
+
+| Method | Path | Notes |
+|---|---|---|
+| GET | `/store/products/:slug/reviews` | Public. Published reviews with `summary { average, count, distribution }`. Query: `sort` (newest | highest | lowest), `page`, `limit` (max 50). Reviews carry a display name such as "Asha R.", never an email or phone |
+| GET | `/reviews` | reviews.read — moderation queue. Query: `status` (PENDING | PUBLISHED | REJECTED), `rating`, `productId`, `q`; `meta.counts` has the totals per status |
+| POST | `/reviews/:id/moderate` | reviews.moderate — `{ action: "publish" | "reject", note? }`. The note is internal. The customer gets an in-app notification |
+| DELETE | `/reviews/:id` | reviews.moderate |
 
 ## Cart & checkout
 
@@ -141,17 +170,26 @@ response; reusing the key with a different body returns `409 IDEMPOTENCY_CONFLIC
 |---|---|---|
 | GET, POST | `/products` | products.read / products.write |
 | GET, PUT, DELETE | `/products/:id` | products.read / products.write / products.delete |
-| POST | `/products/:id/images/upload-url` | products.write — presigned R2 PUT |
-| POST | `/products/:id/images/:imageId/complete` | products.write — queues optimisation |
+| POST | `/products/:id/images/upload-url` | products.write — an upload ticket (see below) |
+| POST | `/products/:id/images/:imageId/complete` | products.write — checks the file arrived and queues the sizes |
 | PATCH, DELETE | `/products/:id/images/:imageId` | products.write |
-| POST | `/products/:id/images/:imageId/replace` | products.write |
+| POST | `/products/:id/images/:imageId/replace` | products.write — an upload ticket for the new file |
 | PUT | `/products/:id/images/order` | products.write |
 | GET, POST | `/categories` | categories.read / categories.write |
 | PUT, DELETE | `/categories/:id` | categories.write |
 | PUT | `/categories/reorder` | categories.write |
 | GET, POST | `/brands` · PUT, DELETE `/brands/:id` | brands.* |
 | GET, POST | `/tax-classes` · PUT, DELETE `/tax-classes/:id` | settings.write |
-| POST | `/uploads/presign` | category / brand images |
+| POST | `/uploads/presign` | category / brand images; `purpose: "content"` for home page pictures: offers and the banner (settings.write) |
+
+**Upload tickets.** `upload-url`, `replace` and `/uploads/presign` answer with a one-time permission for the browser to send the file straight to image storage: `{ uploadUrl, method, headers, fields? }`.
+
+- Without `fields` (R2 / MinIO): `PUT` the file to `uploadUrl` with `headers`; the content type and exact size are part of the signature.
+- With `fields` (Cloudinary): `POST` a multipart form to `uploadUrl` with every field, then the file in a field named `file`. The fields hold a signature for that one picture; changing any of them makes Cloudinary refuse the upload.
+
+`/uploads/presign` also returns `key` (saved on the category, brand or content setting) and `publicUrl`.
+
+**Size limit.** Every picture may be at most 2 MB. A request for a ticket states the file's `size`; a larger size is answered with 400 "Images must be at most 2 MB". On Cloudinary, which does not hold an upload to the stated size, the stored size is checked on `complete` and when a category, brand or content setting is saved with a new picture: an oversized picture is deleted and the request answered with 400, code `IMAGE_TOO_LARGE`.
 
 ## Product codes, scanning & labels
 
@@ -260,5 +298,5 @@ response; reusing the key with a different body returns `409 IDEMPOTENCY_CONFLIC
 | GET, POST | `/roles` · GET, PUT, DELETE `/roles/:id` | roles.read / roles.write — PUT takes `{ name, description, permissions[] }` (system roles keep their code; SUPER_ADMIN is fixed) |
 | GET | `/permissions` | roles.read |
 | GET | `/settings` · PUT `/settings/:key` | settings.read / settings.write |
-| GET | `/settings/:key` | settings.read — one group with `updatedAt` and `updatedBy` (null until first saved) |
+| GET | `/settings/:key` | settings.read — one group with `updatedAt` and `updatedBy` (null until first saved). The CMS content is four of these groups: `homePage`, `contact`, `termsPage`, `privacyPage` |
 | GET | `/audit-logs` | audit.read |

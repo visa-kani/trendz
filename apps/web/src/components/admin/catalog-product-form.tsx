@@ -1,11 +1,11 @@
 "use client";
 
-import { createElement, Fragment, useEffect, useMemo, useState, type ReactNode } from "react";
+import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useQueryClient } from "@tanstack/react-query";
 import { Controller, useForm, useWatch, type Control, type FieldPath } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { Button, Card, Checkbox, Field, Input, Select, Tabs, Textarea } from "@/components/ui";
+import { Button, Card, Checkbox, Field, Input, Select, Textarea } from "@/components/ui";
 import { useToast } from "@/components/ui/toast";
 import { api, errorMessage } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
@@ -23,6 +23,7 @@ import {
 } from "./catalog-shared";
 import { emptyProductForm, formToPayload, mapProductErrorPath, productFormSchema, productToForm, type ProductFormInput, type ProductFormOutput } from "./catalog-product-schema";
 import { OptionsAndVariants, syncSuggestedSkus } from "./catalog-product-variants";
+import { RichTextEditor } from "@/components/ui/rich-text-editor";
 
 const STATUS_HELP: Record<ProductStatus, string> = {
   DRAFT: "Hidden from the storefront while you work on it.",
@@ -43,7 +44,6 @@ export function ProductForm({ product }: { product?: AdminProduct }) {
   const [initial] = useState(() => (product ? productToForm(product) : { values: emptyProductForm(), exclusions: [], retired: [] }));
   const [exclusions, setExclusions] = useState(initial.exclusions);
   const [retired, setRetired] = useState(initial.retired);
-  const [descriptionTab, setDescriptionTab] = useState<"write" | "preview">("write");
 
   const form = useForm<ProductFormInput, unknown, ProductFormOutput>({ resolver: zodResolver(productFormSchema), defaultValues: initial.values });
   const {
@@ -59,7 +59,6 @@ export function ProductForm({ product }: { product?: AdminProduct }) {
   const brands = useBrands();
   const taxClasses = useTaxClasses();
   const status = useWatch({ control, name: "status" });
-  const description = useWatch({ control, name: "description" });
 
   // Warn before closing the tab with unsaved changes.
   useEffect(() => {
@@ -124,38 +123,23 @@ export function ProductForm({ product }: { product?: AdminProduct }) {
                   </Field>
                 </div>
                 <Field label="Short description" htmlFor="p-short" error={errors.shortDescription?.message} hint="One or two lines shown near the price">
-                  <Textarea id="p-short" className="min-h-16" rows={2} invalid={!!errors.shortDescription} {...register("shortDescription")} />
+                  <Controller
+                    control={control}
+                    name="shortDescription"
+                    render={({ field }) => (
+                      <RichTextEditor id="p-short" variant="compact" aria-label="Short description" value={field.value} onChange={field.onChange} onBlur={field.onBlur} invalid={!!errors.shortDescription} disabled={!canWrite} />
+                    )}
+                  />
                 </Field>
-                <div>
-                  <div className="mb-1.5 flex flex-wrap items-center justify-between gap-2">
-                    <label htmlFor="p-description" className="label mb-0">
-                      Description
-                    </label>
-                    <Tabs
-                      value={descriptionTab}
-                      onChange={setDescriptionTab}
-                      tabs={[
-                        { value: "write", label: "Write" },
-                        { value: "preview", label: "Preview" },
-                      ]}
-                    />
-                  </div>
-                  <div hidden={descriptionTab !== "write"}>
-                    <Textarea id="p-description" rows={8} className="font-mono text-[13px]" invalid={!!errors.description} {...register("description")} />
-                  </div>
-                  {descriptionTab === "preview" && (
-                    <div className="min-h-40 rounded-2xl border border-black/10 bg-white px-4 py-3">
-                      {description?.trim() ? <HtmlPreview html={description} /> : <p className="text-sm text-ink/40">Nothing to preview yet.</p>}
-                    </div>
-                  )}
-                  {errors.description?.message ? (
-                    <p className="mt-1 text-xs text-danger">{errors.description.message}</p>
-                  ) : (
-                    <p className="mt-1 text-xs text-ink/50">
-                      Simple HTML is allowed: <code>&lt;p&gt;</code>, <code>&lt;ul&gt;</code>/<code>&lt;li&gt;</code>, <code>&lt;strong&gt;</code>, <code>&lt;em&gt;</code>.
-                    </p>
-                  )}
-                </div>
+                <Field label="Description" htmlFor="p-description" error={errors.description?.message} hint="Shown on the product page. Use the toolbar for headings, lists and links.">
+                  <Controller
+                    control={control}
+                    name="description"
+                    render={({ field }) => (
+                      <RichTextEditor id="p-description" aria-label="Description" value={field.value} onChange={field.onChange} onBlur={field.onBlur} invalid={!!errors.description} disabled={!canWrite} />
+                    )}
+                  />
+                </Field>
               </div>
             </Card>
 
@@ -321,37 +305,5 @@ function Counter({ control, name, max }: { control: Control<ProductFormInput, un
     <p className={`mt-1 text-right text-[11px] tabular-nums ${length > max ? "text-danger" : "text-ink/40"}`}>
       {length}/{max}
     </p>
-  );
-}
-
-// ---------------------------------------------------------------------------
-// Safe description preview: parses the HTML and renders only whitelisted tags
-// as React elements (no dangerouslySetInnerHTML, so nothing can execute).
-// ---------------------------------------------------------------------------
-
-const ALLOWED_TAGS = new Set(["P", "UL", "OL", "LI", "STRONG", "EM", "B", "I", "BR", "H3", "H4"]);
-const DROPPED_TAGS = new Set(["SCRIPT", "STYLE", "IFRAME", "OBJECT", "EMBED", "TEMPLATE", "NOSCRIPT"]);
-
-function toReact(node: Node, key: string): ReactNode {
-  if (node.nodeType === 3) return node.textContent;
-  if (node.nodeType !== 1) return null;
-  const el = node as Element;
-  if (DROPPED_TAGS.has(el.tagName)) return null;
-  const children = Array.from(el.childNodes).map((c, i) => toReact(c, `${key}.${i}`));
-  if (el.tagName === "BR") return <br key={key} />;
-  if (!ALLOWED_TAGS.has(el.tagName)) return <Fragment key={key}>{children}</Fragment>;
-  return createElement(el.tagName.toLowerCase(), { key }, ...children);
-}
-
-function HtmlPreview({ html }: { html: string }) {
-  const nodes = useMemo(() => {
-    if (typeof DOMParser === "undefined") return null;
-    const doc = new DOMParser().parseFromString(html, "text/html");
-    return Array.from(doc.body.childNodes).map((n, i) => toReact(n, String(i)));
-  }, [html]);
-  return (
-    <div className="space-y-2 text-sm leading-relaxed text-ink/75 [&_h3]:font-semibold [&_h4]:font-semibold [&_ol]:list-decimal [&_ol]:pl-5 [&_strong]:font-semibold [&_ul]:list-disc [&_ul]:pl-5">
-      {nodes}
-    </div>
   );
 }

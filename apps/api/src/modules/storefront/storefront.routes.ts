@@ -5,7 +5,10 @@ import { ok, paginationQuery } from "../../common/utils/http";
 import { INDIAN_STATES } from "../../common/utils/india";
 import { publicBrands } from "../catalog/brands.routes";
 import { publicTree } from "../catalog/categories.service";
-import { getSettings } from "../settings/settings.service";
+import { notFound } from "../../common/errors/app-error";
+import { isPageSlug, PAGE_SETTINGS, publishedPages, withAboutImage, withHeroImage } from "../settings/cms";
+import { withImageUrls } from "../settings/home-offers";
+import { getSettingRecord, getSettings } from "../settings/settings.service";
 import * as store from "./storefront.service";
 import { publicCoupons } from "../promotions/coupons.service";
 
@@ -27,8 +30,35 @@ storefrontRouter.get("/config", async (_req, res) => {
     checkout: { allowGuestCheckout: s.checkout.allowGuestCheckout, maxQuantityPerLine: s.checkout.maxQuantityPerLine },
     payments: { provider: env.PAYMENT_PROVIDER, razorpayKeyId: env.PAYMENT_PROVIDER === "razorpay" ? env.RAZORPAY_KEY_ID : null },
     appearance: s.appearance,
+    // Null while switched off, so unpublished offers are not readable from outside.
+    homeOffers: s.homeOffers.enabled ? withImageUrls(s.homeOffers) : null,
+    // Written in Admin → CMS. `pages` lists the legal pages that are published; their text is at /store/pages/:slug.
+    home: withHeroImage(s.homePage),
+    contact: s.contact,
+    pages: publishedPages(s),
+    // Whether the About us page is switched on, for the links to it; the page itself is at /store/about.
+    aboutPublished: s.aboutPage.published,
     states: INDIAN_STATES,
   });
+});
+
+storefrontRouter.get("/about", async (_req, res) => {
+  const { value, updatedAt } = await getSettingRecord("aboutPage");
+  // A page that is switched off is not readable from outside.
+  if (!value.published) throw notFound("Page");
+  const { eyebrow, title, intro, body, imageUrl } = withAboutImage(value);
+  res.setHeader("Cache-Control", "public, max-age=60");
+  ok(res, { eyebrow, title, intro, body, imageUrl, updatedAt });
+});
+
+storefrontRouter.get("/pages/:slug", async (req, res) => {
+  const { slug } = z.object({ slug: z.string().max(40) }).parse(req.params);
+  if (!isPageSlug(slug)) throw notFound("Page");
+  const { value: page, updatedAt } = await getSettingRecord(PAGE_SETTINGS[slug]);
+  // A draft is not readable from outside.
+  if (!page.published) throw notFound("Page");
+  res.setHeader("Cache-Control", "public, max-age=60");
+  ok(res, { slug, title: page.title, body: page.body, updatedAt });
 });
 
 storefrontRouter.get("/products", async (req, res) => {

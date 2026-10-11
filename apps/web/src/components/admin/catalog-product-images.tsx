@@ -8,7 +8,7 @@ import { Badge, Button, Card, ConfirmDialog, EmptyState, Field, Input, Modal, Se
 import { useToast } from "@/components/ui/toast";
 import { api, errorMessage } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
-import { IMAGE_TYPES, putToStorage, uploadProductImage } from "@/lib/upload";
+import { IMAGE_RULES, IMAGE_TYPES, imageProblem, MAX_IMAGE_BYTES, MAX_IMAGE_MB, sendToStorage, uploadProductImage, type UploadTicket } from "@/lib/upload";
 import type { ImageView } from "@/lib/types";
 import { catalogKeys, MAX_PRODUCT_IMAGES, type AdminProduct } from "./catalog-shared";
 
@@ -41,8 +41,14 @@ export function ProductImages({ product }: { product: AdminProduct }) {
       toast(`A product can have at most ${MAX_PRODUCT_IMAGES} images`, "error");
       return;
     }
-    const valid = files.filter((f) => IMAGE_TYPES.includes(f.type));
-    if (valid.length < files.length) toast("Only JPEG, PNG, WebP and AVIF images are supported", "error");
+    // Files that break a rule are named and left out; the rest still upload.
+    const valid = files.filter((f) => !imageProblem(f));
+    if (files.some((f) => !IMAGE_TYPES.includes(f.type))) toast("Only JPEG, PNG, WebP and AVIF images are supported", "error");
+    const tooLarge = files.filter((f) => IMAGE_TYPES.includes(f.type) && f.size > MAX_IMAGE_BYTES);
+    if (tooLarge.length) {
+      const names = tooLarge.slice(0, 3).map((f) => f.name).join(", ");
+      toast(`Over ${MAX_IMAGE_MB} MB, not uploaded: ${names}${tooLarge.length > 3 ? ` and ${tooLarge.length - 3} more` : ""}`, "error");
+    }
     const batch = valid.slice(0, room);
     if (valid.length > room) toast(`Only ${room} more image(s) fit; the rest were skipped`, "error");
     if (!batch.length) return;
@@ -65,18 +71,19 @@ export function ProductImages({ product }: { product: AdminProduct }) {
 
   const replace = async (image: ImageView, file: File | undefined) => {
     if (!file) return;
-    if (!IMAGE_TYPES.includes(file.type)) {
-      toast("Use a JPEG, PNG, WebP or AVIF image", "error");
+    const problem = imageProblem(file);
+    if (problem) {
+      toast(problem, "error");
       return;
     }
     setReplacing(image.id);
     try {
-      const p = await api.post<{ uploadUrl: string; headers: Record<string, string> }>(`/products/${product.id}/images/${image.id}/replace`, {
+      const p = await api.post<UploadTicket>(`/products/${product.id}/images/${image.id}/replace`, {
         fileName: file.name,
         contentType: file.type,
         size: file.size,
       });
-      await putToStorage(p.uploadUrl, file, p.headers);
+      await sendToStorage(p, file);
       await api.post(`/products/${product.id}/images/${image.id}/complete`);
       toast("Image replaced. Optimising…");
     } catch (err) {
@@ -166,7 +173,7 @@ export function ProductImages({ product }: { product: AdminProduct }) {
         >
           {progress ? <Loader2 size={22} className="animate-spin text-ink/50" /> : <ImagePlus size={22} className="text-ink/40" />}
           <span className="text-sm font-semibold">{progress ? `Uploading ${Math.min(progress.done + 1, progress.total)} of ${progress.total}…` : "Drop images here or click to upload"}</span>
-          <span className="text-xs text-ink/50">JPEG, PNG, WebP or AVIF. The first image is the cover. Images are optimised automatically.</span>
+          <span className="text-xs text-ink/50">{IMAGE_RULES} each. The first image is the cover. Images are optimised automatically.</span>
           <input
             type="file"
             multiple

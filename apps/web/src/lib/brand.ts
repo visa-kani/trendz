@@ -1,6 +1,8 @@
 /**
  * Brand facts shown on the storefront (taken from the shop's own banner and
- * flyer). Edit here when the phone number, handle or address changes.
+ * flyer). The phone number, Instagram handle and address are edited in
+ * Admin → CMS → Contact us; the ones here are shown only when the API cannot
+ * supply them (see lib/cms.ts).
  */
 export const BRAND = {
   name: "Trendz",

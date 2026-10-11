@@ -12,6 +12,7 @@ import { api, errorMessage } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
 import { pluralize } from "@/lib/format";
 import { SUPER_ADMIN, usePermissionCatalog, useRoles, type RoleView } from "@/components/admin/system-data";
+import { plainText } from "@/lib/rich-text";
 
 export default function RolesPage() {
   const router = useRouter();
@@ -74,7 +75,7 @@ export default function RolesPage() {
                   </div>
                 ),
               },
-              { key: "desc", header: "Description", cell: (r) => <span className="line-clamp-2 max-w-sm text-ink/65">{r.description ?? "—"}</span> },
+              { key: "desc", header: "Description", cell: (r) => <span className="line-clamp-2 max-w-sm text-ink/65">{plainText(r.description) || "—"}</span> },
               {
                 key: "perms",
                 header: "Permissions",

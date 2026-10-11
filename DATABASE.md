@@ -92,7 +92,7 @@ products (P100)
 | Catalog | `categories`, `brands`, `tax_classes`, `tax_rates`, `products`, `product_options`, `product_option_values`, `product_variants`, `variant_option_values`, `product_images`, `product_codes` |
 | Inventory | `warehouses`, `warehouse_locations`, `inventory_levels`, `inventory_transactions`, `stock_reservations`, `stock_adjustments`, `stock_adjustment_items`, `stock_transfers`, `stock_transfer_items` |
 | Purchasing | `suppliers`, `purchase_orders`, `purchase_order_items`, `goods_receipts`, `goods_receipt_items` |
-| Commerce | `carts`, `cart_items`, `wishlist_items`, `coupons`, `coupon_products`, `coupon_categories`, `coupon_redemptions`, `discounts`, `discount_targets` |
+| Commerce | `carts`, `cart_items`, `wishlist_items`, `product_reviews`, `coupons`, `coupon_products`, `coupon_categories`, `coupon_redemptions`, `discounts`, `discount_targets` |
 | Orders | `orders`, `order_items`, `order_status_history` |
 | Payments | `payments`, `refunds`, `webhook_events` |
 | Billing | `invoices`, `credit_notes`, `document_sequences` |
@@ -169,6 +169,10 @@ columns they render.
   changes are done in two releases (stop using the column, then drop it).
 * Raw SQL that Prisma cannot express (CHECK constraints, immutability
   triggers) lives in the migration files themselves.
+
+### Hosted on Supabase
+
+The schema uses only standard PostgreSQL plus the `citext` and `pg_trgm` extensions, so it runs unchanged on Supabase (PostgreSQL 17). Apply migrations there with `npm run db:deploy --workspace apps/api`, never with `migrate dev`. Every table has row level security enabled there with no policy, and Supabase's API roles hold no privileges (see `scripts/db-lockdown.ts`): the tables are for the application only. The application's role owns the tables, so the policies do not apply to it.
 
 ## Seed data
 

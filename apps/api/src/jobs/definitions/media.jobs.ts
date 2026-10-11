@@ -1,6 +1,6 @@
 import { QUEUE_NAMES } from "../queues";
 import { registerJob, registerSchedule } from "../registry";
-import { storage } from "../../integrations/r2/storage";
+import { storage } from "../../integrations/object-storage";
 import { markImageFailed, processImage, sweepImages } from "../../modules/media/images.service";
 
 registerJob(QUEUE_NAMES.media, "image.process", async (job) => {

@@ -11,6 +11,7 @@ import { Badge, Button, Card, ConfirmDialog, DataTable, EmptyState, ErrorState, 
 import { useToast } from "@/components/ui/toast";
 import { api, errorMessage } from "@/lib/api";
 import { dateTime } from "@/lib/format";
+import { plainText } from "@/lib/rich-text";
 
 export default function WarehouseDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = use(params);
@@ -94,7 +95,7 @@ export default function WarehouseDetailPage({ params }: { params: Promise<{ id: 
               columns={[
                 { key: "code", header: "Code", cell: (l) => <span className="font-mono text-sm font-medium">{l.code}</span> },
                 { key: "name", header: "Name", cell: (l) => l.name ?? <span className="text-ink/35">—</span> },
-                { key: "desc", header: "Description", cell: (l) => <span className="line-clamp-2 text-ink/60">{l.description ?? "—"}</span> },
+                { key: "desc", header: "Description", cell: (l) => <span className="line-clamp-2 text-ink/60">{plainText(l.description) || "—"}</span> },
                 { key: "status", header: "Status", cell: (l) => (l.isActive ? <Badge tone="success">Active</Badge> : <Badge>Inactive</Badge>) },
                 {
                   key: "actions",

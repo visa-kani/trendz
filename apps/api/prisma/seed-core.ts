@@ -5,7 +5,12 @@ import { PERMISSIONS, SYSTEM_ROLES } from "../src/modules/rbac/permissions";
 /** Core reference data required in every environment (including tests). */
 export async function seedPermissions(prisma: PrismaClient) {
   const entries = Object.entries(PERMISSIONS).map(([code, description]) => ({ code, description, module: code.split(".")[0]! }));
+  const known = new Set((await prisma.permission.findMany({ select: { code: true } })).map((p) => p.code));
   await prisma.permission.createMany({ data: entries, skipDuplicates: true });
+  // On a database that already has roles, a permission added in a later release would reach nobody but the
+  // super admin. Give it, once, to the system roles that have it by default; roles are otherwise left as edited.
+  const added = entries.map((e) => e.code).filter((code) => !known.has(code));
+  if (known.size && added.length) await grantToSystemRoles(prisma, added);
   // Keep descriptions in sync for permissions that already existed.
   const existing = await prisma.permission.findMany({ select: { code: true, description: true } });
   const changed = entries.filter((e) => existing.some((x) => x.code === e.code && x.description !== e.description));
@@ -29,6 +34,19 @@ export async function seedRoles(prisma: PrismaClient) {
       },
     });
     console.log(`✔ role ${code}`);
+  }
+}
+
+async function grantToSystemRoles(prisma: PrismaClient, codes: string[]) {
+  const perms = await prisma.permission.findMany({ where: { code: { in: codes } }, select: { id: true, code: true } });
+  for (const [roleCode, def] of Object.entries(SYSTEM_ROLES)) {
+    if (def.permissions === "*") continue; // the super admin has everything without rows
+    const defaults: readonly string[] = def.permissions;
+    const grant = perms.filter((p) => defaults.includes(p.code));
+    const role = grant.length ? await prisma.role.findUnique({ where: { code: roleCode }, select: { id: true } }) : null;
+    if (!role) continue;
+    await prisma.rolePermission.createMany({ data: grant.map((p) => ({ roleId: role.id, permissionId: p.id })), skipDuplicates: true });
+    console.log(`✔ role ${roleCode}: granted ${grant.map((p) => p.code).join(", ")}`);
   }
 }
 

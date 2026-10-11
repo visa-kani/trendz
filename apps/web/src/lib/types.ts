@@ -95,6 +95,115 @@ export interface CategoryNode {
   children: CategoryNode[];
 }
 
+/** Text kept in both storefront languages; an empty one falls back to the other. */
+export interface LocalizedText {
+  en: string;
+  ta: string;
+}
+
+export interface OfferCard {
+  tag: LocalizedText;
+  title: LocalizedText;
+  caption: LocalizedText;
+  price: number | null;
+  href: string;
+  imageKey: string | null;
+  imageUrl: string | null;
+}
+
+/** The offers block on the home page (Admin → Home page offers). Dates are India calendar dates. */
+export interface HomeOffers {
+  enabled: boolean;
+  eyebrow: LocalizedText;
+  title: LocalizedText;
+  subtitle: LocalizedText;
+  startsOn: string | null;
+  endsOn: string | null;
+  cards: OfferCard[];
+  gift: { enabled: boolean; text: LocalizedText; tag: LocalizedText };
+  sale: { enabled: boolean; label: LocalizedText; value: string; valueLabel: LocalizedText; href: string };
+}
+
+/** A product section of the home page: small heading, heading and the link beside them. */
+export interface HomeListing {
+  enabled: boolean;
+  eyebrow: LocalizedText;
+  title: LocalizedText;
+  linkLabel: LocalizedText;
+}
+
+/** The home page sections other than the offers (Admin → CMS → Home page). Empty text is left out on the page. */
+export interface HomePageContent {
+  hero: {
+    titleTop: LocalizedText;
+    titleBottom: LocalizedText;
+    tagline: LocalizedText;
+    body: LocalizedText;
+    primaryLabel: LocalizedText;
+    primaryHref: string;
+    secondaryLabel: LocalizedText;
+    secondaryHref: string;
+    highlightValue: LocalizedText;
+    highlightLabel: LocalizedText;
+    /** Null shows the first featured product instead. */
+    imageKey: string | null;
+    imageUrl: string | null;
+  };
+  categories: HomeListing;
+  popular: HomeListing;
+  editorial: { enabled: boolean; eyebrow: LocalizedText; title: LocalizedText; titleAccent: LocalizedText; body: LocalizedText; points: LocalizedText[] };
+  promises: { enabled: boolean; shippingBody: LocalizedText; returnsBody: LocalizedText; paymentTitle: LocalizedText; paymentBody: LocalizedText };
+  newArrivals: HomeListing;
+  closing: { enabled: boolean; title: LocalizedText; buttonLabel: LocalizedText; buttonHref: string; whatsappLabel: LocalizedText };
+}
+
+/** How shoppers reach the shop (Admin → CMS → Contact us). Address and hours hold one line per line of text. */
+export interface ContactDetails {
+  eyebrow: LocalizedText;
+  title: LocalizedText;
+  intro: LocalizedText;
+  phone: string;
+  whatsapp: string;
+  email: string;
+  instagram: string;
+  address: LocalizedText;
+  hours: LocalizedText;
+  mapUrl: string;
+}
+
+/** The legal pages; each is served at /<slug>. */
+export type PageSlug = "terms" | "privacy";
+
+/** A legal page as edited in Admin → CMS. The body is rich text (HTML) per language. */
+export interface LegalPageContent {
+  published: boolean;
+  title: LocalizedText;
+  body: LocalizedText;
+}
+
+/** A published legal page as the storefront reads it. */
+export interface PublishedPage {
+  slug: PageSlug;
+  title: LocalizedText;
+  body: LocalizedText;
+  updatedAt: string | null;
+}
+
+/** The About us page as edited in Admin → CMS. The body is rich text (HTML) per language. */
+export interface AboutPageContent {
+  published: boolean;
+  eyebrow: LocalizedText;
+  title: LocalizedText;
+  intro: LocalizedText;
+  /** Null shows the shop's logo instead. */
+  imageKey: string | null;
+  imageUrl: string | null;
+  body: LocalizedText;
+}
+
+/** The About us page as the storefront reads it (only while it is published). */
+export type PublishedAbout = Pick<AboutPageContent, "eyebrow" | "title" | "intro" | "imageUrl" | "body"> & { updatedAt: string | null };
+
 export interface StoreConfig {
   store: { name: string; email: string; phone: string; currency: string };
   pricesIncludeTax: boolean;
@@ -104,6 +213,14 @@ export interface StoreConfig {
   payments: { provider: "razorpay" | "mock"; razorpayKeyId: string | null };
   /** Theme saved in Admin → Appearance. */
   appearance: Appearance;
+  /** Null while the block is switched off. */
+  homeOffers: HomeOffers | null;
+  home: HomePageContent;
+  contact: ContactDetails;
+  /** The legal pages that are published, for links to them. */
+  pages: Pick<PublishedPage, "slug" | "title">[];
+  /** Whether the About us page is switched on, for the links to it. */
+  aboutPublished: boolean;
   states: { name: string; code: string }[];
 }
 

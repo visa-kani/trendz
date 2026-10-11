@@ -9,26 +9,29 @@ import { CtaLink, delay } from "@/components/store/checkout-ui";
 import { api, errorMessage } from "@/lib/api";
 import { useToast } from "@/components/ui/toast";
 import { useAuth } from "@/lib/auth";
-import { date, pluralize } from "@/lib/format";
+import { date } from "@/lib/format";
+import { useI18n } from "@/lib/i18n/client";
 import type { OrderListItem } from "@/lib/types";
 
 export default function AccountOverview() {
   const { user } = useAuth();
+  const { t, tn, locale } = useI18n();
   const orders = useQuery({ queryKey: ["my-orders", 1], queryFn: () => api.page<OrderListItem[]>("/account/orders", { page: 1, limit: 5 }) });
   const total = orders.data?.meta.total;
+  const firstName = user?.name?.split(" ")[0];
   const tiles = [
-    { href: "/account/orders", label: "Orders", icon: Package, meta: total != null ? pluralize(total, "order") : "Your history" },
-    { href: "/account/returns", label: "Returns", icon: RotateCcw, meta: "Refund status" },
-    { href: "/account/wishlist", label: "Wishlist", icon: Heart, meta: "Saved for later" },
-    { href: "/account/addresses", label: "Addresses", icon: MapPin, meta: "Faster checkout" },
+    { href: "/account/orders", label: t("Orders"), icon: Package, meta: total != null ? tn(total, "{n} order", "{n} orders") : t("Your history") },
+    { href: "/account/returns", label: t("Returns"), icon: RotateCcw, meta: t("Refund status") },
+    { href: "/account/wishlist", label: t("Wishlist"), icon: Heart, meta: t("Saved for later") },
+    { href: "/account/addresses", label: t("Addresses"), icon: MapPin, meta: t("Faster checkout") },
   ];
 
   return (
     <div className="space-y-8">
       <AccountHeader
-        eyebrow="Your account"
-        title={`Hi ${user?.name?.split(" ")[0] ?? "there"} 👋`}
-        description="Track orders, manage returns and keep your details up to date."
+        eyebrow={t("Your account")}
+        title={firstName == null ? t("Hi there 👋") : t("Hi {name} 👋", { name: firstName })}
+        description={t("Track orders, manage returns and keep your details up to date.")}
       />
       {!user?.emailVerified && user?.email && <VerifyBanner />}
 
@@ -55,24 +58,24 @@ export default function AccountOverview() {
       </ul>
 
       <Panel
-        title="Recent orders"
+        title={t("Recent orders")}
         actions={
           <Link href="/account/orders" className="link-draw text-xs font-semibold">
-            View all
+            {t("View all")}
           </Link>
         }
         padded={false}
         delay={0.15}
       >
         {orders.isLoading ? (
-          <RowsSkeleton label="Loading your orders" />
+          <RowsSkeleton label={t("Loading your orders")} />
         ) : !orders.data?.data.length ? (
           <EmptyPanel
             bare
             icon={<Package size={28} strokeWidth={1.5} />}
-            title="No orders yet"
-            body="When you place an order it will appear here."
-            action={<CtaLink href="/products">Start shopping</CtaLink>}
+            title={t("No orders yet")}
+            body={t("When you place an order it will appear here.")}
+            action={<CtaLink href="/products">{t("Start shopping")}</CtaLink>}
           />
         ) : (
           <StaggerList className="divide-y divide-black/5 pb-2">
@@ -82,7 +85,7 @@ export default function AccountOverview() {
                   order={o}
                   meta={
                     <>
-                      {date(o.placedAt)} · {o._count.items} item{o._count.items === 1 ? "" : "s"}
+                      {date(o.placedAt, locale)} · {tn(o._count.items, "{n} item", "{n} items")}
                     </>
                   }
                 />
@@ -97,12 +100,13 @@ export default function AccountOverview() {
 
 function VerifyBanner() {
   const toast = useToast();
+  const { t } = useI18n();
   const [sending, setSending] = useState(false);
   const send = async () => {
     setSending(true);
     try {
       await api.post("/auth/verify-email/request");
-      toast("Verification email sent. Check your inbox.");
+      toast(t("Verification email sent. Check your inbox."));
     } catch (err) {
       toast(errorMessage(err), "error");
     } finally {
@@ -115,7 +119,7 @@ function VerifyBanner() {
         <span className="grid h-9 w-9 shrink-0 place-items-center rounded-full bg-warning/15">
           <MailWarning size={17} />
         </span>
-        Please verify your email address to receive order updates.
+        {t("Please verify your email address to receive order updates.")}
       </span>
       <button
         type="button"
@@ -124,7 +128,7 @@ function VerifyBanner() {
         className="inline-flex items-center gap-2 rounded-full bg-warning px-4 py-2 text-xs font-semibold text-white transition hover:bg-warning/90 focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-warning/25 disabled:opacity-60"
       >
         {sending && <Loader2 size={13} className="animate-spin" />}
-        Resend verification email
+        {t("Resend verification email")}
       </button>
     </div>
   );

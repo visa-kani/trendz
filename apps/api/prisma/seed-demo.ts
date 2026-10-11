@@ -10,7 +10,7 @@
 import fs from "node:fs";
 import path from "node:path";
 import type { PrismaClient } from "@prisma/client";
-import { storage } from "../src/integrations/r2/storage";
+import { storage } from "../src/integrations/object-storage";
 import { invalidate } from "../src/database/redis";
 import { enqueue, QUEUE_NAMES } from "../src/jobs/queues";
 import { audit, systemContext } from "../src/modules/audit/audit.service";

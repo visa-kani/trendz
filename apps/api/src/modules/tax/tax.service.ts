@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { richText } from "../../common/utils/html";
 import { prisma, withTransaction } from "../../database/prisma";
 import { cached, invalidate } from "../../database/redis";
 import { AppError, badRequest, conflict, notFound } from "../../common/errors/app-error";
@@ -21,7 +22,7 @@ export const taxClassSchema = z
   .object({
     code: z.string().trim().regex(/^[A-Z0-9_]{2,30}$/, "Use UPPER_SNAKE_CASE"),
     name: z.string().trim().min(2).max(80),
-    description: z.string().trim().max(500).nullable().optional(),
+    description: richText(500),
     isDefault: z.boolean().optional(),
     rates: z.array(rateSchema).min(1).max(20),
   })

@@ -1,6 +1,7 @@
 import { z } from "zod";
 import { intOrNull, intToString, PRODUCT_STATUSES, VARIANT_STATUSES, type AdminProduct, type AdminVariant } from "./catalog-shared";
 import { emptyVariant, missingCombinations, SKU_PATTERN, uid, type Exclusion, type OptionDraft, type VariantDraft } from "./catalog-variants";
+import { withinChars } from "@/lib/rich-text";
 
 /** Mirrors apps/api/src/modules/catalog/products.schemas.ts (the API re-validates everything). */
 const MAX_MONEY = 100_000_000;
@@ -47,7 +48,7 @@ export const productFormSchema = z
     slug: z.string().trim().toLowerCase().max(100, "At most 100 characters").refine((v) => v === "" || SLUG.test(v), "Use lowercase letters, numbers and hyphens"),
     baseSku: sku,
     description: z.string().max(20_000, "At most 20,000 characters"),
-    shortDescription: z.string().trim().max(500, "At most 500 characters"),
+    shortDescription: z.string().refine(withinChars(500), "At most 500 characters"),
     categoryId: z.string().min(1, "Choose a category"),
     brandId: z.string(),
     productType: z.string().trim().max(60, "At most 60 characters"),

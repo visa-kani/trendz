@@ -11,11 +11,20 @@ export const toRupees = (paise: number | null | undefined) => (paise == null ? "
 
 export const percent = (bps: number) => `${(bps / 100).toFixed(bps % 100 === 0 ? 0 : 2)}%`;
 
-const dateFmt = new Intl.DateTimeFormat("en-IN", { day: "numeric", month: "short", year: "numeric", timeZone: "Asia/Kolkata" });
-const dateTimeFmt = new Intl.DateTimeFormat("en-IN", { day: "numeric", month: "short", year: "numeric", hour: "numeric", minute: "2-digit", timeZone: "Asia/Kolkata" });
+const formatters = (options: Intl.DateTimeFormatOptions) => ({
+  en: new Intl.DateTimeFormat("en-IN", { ...options, timeZone: "Asia/Kolkata" }),
+  ta: new Intl.DateTimeFormat("ta-IN", { ...options, timeZone: "Asia/Kolkata" }),
+});
+const dateFmt = formatters({ day: "numeric", month: "short", year: "numeric" });
+const dateTimeFmt = formatters({ day: "numeric", month: "short", year: "numeric", hour: "numeric", minute: "2-digit" });
+const timeFmt = formatters({ hour: "numeric", minute: "2-digit" });
 
-export const date = (v: string | Date | null | undefined) => (v ? dateFmt.format(new Date(v)) : "—");
-export const dateTime = (v: string | Date | null | undefined) => (v ? dateTimeFmt.format(new Date(v)) : "—");
+type DateLocale = keyof typeof dateFmt;
+
+/** Dates are English unless the storefront passes its language (`useI18n().locale`). */
+export const date = (v: string | Date | null | undefined, locale: DateLocale = "en") => (v ? dateFmt[locale].format(new Date(v)) : "—");
+export const dateTime = (v: string | Date | null | undefined, locale: DateLocale = "en") => (v ? dateTimeFmt[locale].format(new Date(v)) : "—");
+export const time = (v: string | Date | null | undefined, locale: DateLocale = "en") => (v ? timeFmt[locale].format(new Date(v)) : "—");
 
 export const titleCase = (s: string) =>
   s

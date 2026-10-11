@@ -1,16 +1,20 @@
 /**
- * Bootstraps the object storage bucket:
+ * Bootstraps the object storage bucket (R2 / MinIO only):
  *  - creates the bucket if it does not exist (MinIO locally; on R2 create it in the dashboard)
  *  - makes only the public/ prefix anonymously readable (MinIO; on R2 use a custom domain)
  *  - allows browser PUT uploads from the web origin (CORS)
- * Safe to run repeatedly.
+ * Safe to run repeatedly. Cloudinary needs no setup: run `npm run storage:check` instead.
  */
 import { CreateBucketCommand, HeadBucketCommand, PutBucketCorsCommand, PutBucketPolicyCommand } from "@aws-sdk/client-s3";
 import { env } from "../src/config/env";
-import { storage } from "../src/integrations/r2/storage";
+import { r2Storage } from "../src/integrations/object-storage";
 
 async function main() {
-  const { client, bucket } = storage().raw;
+  if (env.STORAGE_PROVIDER !== "r2") {
+    console.log(`• STORAGE_PROVIDER=${env.STORAGE_PROVIDER}: there is no bucket to set up. Check the connection with "npm run storage:check".`);
+    return;
+  }
+  const { client, bucket } = r2Storage().raw;
 
   try {
     await client.send(new HeadBucketCommand({ Bucket: bucket }));

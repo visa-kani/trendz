@@ -78,7 +78,7 @@ function productData(input: ProductInput) {
     name: input.name,
     baseSku: input.baseSku,
     description: sanitizeRichText(input.description),
-    shortDescription: input.shortDescription ?? null,
+    shortDescription: sanitizeRichText(input.shortDescription),
     categoryId: input.categoryId,
     brandId: input.brandId ?? null,
     productType: input.productType ?? null,

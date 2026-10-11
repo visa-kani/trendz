@@ -11,6 +11,7 @@ import { Badge, Button, Card, ConfirmDialog, DataTable, EmptyState, ErrorState, 
 import { useToast } from "@/components/ui/toast";
 import { api, errorMessage } from "@/lib/api";
 import { date, money, percent, pluralize } from "@/lib/format";
+import { plainText } from "@/lib/rich-text";
 
 const DEFAULTS = { active: "" };
 const SCOPE_NOUN = { PRODUCTS: "product", CATEGORIES: "category", BRANDS: "brand" } as const;
@@ -95,7 +96,7 @@ export default function DiscountsPage() {
                 cell: (d) => (
                   <div className="min-w-0">
                     <p className="font-medium">{d.name}</p>
-                    {d.description && <p className="max-w-64 truncate text-xs text-ink/50">{d.description}</p>}
+                    {d.description && <p className="max-w-64 truncate text-xs text-ink/50">{plainText(d.description)}</p>}
                   </div>
                 ),
               },

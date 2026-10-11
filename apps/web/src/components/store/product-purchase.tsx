@@ -9,6 +9,7 @@ import { useToast } from "@/components/ui/toast";
 import { errorMessage } from "@/lib/api";
 import { useAddToCart } from "@/lib/cart";
 import { money } from "@/lib/format";
+import { useI18n } from "@/lib/i18n/client";
 import type { ImageView, ProductDetail } from "@/lib/types";
 import { useCartDrawer } from "./cart-drawer";
 import { isColorOption, swatch } from "./colors";
@@ -18,6 +19,9 @@ import { ProductImage } from "./product-card";
 import { MaskedHeading } from "./shop-heading";
 import { RollingNumber } from "./shop-rolling-number";
 import { WishlistButton } from "./wishlist-button";
+import { RichText } from "@/components/ui/rich-text";
+import { Stars } from "./reviews";
+import type { RatingSummary } from "@/lib/reviews";
 
 type AddState = "idle" | "loading" | "added";
 
@@ -56,6 +60,7 @@ function useScrolledPast(target: RefObject<HTMLElement | null>) {
 }
 
 function AddButton({ state, label, disabled, onClick, className }: { state: AddState; label: string; disabled: boolean; onClick: () => void; className?: string }) {
+  const { t } = useI18n();
   return (
     <m.button
       type="button"
@@ -81,14 +86,14 @@ function AddButton({ state, label, disabled, onClick, className }: { state: AddS
           {state === "loading" ? (
             <>
               <LoaderCircle size={17} className="animate-spin" aria-hidden="true" />
-              Adding…
+              {t("Adding…")}
             </>
           ) : state === "added" ? (
             <>
               <m.span initial={{ scale: 0, rotate: -90 }} animate={{ scale: 1, rotate: 0 }} transition={{ type: "spring", stiffness: 500, damping: 15 }} className="grid place-items-center">
                 <Check size={18} strokeWidth={2.75} aria-hidden="true" />
               </m.span>
-              Added
+              {t("Added")}
             </>
           ) : (
             <>
@@ -103,15 +108,16 @@ function AddButton({ state, label, disabled, onClick, className }: { state: AddS
 }
 
 function QuantityStepper({ value, onChange }: { value: number; onChange: (n: number) => void }) {
+  const { t } = useI18n();
   return (
     <div className="flex h-14 shrink-0 items-center rounded-full border border-black/10 bg-white">
-      <button type="button" aria-label="Decrease quantity" disabled={value <= 1} onClick={() => onChange(Math.max(1, value - 1))} className={clsx("grid h-full w-10 place-items-center rounded-l-full text-ink/60 transition hover:text-ink disabled:opacity-30 sm:w-12", FOCUS_RING)}>
+      <button type="button" aria-label={t("Decrease quantity")} disabled={value <= 1} onClick={() => onChange(Math.max(1, value - 1))} className={clsx("grid h-full w-10 place-items-center rounded-l-full text-ink/60 transition hover:text-ink disabled:opacity-30 sm:w-12", FOCUS_RING)}>
         <Minus size={14} />
       </button>
       <span className="grid w-7 place-items-center text-sm font-semibold tabular-nums" aria-live="polite">
         <RollingNumber value={value} />
       </span>
-      <button type="button" aria-label="Increase quantity" disabled={value >= 10} onClick={() => onChange(Math.min(10, value + 1))} className={clsx("grid h-full w-10 place-items-center rounded-r-full text-ink/60 transition hover:text-ink disabled:opacity-30 sm:w-12", FOCUS_RING)}>
+      <button type="button" aria-label={t("Increase quantity")} disabled={value >= 10} onClick={() => onChange(Math.min(10, value + 1))} className={clsx("grid h-full w-10 place-items-center rounded-r-full text-ink/60 transition hover:text-ink disabled:opacity-30 sm:w-12", FOCUS_RING)}>
         <Plus size={14} />
       </button>
     </div>
@@ -144,7 +150,8 @@ function StickyBar({ name, image, detail, price, state, label, disabled, onAdd }
   );
 }
 
-export function ProductPurchase({ product }: { product: ProductDetail }) {
+export function ProductPurchase({ product, rating }: { product: ProductDetail; rating?: Pick<RatingSummary, "average" | "count"> | null }) {
+  const { t, tn, tx } = useI18n();
   const toast = useToast();
   const add = useAddToCart();
   const { openCart } = useCartDrawer();
@@ -188,7 +195,7 @@ export function ProductPurchase({ product }: { product: ProductDetail }) {
   };
 
   const addToCart = () => {
-    if (!variant) return toast("Choose your options first", "info");
+    if (!variant) return toast(t("Choose your options first"), "info");
     add.mutate(
       { variantId: variant.id, quantity: qty },
       {
@@ -205,12 +212,12 @@ export function ProductPurchase({ product }: { product: ProductDetail }) {
   };
 
   const state: AddState = add.isPending ? "loading" : added ? "added" : "idle";
-  const label = !variant ? "Select options" : variant.inStock ? "Add to bag" : "Out of stock";
+  const label = !variant ? t("Select options") : variant.inStock ? t("Add to bag") : t("Out of stock");
   const disabled = !variant?.inStock;
   const price = variant?.sellingPrice ?? product.sellingPrice;
   const mrp = variant?.mrp ?? product.mrp;
   const off = percentOff(price, mrp);
-  const detail = product.options.map((o) => selected[o.name]).filter(Boolean).join(" · ");
+  const detail = product.options.map((o) => tx(selected[o.name])).filter(Boolean).join(" · ");
 
   return (
     <>
@@ -235,11 +242,18 @@ export function ProductPurchase({ product }: { product: ProductDetail }) {
                 {product.brand.name}
               </Link>
             ) : (
-              <p className="eyebrow">{product.category.name}</p>
+              <p className="eyebrow">{tx(product.category.name)}</p>
             )}
             <MaskedHeading className="mt-3 text-[clamp(2.1rem,3.8vw,3.4rem)] font-bold leading-[0.95] tracking-tighter" delay={0.1}>
               {product.name}
             </MaskedHeading>
+            {rating?.average != null && rating.count > 0 && (
+              <a href="#reviews" className="mt-3 inline-flex animate-rise items-center gap-2 text-sm text-ink/60 transition-colors hover:text-ink [animation-delay:140ms]">
+                <Stars value={rating.average} size={15} />
+                <span className="font-semibold tabular-nums text-ink">{rating.average.toFixed(1)}</span>
+                <span className="underline decoration-accent/50 underline-offset-4">{tn(rating.count, "{n} review", "{n} reviews")}</span>
+              </a>
+            )}
 
             {/* Price (CSS entrance: visible without waiting for JavaScript) */}
             <div className="animate-rise [animation-delay:180ms]">
@@ -249,13 +263,13 @@ export function ProductPurchase({ product }: { product: ProductDetail }) {
                   {off > 0 && (
                     <m.span key={`${mrp}-${off}`} className="flex items-center gap-3" initial={{ opacity: 0, x: -8 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: 8 }} transition={{ duration: 0.35, ease: EASE_OUT }}>
                       <s className="text-base text-ink/35 tabular-nums">{money(mrp)}</s>
-                      <span className="rounded-full bg-accent/10 px-2.5 py-1 text-xs font-bold text-accent">{off}% off</span>
+                      <span className="rounded-full bg-accent/10 px-2.5 py-1 text-xs font-bold text-accent">{t("{percent}% off", { percent: off })}</span>
                     </m.span>
                   )}
                 </AnimatePresence>
               </div>
-              <p className="mt-1.5 text-xs text-ink/45">Inclusive of all taxes</p>
-              {product.shortDescription && <p className="mt-6 max-w-prose text-sm leading-relaxed text-ink/65">{product.shortDescription}</p>}
+              <p className="mt-1.5 text-xs text-ink/45">{t("Inclusive of all taxes")}</p>
+              <RichText html={product.shortDescription} className="mt-6 max-w-prose text-sm leading-relaxed text-ink/65" />
             </div>
 
             {/* Options */}
@@ -264,11 +278,11 @@ export function ProductPurchase({ product }: { product: ProductDetail }) {
               return (
                 <fieldset key={o.name} className="mt-7">
                   <legend className="flex items-center gap-2 text-sm font-semibold">
-                    {o.name}
+                    {tx(o.name)}
                     <span className="relative overflow-hidden font-normal text-ink/55">
                       <AnimatePresence mode="popLayout" initial={false}>
                         <m.span key={selected[o.name] ?? "none"} className="inline-block" initial={{ y: 12, opacity: 0 }} animate={{ y: 0, opacity: 1 }} exit={{ y: -12, opacity: 0 }} transition={{ duration: 0.3, ease: EASE_OUT }}>
-                          {selected[o.name] ?? "—"}
+                          {tx(selected[o.name]) ?? "—"}
                         </m.span>
                       </AnimatePresence>
                     </span>
@@ -277,7 +291,7 @@ export function ProductPurchase({ product }: { product: ProductDetail }) {
                     {o.values.map((value) => {
                       const active = selected[o.name] === value;
                       const enabled = available(o.name, value);
-                      const a11yLabel = enabled ? value : `${value} — out of stock`;
+                      const a11yLabel = enabled ? tx(value) : t("{value} — out of stock", { value: tx(value) });
                       return color ? (
                         <button
                           key={value}
@@ -310,7 +324,7 @@ export function ProductPurchase({ product }: { product: ProductDetail }) {
                           )}
                         >
                           {active && <m.span layoutId={`pdp-pill-${o.name}`} className={clsx("absolute inset-0 rounded-full", enabled ? "bg-accent" : "bg-accent/45")} transition={{ type: "spring", stiffness: 420, damping: 34 }} />}
-                          <span className={clsx("relative", !enabled && "line-through decoration-1")}>{value}</span>
+                          <span className={clsx("relative", !enabled && "line-through decoration-1")}>{tx(value)}</span>
                         </button>
                       );
                     })}
@@ -326,7 +340,7 @@ export function ProductPurchase({ product }: { product: ProductDetail }) {
               <WishlistButton productId={product.id} productName={product.name} size={19} className={clsx("h-14 w-14 shrink-0 border border-black/10 bg-white hover:border-ink/40", FOCUS_RING)} />
             </div>
             <p className="sr-only" role="status" aria-live="polite">
-              {state === "added" ? `Added ${product.name} to your bag` : ""}
+              {state === "added" ? t("Added {name} to your bag", { name: product.name }) : ""}
             </p>
 
             <AnimatePresence initial={false}>
@@ -341,7 +355,7 @@ export function ProductPurchase({ product }: { product: ProductDetail }) {
                 >
                   <span className="mt-4 flex items-center gap-2 text-sm font-medium text-warning">
                     <span className="h-2 w-2 animate-pulse-dot rounded-full bg-accent" />
-                    Only a few left in this size
+                    {t("Only a few left in this size")}
                   </span>
                 </m.p>
               )}
@@ -350,7 +364,7 @@ export function ProductPurchase({ product }: { product: ProductDetail }) {
               {variant && <p className="text-xs text-ink/40">SKU {variant.sku}</p>}
               {add.isSuccess && (
                 <Link href="/cart" className="link-draw text-sm font-semibold">
-                  View bag and checkout →
+                  {t("View bag and checkout →")}
                 </Link>
               )}
             </div>
@@ -358,8 +372,8 @@ export function ProductPurchase({ product }: { product: ProductDetail }) {
             {/* Promises */}
             <ul className="mt-8 grid overflow-hidden rounded-3xl bg-white shadow-neu sm:grid-cols-2">
               {[
-                { icon: Truck, title: "Tracked delivery", body: "Shipping calculated at checkout" },
-                { icon: RotateCcw, title: "Easy returns", body: "Request from your account" },
+                { icon: Truck, title: t("Tracked delivery"), body: t("Shipping calculated at checkout") },
+                { icon: RotateCcw, title: t("Easy returns"), body: t("Request from your account") },
               ].map(({ icon: Icon, title, body }, i) => (
                 <li key={title} className={clsx("group flex items-center gap-3.5 p-4", i > 0 && "border-t border-black/5 sm:border-l sm:border-t-0")}>
                   <span className="grid h-10 w-10 shrink-0 place-items-center rounded-2xl bg-offwhite transition-colors duration-500 group-hover:bg-ink group-hover:text-white">
@@ -372,7 +386,7 @@ export function ProductPurchase({ product }: { product: ProductDetail }) {
                 </li>
               ))}
             </ul>
-            <p className="mt-4 text-xs text-ink/40">Prices from {money(Math.min(...product.variants.map((v) => v.sellingPrice)))}</p>
+            <p className="mt-4 text-xs text-ink/40">{t("Prices from {amount}", { amount: money(Math.min(...product.variants.map((v) => v.sellingPrice))) })}</p>
           </div>
         </div>
       </div>

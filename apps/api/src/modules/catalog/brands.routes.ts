@@ -1,5 +1,6 @@
 import { Router } from "express";
 import { z } from "zod";
+import { richText } from "../../common/utils/html";
 import { prisma, withTransaction } from "../../database/prisma";
 import { cached, invalidate } from "../../database/redis";
 import { authenticate, requireStaff } from "../../common/middleware/authenticate";
@@ -7,8 +8,9 @@ import { requirePermission } from "../../common/guards/permissions";
 import { conflict, notFound } from "../../common/errors/app-error";
 import { created, ok, uuidParam } from "../../common/utils/http";
 import { slugSchemaPattern, uniqueSlug } from "../../common/utils/slug";
-import { storage } from "../../integrations/r2/storage";
+import { storage } from "../../integrations/object-storage";
 import { audit, auditContext } from "../audit/audit.service";
+import { checkAttachedImages } from "../media/upload-limit";
 
 export const brandsRouter = Router();
 brandsRouter.use(authenticate, requireStaff);
@@ -22,7 +24,7 @@ export const publicBrands = () =>
 const brandSchema = z.object({
   name: z.string().trim().min(1).max(80),
   slug: z.string().trim().toLowerCase().regex(slugSchemaPattern).max(80).optional(),
-  description: z.string().trim().max(2000).nullable().optional(),
+  description: richText(2000),
   logoKey: z.string().regex(/^public\/brands\/[\w.-]+$/, "Upload the logo through /api/uploads/presign").nullable().optional(),
   isActive: z.boolean().optional(),
 });
@@ -39,6 +41,7 @@ brandsRouter.post("/", requirePermission("brands.write"), async (req, res) => {
   const input = brandSchema.parse(req.body);
   if (input.slug && (await slugTaken()(input.slug))) throw conflict("This slug is already used by another brand");
   const slug = input.slug ?? (await uniqueSlug(input.name, slugTaken()));
+  await checkAttachedImages([input.logoKey]);
   const brand = await withTransaction(async (tx) => {
     const b = await tx.brand.create({ data: { ...input, slug, logoUrl: input.logoKey ? storage().publicUrl(input.logoKey) : null } });
     await audit(tx, auditContext(req), { action: "brand.create", entityType: "brand", entityId: b.id, newValue: b });
@@ -54,6 +57,7 @@ brandsRouter.put("/:id", requirePermission("brands.write"), async (req, res) => 
   const before = await prisma.brand.findUnique({ where: { id } });
   if (!before) throw notFound("Brand");
   if (input.slug && input.slug !== before.slug && (await slugTaken(id)(input.slug))) throw conflict("This slug is already used by another brand");
+  await checkAttachedImages([input.logoKey], [before.logoKey]);
   const brand = await withTransaction(async (tx) => {
     const b = await tx.brand.update({
       where: { id },

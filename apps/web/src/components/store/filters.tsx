@@ -8,6 +8,8 @@ import { AnimatePresence, m } from "motion/react";
 import { clsx } from "clsx";
 import { ArrowDownUp, ArrowUpRight, Check, ChevronDown, LoaderCircle, SearchX, SlidersHorizontal, X } from "lucide-react";
 import { money } from "@/lib/format";
+import { msg, type I18n } from "@/lib/i18n";
+import { useI18n } from "@/lib/i18n/client";
 import { isColorOption, swatch } from "./colors";
 import { EASE_OUT } from "./motion";
 import { RollingNumber } from "./shop-rolling-number";
@@ -19,11 +21,11 @@ export interface Facets {
 }
 
 const SORTS = [
-  { value: "", label: "Recommended" },
-  { value: "newest", label: "Newest" },
-  { value: "price_asc", label: "Price: low to high" },
-  { value: "price_desc", label: "Price: high to low" },
-  { value: "name", label: "Name" },
+  { value: "", label: msg("Recommended") },
+  { value: "newest", label: msg("Newest") },
+  { value: "price_asc", label: msg("Price: low to high") },
+  { value: "price_desc", label: msg("Price: high to low") },
+  { value: "name", label: msg("Name") },
 ];
 
 const FOCUS_RING = "outline-none focus-visible:ring-2 focus-visible:ring-ink focus-visible:ring-offset-2 focus-visible:ring-offset-offwhite";
@@ -90,26 +92,26 @@ interface Chip {
 }
 
 /** Every active filter as a removable chip. */
-function activeChips(params: URLSearchParams, facets: Facets): Chip[] {
+function activeChips(params: URLSearchParams, facets: Facets, t: I18n["t"], tx: I18n["tx"]): Chip[] {
   const chips: Chip[] = [];
-  if (params.get("inStock") === "true") chips.push({ id: "inStock", label: "In stock", remove: { inStock: null, page: null } });
-  if (params.get("featured") === "true") chips.push({ id: "featured", label: "Trending", remove: { featured: null, page: null } });
+  if (params.get("inStock") === "true") chips.push({ id: "inStock", label: t("In stock"), remove: { inStock: null, page: null } });
+  if (params.get("featured") === "true") chips.push({ id: "featured", label: t("Trending"), remove: { featured: null, page: null } });
   for (const [key, raw] of params) {
     if (!key.startsWith("opt.")) continue;
     const values = list(raw);
     for (const value of values) {
-      chips.push({ id: `${key}:${value}`, group: key.slice(4), label: value, remove: { [key]: values.filter((v) => v !== value).join(",") || null, page: null } });
+      chips.push({ id: `${key}:${value}`, group: tx(key.slice(4)), label: tx(value), remove: { [key]: values.filter((v) => v !== value).join(",") || null, page: null } });
     }
   }
   const brands = list(params.get("brand"));
   for (const slug of brands) {
-    chips.push({ id: `brand:${slug}`, group: "Brand", label: facets.brands.find((b) => b.slug === slug)?.name ?? slug, remove: { brand: brands.filter((b) => b !== slug).join(",") || null, page: null } });
+    chips.push({ id: `brand:${slug}`, group: t("Brand"), label: facets.brands.find((b) => b.slug === slug)?.name ?? slug, remove: { brand: brands.filter((b) => b !== slug).join(",") || null, page: null } });
   }
   const min = params.get("minPrice");
   const max = params.get("maxPrice");
   if (min || max) {
-    const label = min && max ? `${money(Number(min))} – ${money(Number(max))}` : min ? `From ${money(Number(min))}` : `Up to ${money(Number(max))}`;
-    chips.push({ id: "price", group: "Price", label, remove: { minPrice: null, maxPrice: null, page: null } });
+    const label = min && max ? `${money(Number(min))} – ${money(Number(max))}` : min ? t("From {amount}", { amount: money(Number(min)) }) : t("Up to {amount}", { amount: money(Number(max)) });
+    chips.push({ id: "price", group: t("Price"), label, remove: { minPrice: null, maxPrice: null, page: null } });
   }
   return chips;
 }
@@ -119,7 +121,8 @@ function activeChips(params: URLSearchParams, facets: Facets): Chip[] {
 /* -------------------------------------------------------------------------- */
 
 function FilterSection({ title, badge = 0, children }: { title: string; badge?: number; children: ReactNode }) {
-  const [open, setOpen] = useState(true);
+  // Every group starts closed, so the list of filters is short; the badge still shows how many are applied inside.
+  const [open, setOpen] = useState(false);
   const id = useId();
   return (
     <section className="border-b border-black/[0.07] py-5 first:pt-0">
@@ -169,11 +172,12 @@ function FilterSection({ title, badge = 0, children }: { title: string; badge?: 
 }
 
 function StockToggle() {
+  const { t } = useI18n();
   const { params, update } = useListing();
   const on = params.get("inStock") === "true";
   return (
     <button type="button" role="switch" aria-checked={on} onClick={() => update({ inStock: on ? null : "true", page: null })} className={clsx("flex w-full items-center justify-between gap-3 rounded-xl py-1 text-sm", FOCUS_RING)}>
-      <span>In stock only</span>
+      <span>{t("In stock only")}</span>
       <span className={clsx("flex h-6 w-11 shrink-0 items-center rounded-full p-0.5 transition-colors duration-300", on ? "justify-end bg-accent" : "justify-start bg-black/15")}>
         <m.span layout transition={{ type: "spring", stiffness: 600, damping: 36 }} className="h-5 w-5 rounded-full bg-white shadow-sm" />
       </span>
@@ -191,6 +195,7 @@ function isLight(hex: string) {
 }
 
 function OptionFilter({ option }: { option: Facets["options"][number] }) {
+  const { tn, tx } = useI18n();
   const { params, update } = useListing();
   const key = `opt.${option.name}`;
   const current = list(params.get(key));
@@ -201,7 +206,7 @@ function OptionFilter({ option }: { option: Facets["options"][number] }) {
 
   if (isColorOption(option.name)) {
     return (
-      <div className="grid grid-cols-2 gap-1.5">
+      <div className="grid grid-cols-2 gap-1.5 ta:grid-cols-1">
         {option.values.map((v) => {
           const active = current.includes(v.value);
           const hex = swatch(v.value);
@@ -226,7 +231,7 @@ function OptionFilter({ option }: { option: Facets["options"][number] }) {
                   )}
                 </AnimatePresence>
               </span>
-              <span className="min-w-0 flex-1 truncate">{v.value}</span>
+              <span className="min-w-0 flex-1 truncate">{tx(v.value)}</span>
               <span className="text-[10px] tabular-nums text-ink/35">{v.count}</span>
             </button>
           );
@@ -246,14 +251,14 @@ function OptionFilter({ option }: { option: Facets["options"][number] }) {
             whileTap={{ scale: 0.94 }}
             onClick={() => toggle(v.value)}
             aria-pressed={active}
-            title={`${v.count} ${v.count === 1 ? "product" : "products"}`}
+            title={tn(v.count, "{n} product", "{n} products")}
             className={clsx(
               "h-9 min-w-11 rounded-full border px-3.5 text-xs font-semibold transition-colors duration-300",
               FOCUS_RING,
               active ? "border-ink bg-ink text-white" : "border-black/10 bg-white hover:border-ink/50",
             )}
           >
-            {v.value}
+            {tx(v.value)}
           </m.button>
         );
       })}
@@ -264,6 +269,7 @@ function OptionFilter({ option }: { option: Facets["options"][number] }) {
 const BRAND_LIMIT = 6;
 
 function BrandFilter({ brands }: { brands: Facets["brands"] }) {
+  const { t } = useI18n();
   const { params, update } = useListing();
   const selected = list(params.get("brand"));
   const [showAll, setShowAll] = useState(false);
@@ -307,7 +313,7 @@ function BrandFilter({ brands }: { brands: Facets["brands"] }) {
       </ul>
       {brands.length > BRAND_LIMIT && (
         <button type="button" onClick={() => setShowAll((s) => !s)} aria-expanded={showAll} className={clsx("link-draw mt-3 rounded-sm text-xs font-semibold", FOCUS_RING)}>
-          {showAll ? "Show fewer" : `Show all ${brands.length}`}
+          {showAll ? t("Show fewer") : t("Show all {count}", { count: brands.length })}
         </button>
       )}
     </div>
@@ -317,6 +323,7 @@ function BrandFilter({ brands }: { brands: Facets["brands"] }) {
 const rupeesFromParam = (paise: string | null) => (paise ? String(Number(paise) / 100) : "");
 
 function PriceFilter({ facets }: { facets: Facets }) {
+  const { t } = useI18n();
   const { params, update } = useListing();
   const minParam = params.get("minPrice");
   const maxParam = params.get("maxPrice");
@@ -334,9 +341,7 @@ function PriceFilter({ facets }: { facets: Facets }) {
   return (
     <div>
       {facets.price.max > 0 && (
-        <p className="text-xs text-ink/45">
-          Range {money(facets.price.min)} – {money(facets.price.max)}
-        </p>
+        <p className="text-xs text-ink/45">{t("Range {min} – {max}", { min: money(facets.price.min), max: money(facets.price.max) })}</p>
       )}
       <form
         className="mt-3 space-y-3"
@@ -348,18 +353,18 @@ function PriceFilter({ facets }: { facets: Facets }) {
         <div className="grid grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] items-center gap-2">
           <label className="relative block">
             <span className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-xs text-ink/40">₹</span>
-            <input aria-label="Minimum price" value={min} onChange={(e) => setMin(e.target.value)} inputMode="numeric" placeholder="Min" className="input rounded-full py-2 pl-7" />
+            <input aria-label={t("Minimum price")} value={min} onChange={(e) => setMin(e.target.value)} inputMode="numeric" placeholder={t("Min")} className="input rounded-full py-2 pl-7" />
           </label>
           <span aria-hidden="true" className="text-ink/30">
             –
           </span>
           <label className="relative block">
             <span className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-xs text-ink/40">₹</span>
-            <input aria-label="Maximum price" value={max} onChange={(e) => setMax(e.target.value)} inputMode="numeric" placeholder="Max" className="input rounded-full py-2 pl-7" />
+            <input aria-label={t("Maximum price")} value={max} onChange={(e) => setMax(e.target.value)} inputMode="numeric" placeholder={t("Max")} className="input rounded-full py-2 pl-7" />
           </label>
         </div>
         <button type="submit" className={clsx("group flex h-10 w-full items-center justify-center gap-2 rounded-full border border-ink/15 text-xs font-semibold transition-colors hover:border-ink hover:bg-ink hover:text-white", FOCUS_RING)}>
-          Apply price
+          {t("Apply price")}
           <ArrowUpRight size={14} className="transition-transform duration-500 group-hover:rotate-45" />
         </button>
       </form>
@@ -368,24 +373,25 @@ function PriceFilter({ facets }: { facets: Facets }) {
 }
 
 function FilterPanel({ facets }: { facets: Facets }) {
+  const { t, tx } = useI18n();
   const { params } = useListing();
   const count = (key: string) => list(params.get(key)).length;
   return (
     <div>
-      <FilterSection title="Availability" badge={params.get("inStock") === "true" ? 1 : 0}>
+      <FilterSection title={t("Availability")} badge={params.get("inStock") === "true" ? 1 : 0}>
         <StockToggle />
       </FilterSection>
       {facets.options.map((o) => (
-        <FilterSection key={o.name} title={o.name} badge={count(`opt.${o.name}`)}>
+        <FilterSection key={o.name} title={tx(o.name)} badge={count(`opt.${o.name}`)}>
           <OptionFilter option={o} />
         </FilterSection>
       ))}
       {facets.brands.length > 0 && (
-        <FilterSection title="Brand" badge={count("brand")}>
+        <FilterSection title={t("Brand")} badge={count("brand")}>
           <BrandFilter brands={facets.brands} />
         </FilterSection>
       )}
-      <FilterSection title="Price" badge={params.get("minPrice") || params.get("maxPrice") ? 1 : 0}>
+      <FilterSection title={t("Price")} badge={params.get("minPrice") || params.get("maxPrice") ? 1 : 0}>
         <PriceFilter facets={facets} />
       </FilterSection>
     </div>
@@ -394,12 +400,13 @@ function FilterPanel({ facets }: { facets: Facets }) {
 
 /** Desktop filter column. */
 export function FilterSidebar({ facets }: { facets: Facets }) {
+  const { t, tx } = useI18n();
   const { params, clearAll } = useListing();
-  const active = activeChips(params, facets).length;
+  const active = activeChips(params, facets, t, tx).length;
   return (
     <div>
       <div className="mb-6 flex h-6 items-center justify-between">
-        <p className="eyebrow">Filter by</p>
+        <p className="eyebrow">{t("Filter by")}</p>
         <AnimatePresence initial={false}>
           {active > 0 && (
             <m.button
@@ -412,7 +419,7 @@ export function FilterSidebar({ facets }: { facets: Facets }) {
               transition={{ duration: 0.3, ease: EASE_OUT }}
               className={clsx("link-draw rounded-sm text-xs font-semibold text-ink/60 hover:text-ink", FOCUS_RING)}
             >
-              Clear all
+              {t("Clear all")}
             </m.button>
           )}
         </AnimatePresence>
@@ -424,20 +431,21 @@ export function FilterSidebar({ facets }: { facets: Facets }) {
 
 /** Removable chips for every active filter, plus "Clear all". */
 export function ActiveFilters({ facets }: { facets: Facets }) {
+  const { t, tx } = useI18n();
   const { params, update, clearAll } = useListing();
-  const chips = activeChips(params, facets);
+  const chips = activeChips(params, facets, t, tx);
   return (
     <AnimatePresence initial={false}>
       {chips.length > 0 && (
         <m.div key="chips" initial={{ height: 0, opacity: 0 }} animate={{ height: "auto", opacity: 1 }} exit={{ height: 0, opacity: 0 }} transition={{ duration: 0.4, ease: EASE_OUT }} className="-mx-1 overflow-hidden px-1">
-          <ul aria-label="Active filters" className="flex flex-wrap items-center gap-2 pb-7 pt-1">
+          <ul aria-label={t("Active filters")} className="flex flex-wrap items-center gap-2 pb-7 pt-1">
             <AnimatePresence mode="popLayout" initial={false}>
               {chips.map((c) => (
                 <m.li key={c.id} layout initial={{ opacity: 0, scale: 0.8 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.8 }} transition={{ duration: 0.35, ease: EASE_OUT }}>
                   <button
                     type="button"
                     onClick={() => update(c.remove)}
-                    aria-label={`Remove filter ${c.group ? `${c.group}: ` : ""}${c.label}`}
+                    aria-label={t("Remove filter {filter}", { filter: `${c.group ? `${c.group}: ` : ""}${c.label}` })}
                     className={clsx("group inline-flex h-9 items-center gap-1.5 rounded-full bg-ink pl-3.5 pr-1.5 text-xs font-semibold text-white transition-colors hover:bg-ink/85", FOCUS_RING)}
                   >
                     {c.group && <span className="font-medium text-white/50">{c.group}</span>}
@@ -450,7 +458,7 @@ export function ActiveFilters({ facets }: { facets: Facets }) {
               ))}
               <m.li key="clear-all" layout className="pl-1">
                 <button type="button" onClick={clearAll} className={clsx("link-draw rounded-sm text-xs font-semibold text-ink/60 hover:text-ink", FOCUS_RING)}>
-                  Clear all
+                  {t("Clear all")}
                 </button>
               </m.li>
             </AnimatePresence>
@@ -477,11 +485,12 @@ function trapFocus(e: KeyboardEvent, root: HTMLElement) {
 }
 
 function FilterDrawer({ facets, total, onClose }: { facets: Facets; total: number; onClose: () => void }) {
+  const { t, tn, tr, tx } = useI18n();
   const { params, pending, clearAll } = useListing();
   const panel = useRef<HTMLDivElement>(null);
   const closeButton = useRef<HTMLButtonElement>(null);
   const titleId = useId();
-  const active = activeChips(params, facets).length;
+  const active = activeChips(params, facets, t, tx).length;
 
   useEffect(() => {
     closeButton.current?.focus();
@@ -514,12 +523,12 @@ function FilterDrawer({ facets, total, onClose }: { facets: Facets; total: numbe
       >
         <header className="flex items-center justify-between border-b border-black/5 px-5 py-4">
           <div>
-            <p className="eyebrow">Refine</p>
+            <p className="eyebrow">{t("Refine")}</p>
             <h2 id={titleId} className="mt-0.5 text-xl font-bold tracking-tight">
-              Filters
+              {t("Filters")}
             </h2>
           </div>
-          <button ref={closeButton} type="button" aria-label="Close filters" onClick={onClose} className={clsx("grid h-10 w-10 place-items-center rounded-full transition hover:rotate-90 hover:bg-black/5", FOCUS_RING)}>
+          <button ref={closeButton} type="button" aria-label={t("Close filters")} onClick={onClose} className={clsx("grid h-10 w-10 place-items-center rounded-full transition hover:rotate-90 hover:bg-black/5", FOCUS_RING)}>
             <X size={20} />
           </button>
         </header>
@@ -529,17 +538,17 @@ function FilterDrawer({ facets, total, onClose }: { facets: Facets; total: numbe
         </div>
         <footer className="grid grid-cols-[auto_minmax(0,1fr)] gap-3 border-t border-black/5 bg-white/80 px-5 pb-[max(1rem,env(safe-area-inset-bottom))] pt-4 backdrop-blur">
           <button type="button" onClick={clearAll} disabled={!active} className={clsx("h-12 rounded-full border border-ink/15 px-5 text-sm font-semibold transition hover:border-ink disabled:opacity-35", FOCUS_RING)}>
-            Clear all
+            {t("Clear all")}
           </button>
           <button type="button" onClick={onClose} className={clsx("flex h-12 items-center justify-center gap-2 rounded-full bg-ink px-4 text-sm font-semibold text-white transition hover:bg-ink/90", FOCUS_RING)}>
             {pending && <LoaderCircle size={16} className="animate-spin" aria-hidden="true" />}
             <span className="flex items-center gap-1 whitespace-nowrap">
-              Show <RollingNumber value={total} /> {total === 1 ? "product" : "products"}
+              {total === 1 ? tr("Show {count} product", { count: <RollingNumber value={total} /> }) : tr("Show {count} products", { count: <RollingNumber value={total} /> })}
             </span>
           </button>
         </footer>
         <p className="sr-only" role="status" aria-live="polite">
-          {pending ? "Updating results" : `${total} ${total === 1 ? "product" : "products"} found`}
+          {pending ? t("Updating results") : tn(total, "{n} product found", "{n} products found")}
         </p>
       </m.div>
     </div>,
@@ -549,11 +558,12 @@ function FilterDrawer({ facets, total, onClose }: { facets: Facets; total: numbe
 
 /** "Filters" button (below lg) that opens the slide-in filter drawer. */
 export function MobileFilters({ facets, total }: { facets: Facets; total: number }) {
+  const { t, tx } = useI18n();
   const { params } = useListing();
   const [open, setOpen] = useState(false);
   const trigger = useRef<HTMLButtonElement>(null);
   const close = useCallback(() => setOpen(false), []);
-  const active = activeChips(params, facets).length;
+  const active = activeChips(params, facets, t, tx).length;
 
   return (
     <>
@@ -566,7 +576,7 @@ export function MobileFilters({ facets, total }: { facets: Facets; total: number
         className={clsx("flex h-10 items-center gap-2 rounded-full border border-black/10 bg-white pl-4 pr-3 text-sm font-semibold transition hover:border-ink/40 lg:hidden", FOCUS_RING)}
       >
         <SlidersHorizontal size={15} />
-        Filters
+        {t("Filters")}
         <AnimatePresence initial={false}>
           {active > 0 && (
             <m.span
@@ -592,6 +602,7 @@ export function MobileFilters({ facets, total }: { facets: Facets; total: number
 /* -------------------------------------------------------------------------- */
 
 export function SortSelect() {
+  const { t } = useI18n();
   const { params, update } = useListing();
   const current = params.get("sort") ?? "";
   const selectedIndex = Math.max(0, SORTS.findIndex((s) => s.value === current));
@@ -666,8 +677,8 @@ export function SortSelect() {
         className={clsx("flex h-10 max-w-[13rem] items-center gap-2 rounded-full border border-black/10 bg-white pl-4 pr-3 text-sm transition hover:border-ink/40 sm:max-w-none", FOCUS_RING)}
       >
         <ArrowDownUp size={14} className="shrink-0 text-ink/50 sm:hidden" />
-        <span className="hidden text-ink/50 sm:inline">Sort</span>
-        <span className="truncate font-semibold">{SORTS[selectedIndex]!.label}</span>
+        <span className="hidden text-ink/50 sm:inline">{t("Sort")}</span>
+        <span className="truncate font-semibold">{t(SORTS[selectedIndex]!.label)}</span>
         <m.span animate={{ rotate: open ? 180 : 0 }} transition={{ duration: 0.35, ease: EASE_OUT }} className="grid shrink-0 place-items-center text-ink/50">
           <ChevronDown size={15} />
         </m.span>
@@ -677,7 +688,7 @@ export function SortSelect() {
           <m.div
             id={menuId}
             role="menu"
-            aria-label="Sort products"
+            aria-label={t("Sort products")}
             onKeyDown={onMenuKey}
             initial={{ opacity: 0, scale: 0.95, y: -6 }}
             animate={{ opacity: 1, scale: 1, y: 0 }}
@@ -703,7 +714,7 @@ export function SortSelect() {
                   className="relative flex w-full items-center justify-between rounded-xl px-3.5 py-2.5 text-left text-sm outline-none"
                 >
                   {hovered === i && <m.span layoutId="sort-highlight" className="absolute inset-0 rounded-xl bg-offwhite" transition={{ type: "spring", stiffness: 500, damping: 38 }} />}
-                  <span className={clsx("relative", checked ? "font-semibold" : "text-ink/70")}>{s.label}</span>
+                  <span className={clsx("relative", checked ? "font-semibold" : "text-ink/70")}>{t(s.label)}</span>
                   {checked && <Check size={15} className="relative" />}
                 </button>
               );
@@ -721,23 +732,25 @@ export function SortSelect() {
 
 /** "Showing 1–24 of 120", with a spinner while new results load. */
 export function ListingCount({ from, to, total }: { from: number; to: number; total: number }) {
+  const { t, tr } = useI18n();
   const { pending } = useListing();
   return (
     <p className="hidden items-center gap-2 text-sm text-ink/55 sm:flex" aria-live="polite">
       {pending ? (
         <>
-          <LoaderCircle size={14} className="animate-spin" aria-hidden="true" /> Updating…
+          <LoaderCircle size={14} className="animate-spin" aria-hidden="true" /> {t("Updating…")}
         </>
       ) : total === 0 ? (
-        "No products"
+        t("No products")
       ) : (
-        <>
-          Showing{" "}
-          <span className="font-semibold tabular-nums text-ink">
-            {from}–{to}
-          </span>{" "}
-          of <span className="font-semibold tabular-nums text-ink">{total}</span>
-        </>
+        tr("Showing {range} of {total}", {
+          range: (
+            <span className="font-semibold tabular-nums text-ink">
+              {from}–{to}
+            </span>
+          ),
+          total: <span className="font-semibold tabular-nums text-ink">{total}</span>,
+        })
       )}
     </p>
   );
@@ -755,6 +768,7 @@ export function ListingResults({ children }: { children: ReactNode }) {
 
 /** Shown when nothing matches the current filters. */
 export function ListingEmpty() {
+  const { t } = useI18n();
   const { params, clearAll } = useListing();
   const filtered = [...params.keys()].some((k) => !["q", "sort", "page"].includes(k));
   return (
@@ -765,16 +779,16 @@ export function ListingEmpty() {
         <SearchX size={30} strokeWidth={1.5} className="animate-float" />
       </span>
       <div className="relative animate-rise [animation-delay:120ms]">
-        <p className="mt-6 text-3xl font-bold tracking-tighter md:text-4xl">No products match</p>
-        <p className="mx-auto mt-2 max-w-sm text-sm text-ink/55">Try removing a filter or searching for something else.</p>
+        <p className="mt-6 text-3xl font-bold tracking-tighter md:text-4xl">{t("No products match")}</p>
+        <p className="mx-auto mt-2 max-w-sm text-sm text-ink/55">{t("Try removing a filter or searching for something else.")}</p>
         <div className="mt-8 flex flex-wrap items-center justify-center gap-3">
           {filtered && (
             <button type="button" onClick={clearAll} className={clsx("h-12 rounded-full bg-ink px-6 text-sm font-semibold text-white transition hover:bg-ink/90", FOCUS_RING)}>
-              Clear filters
+              {t("Clear filters")}
             </button>
           )}
           <Link href="/products" className={clsx("group flex h-12 items-center gap-3 rounded-full border border-ink/15 py-1 pl-6 pr-1 text-sm font-semibold transition hover:border-ink", FOCUS_RING)}>
-            Browse everything
+            {t("Browse everything")}
             <span className="grid h-10 w-10 place-items-center rounded-full bg-ink text-white transition-transform duration-500 group-hover:rotate-45">
               <ArrowUpRight size={16} />
             </span>

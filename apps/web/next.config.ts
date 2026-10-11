@@ -6,7 +6,9 @@ import type { NextConfig } from "next";
  * Express API; this rewrite covers local development and `next start`.
  */
 const API_INTERNAL_URL = process.env.API_INTERNAL_URL ?? "http://127.0.0.1:4100";
-const MEDIA_ORIGIN = process.env.NEXT_PUBLIC_MEDIA_ORIGIN ?? "http://localhost:9100";
+// Where stored pictures are shown from and uploaded to: one origin, or several separated by spaces
+// (Cloudinary shows pictures from res.cloudinary.com and takes uploads at api.cloudinary.com).
+const MEDIA_ORIGIN = (process.env.NEXT_PUBLIC_MEDIA_ORIGIN ?? "http://localhost:9100").split(/[\s,]+/).filter(Boolean).join(" ");
 const isProd = process.env.NODE_ENV === "production";
 
 const csp = [
@@ -28,7 +30,7 @@ const csp = [
 const config: NextConfig = {
   reactStrictMode: true,
   poweredByHeader: false,
-  // Product images are already optimised to WebP/AVIF sizes and served from R2/CDN.
+  // Product images are already optimised to WebP/AVIF sizes and served by image storage (R2 or Cloudinary) and its CDN.
   images: { unoptimized: true },
   async rewrites() {
     return [{ source: "/api/:path*", destination: `${API_INTERNAL_URL}/api/:path*` }];

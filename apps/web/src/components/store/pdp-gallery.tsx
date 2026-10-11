@@ -4,6 +4,7 @@ import { useEffect, useRef, useState, type KeyboardEvent, type PointerEvent as R
 import { AnimatePresence, m, useDragControls, useMotionValue, type PanInfo, type Variants } from "motion/react";
 import { clsx } from "clsx";
 import { ArrowLeft, ArrowRight } from "lucide-react";
+import { useI18n } from "@/lib/i18n/client";
 import type { ImageView } from "@/lib/types";
 import { EASE_OUT } from "./motion";
 import { ProductImage } from "./product-card";
@@ -45,6 +46,7 @@ export function PdpGallery({
   onChange: (index: number, direction: number) => void;
   badges?: ReactNode;
 }) {
+  const { t } = useI18n();
   const count = images.length;
   const many = count > 1;
   const current = images[index] ?? null;
@@ -109,7 +111,7 @@ export function PdpGallery({
                 }}
                 type="button"
                 onClick={() => goTo(i)}
-                aria-label={`Show image ${i + 1} of ${count}`}
+                aria-label={t("Show image {index} of {count}", { index: i + 1, count })}
                 aria-current={i === index ? "true" : undefined}
                 className="group/thumb relative aspect-[4/5] w-full shrink-0 overflow-hidden rounded-2xl bg-white outline-none focus-visible:ring-2 focus-visible:ring-ink focus-visible:ring-offset-2 focus-visible:ring-offset-offwhite"
               >
@@ -123,8 +125,8 @@ export function PdpGallery({
 
       <div
         role={many ? "region" : undefined}
-        aria-roledescription={many ? "carousel" : undefined}
-        aria-label={many ? `${name} — images` : undefined}
+        aria-roledescription={many ? t("carousel") : undefined}
+        aria-label={many ? t("{name} — images", { name }) : undefined}
         tabIndex={many ? 0 : undefined}
         onKeyDown={many ? onKeyDown : undefined}
         onPointerMove={onPointerMove}
@@ -171,10 +173,10 @@ export function PdpGallery({
 
         {many && (
           <>
-            <button type="button" onClick={() => step(-1)} aria-label="Previous image" className={clsx(ARROW, "left-4")}>
+            <button type="button" onClick={() => step(-1)} aria-label={t("Previous image")} className={clsx(ARROW, "left-4")}>
               <ArrowLeft size={17} />
             </button>
-            <button type="button" onClick={() => step(1)} aria-label="Next image" className={clsx(ARROW, "right-4")}>
+            <button type="button" onClick={() => step(1)} aria-label={t("Next image")} className={clsx(ARROW, "right-4")}>
               <ArrowRight size={17} />
             </button>
 
@@ -188,7 +190,7 @@ export function PdpGallery({
             <div className="absolute inset-x-0 bottom-3 z-10 flex justify-center sm:hidden">
               <div className="flex items-center rounded-full bg-white/80 px-1.5 backdrop-blur">
                 {images.map((img, i) => (
-                  <button key={img?.id ?? i} type="button" onClick={() => goTo(i)} aria-label={`Show image ${i + 1} of ${count}`} aria-current={i === index ? "true" : undefined} className="grid h-7 place-items-center px-[3px]">
+                  <button key={img?.id ?? i} type="button" onClick={() => goTo(i)} aria-label={t("Show image {index} of {count}", { index: i + 1, count })} aria-current={i === index ? "true" : undefined} className="grid h-7 place-items-center px-[3px]">
                     <m.span initial={false} animate={{ width: i === index ? 18 : 6 }} transition={{ duration: 0.4, ease: EASE_OUT }} className={clsx("block h-1.5 rounded-full transition-colors", i === index ? "bg-ink" : "bg-ink/25")} />
                   </button>
                 ))}
@@ -196,7 +198,7 @@ export function PdpGallery({
             </div>
 
             <p className="sr-only" aria-live="polite">
-              Image {index + 1} of {count}
+              {t("Image {index} of {count}", { index: index + 1, count })}
             </p>
           </>
         )}

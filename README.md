@@ -6,7 +6,7 @@ E-commerce storefront, admin panel, POS billing, inventory and GST invoicing in 
 | --- | --- |
 | **Web** (`apps/web`) | Next.js 16 (App Router), React 19, Tailwind v4, TanStack Query, React Hook Form + zod: storefront, customer account, admin, and `/pos` |
 | **API** (`apps/api`) | Express 5, Prisma 6 / PostgreSQL 16, Redis + BullMQ worker, zod: REST under `/api` |
-| **Integrations** | Razorpay · Shiprocket · MSG91 · Brevo / Amazon SES / SMTP · Cloudflare R2. Each has a clearly separated **mock adapter for local development**. Production refuses the mock adapters. |
+| **Integrations** | Razorpay · Shiprocket · MSG91 · Brevo / Amazon SES / SMTP · Cloudflare R2 or Cloudinary (images). Each has a clearly separated **mock adapter for local development**. Production refuses the mock adapters. |
 
 What it covers:
 
@@ -106,7 +106,8 @@ On a slow machine, skip watch mode: `npx tsx src/server.ts` and `npx tsx src/wor
 
 The demo seed adds:
 
-- 20 products with colour × size variants and images
+- the shop's six collections as categories: Kurti Sets, Anarkali, Western Wear, Lehenga, Party Wear and Kids Wear
+- 12 women's wear products with colour × size variants and images, in Western Wear and Party Wear (the other collections start empty, ready for the shop's own range)
 - two warehouses: `WH-001` (online fulfilment) and `WH-002` (City Store, used for POS)
 - stock, one supplier and an approved purchase order
 
@@ -117,7 +118,91 @@ Admin → Appearance (`/admin/appearance`, needs `settings.read`; saving needs `
 - **Two values are saved**: a mode (light or dark) and one brand colour, plus an optional text colour. They live in the `appearance` setting; the default is dark with brand pink `#ff3d9a`.
 - **Everything else is generated** from them in `apps/web/src/lib/theme.ts` (surfaces, hovers, soft tints, shadows, text on the brand colour) and set as CSS variables on `<html>`. `globals.css` holds the token names and the fallback values.
 - **A save is live immediately.** The root layout paints the saved theme on the server, and saving drops the cached pages, so no visitor sees the old colours.
+- **Shoppers can pick light or dark for themselves** with the sun / moon icon in the storefront header. The choice is kept in that browser's `localStorage` (key `trendz_theme`) and applies to storefront pages only: the saved mode is just what everyone sees first, and the admin and POS always use it. A small script at the top of `<body>` applies the choice before the first paint.
 - **Writing new UI**: use the tokens (`bg-white` for cards, `text-ink`, `bg-accent`, `text-on-accent`, `border-black/10` …), never fixed colours, so it follows both modes. Blocks that must stay dark in light mode (footer, bands over photos) take the `on-dark` class.
+- **Doodles (storefront only)**: big line drawings of a hanger, a dress, a needle and thread and so on sit behind every storefront page. `DoodleField` (`apps/web/src/components/store/doodles.tsx`) is rendered once by the store layout; cards and photographs cover it, so it shows in the open parts of a page. The not-found and error pages sit outside that layout and are also shown for admin and POS addresses, so they use `StandaloneDoodles`, which adds the doodles in the browser for storefront addresses only. Where a large panel would hide it (the category and About banners, the sign-in card, the empty bag, the offers banner, the footer; the home page banner is kept plain) a single `<Doodle art="hanger" className="absolute w-64 text-gold/30 …" />` from `doodle.tsx` is placed inside the panel. They are drawn in the theme's gold and brand colour, are hidden from screen readers and never take a click. The admin and POS do not have them. To add a drawing, add it to `SHEET` (a 200 × 200 grid) and to the `DoodleArt` type.
+- **Select inputs**: every dropdown in the storefront, admin and POS is `Select` from `@/components/ui`, drawn with [react-select](https://react-select.com) (`apps/web/src/components/ui/select.tsx`). Use it like a native `<select>`: `<option>` children, `value` / `onChange={(e) => e.target.value}`, or react-hook-form's `{...register("field")}`. A hidden native `<select>` stays the real form control, so nothing else is needed. Size it with utilities on the component (`className="w-40"`, `h-8 text-xs`); lists of nine or more options can be typed into.
+
+### Image storage (R2 or Cloudinary)
+
+Every picture the application stores (product photos, category pictures, brand logos, the home page, offer and About pictures) is kept by one service, chosen with `STORAGE_PROVIDER` in `apps/api/.env`. The code is in `apps/api/src/integrations/object-storage/`; the rest of the API only knows storage keys.
+
+- **`r2`** (the default; MinIO locally): the browser uploads the file with a presigned `PUT`, the worker makes the WebP and AVIF sizes with sharp, and the upload is deleted.
+- **`cloudinary`**: the browser posts the file to Cloudinary with a form the API has signed, the photo is kept there, and Cloudinary makes the same sizes from it (requested once, when the upload completes). Category, brand and content pictures are served as `f_auto,q_auto`, at most 1600px wide. No bucket to create and no worker CPU spent on resizing.
+- **The API secret never reaches the browser.** It signs each upload on the server; the browser gets a signature that is good for one picture under one name.
+- **One folder per environment.** `CLOUDINARY_FOLDER` (for example `trendz-dev` and `trendz`) keeps environments apart inside one Cloudinary account.
+- **Where the keys go locally**: `apps/api/.env.keys`, a short uncommitted file with just the keys a developer has to obtain (Cloudinary now, the Supabase connection strings for the planned database move). The API reads it together with `.env`, and a value in it wins. On a server the same names go in `api.env`.
+- **Checking a new account**: `npm run storage:check -w apps/api` uploads a test picture from the server and the way a browser does, reads it back, makes the sizes and deletes it again.
+- **Switching an environment that already has pictures**: set the Cloudinary values, keep the `R2_*` ones, and run `npm run storage:migrate -w apps/api` (a dry run; add `-- --apply` to move them). It copies the pictures to Cloudinary and updates the addresses in the database; the files on R2 / MinIO are left in place.
+- **Limits**: every picture (product photos, category images, brand logos, content pictures) may be at most 2 MB, in JPEG, PNG, WebP or AVIF. The admin says so beside each upload control and refuses a larger file before sending anything; the API gives no upload ticket for a larger size (`MAX_IMAGE_BYTES` in `apps/api/src/integrations/object-storage/storage.types.ts`, mirrored in `apps/web/src/lib/upload.ts`). R2 then refuses a file that is not the size the ticket was given for. Cloudinary cannot, so there the stored size is checked when the picture is put to use (a product photo's upload is completed; a category, brand or content record is saved with a new picture), and an oversized picture is refused and deleted (`apps/api/src/modules/media/upload-limit.ts`).
+- **Tests** always use the local MinIO bucket (`tests/setup-env.ts`), so a test run never writes to a real Cloudinary account. `tests/cloudinary.test.ts` runs the Cloudinary code against a stand-in for its API.
+
+### Database on Supabase
+
+The application can keep its data in a Supabase project instead of a PostgreSQL on the same machine. Supabase is used as a plain PostgreSQL server: the application has its own sign-in and does not use Supabase Auth, Storage or its REST API.
+
+- **Connection**: `DATABASE_URL` in `apps/api/.env` is the **session pooler** string (Supabase → Connect, port 5432) ending in `?schema=public&connection_limit=5&connect_timeout=30`. The API and the worker are long-running processes, which is what the session pooler is for; the transaction pooler (port 6543) is not used. Supabase's anon key, service_role key and JWT secret are not needed.
+- **Creating the tables**: `npm run db:deploy -w apps/api` applies the committed migrations (it only ever adds) and then runs `scripts/db-lockdown.ts`.
+- **The tables are closed to Supabase's own REST API.** By default the roles behind a Supabase project's public key may read and write every table in `public`. The lock-down takes every privilege away from them and switches row level security on for every table, with no policy; the application signs in as the tables' owner and is not affected. It runs after every `db:deploy`, so tables added later are covered, and does nothing on a PostgreSQL that is not Supabase.
+- **Writing a new migration**: `npm run db:migrate` never runs `prisma migrate dev` against a hosted database (that command can ask to wipe a database that does not match). When `DATABASE_URL` is not a local address it uses `LOCAL_DATABASE_URL`, the PostgreSQL on this machine; apply the result to Supabase with `npm run db:deploy -w apps/api`.
+- **Tests never touch it.** They run against `trendz_test` on the local PostgreSQL (`tests/setup-env.ts`), and the helper that empties the tables refuses any database whose name does not end in `_test`.
+- **Free plan**: a project is paused after about a week without activity (resume it in the Supabase dashboard), and backups are not included; see DEPLOYMENT.md before using it for the live shop.
+
+### Languages (English / Tamil)
+
+The storefront has a language switch on the announcement strip at the top of every page (and in the mobile menu). The admin and POS are English only.
+
+- **The choice is a cookie** (`trendz_lang`, one year). The store layout reads it on the server, so a page arrives already translated. Reading a cookie means storefront pages are rendered per request rather than served from the full-page cache; the API responses behind them are still cached.
+- **The English sentence is the key.** Write `t("Add to bag")`; Tamil for it lives in `apps/web/src/lib/i18n/ta/` (one file per area). A sentence with no Tamil entry is a TypeScript error.
+  - Client components: `const { t, tn, tr, tx, ts, locale } = useI18n()` from `@/lib/i18n/client`.
+  - Server components and metadata: `const { t } = await getI18n()` from `@/lib/i18n/server`.
+  - `tn(count, "{n} item", "{n} items")` for plurals, `tr()` when a placeholder is an element, `msg()` for text defined outside a component, `date(value, locale)` for dates.
+  - The not-found and error pages sit outside the store layout, so they use `useStandaloneI18n()`, which reads the cookie in the browser. Do not read it on the server there: that makes every route, the admin included, render per request.
+- **Catalogue data is shown as typed in the admin.** Product names and descriptions are not translated. Category, option and colour names are translated when they are listed in `ta/data.ts` (looked up with `tx()`), as are order and payment statuses (`ts()`). Messages that come from the API (for example a validation error) are in English.
+- **Tamil type**: Noto Sans Tamil and Noto Serif Tamil load only when Tamil is shown. `globals.css` drops Latin letter-spacing and loosens heading line height under `:lang(ta)`; use the `ta:` Tailwind variant (`ta:text-3xl`) where a Tamil heading needs its own size.
+- `npm run i18n:check -w apps/web` lists text in the code that has no Tamil entry, translations that lost a `{placeholder}`, and unused entries.
+
+### CMS (home page, about, contact, legal pages)
+
+The CMS group in the admin sidebar holds what the storefront says. Every screen needs `settings.read`, saving needs `settings.write`, and a save shows on the store straight away.
+
+| Admin screen | Edits | Storefront |
+|---|---|---|
+| Home page (`/admin/cms/home`) | The home page sections from top to bottom: banner (headline, tagline, buttons, optional picture), Shop by category, Popular picks, the "about the collection" card, the delivery / returns / payment cards, New arrivals and the closing band. Each section below the banner can be switched off | `/` |
+| Home page offers (`/admin/home-offers`) | The offers section under the banner (next heading) | `/` |
+| About us (`/admin/cms/about`) | The About us page: the banner (small heading, heading, introduction, optional picture; the logo is shown without one) and the page text, written in a rich text editor. The page can be switched off | `/about` and its links in the header menu and the footer |
+| Contact us (`/admin/cms/contact`) | Phone, WhatsApp number, email, Instagram handle, address, opening hours, a directions link and the contact page's heading | `/contact`, the footer of every page and every WhatsApp button |
+| Terms & Conditions, Privacy Policy (`/admin/cms/terms`, `/admin/cms/privacy`) | A title and the page text, written in a rich text editor | `/terms`, `/privacy` and their footer links |
+
+- **Two languages.** Every text is entered in English and Tamil; a shopper sees their language, and an empty one falls back to the other. A text left empty in both is left out of the page.
+- **Legal pages start empty and unpublished.** Until a page is published, `/terms` or `/privacy` answers "not found" and the footer does not link to it. The shop writes its own wording; nothing is pre-filled.
+- **The About us page starts written and shown.** Its starting text only repeats what the store already says (the collections, weekly arrivals, WhatsApp help, the shop and home delivery); the shop's own history is for the shop to add. Switched off, `/about` answers "not found" and the header and footer links disappear.
+- **It is content only.** The delivery and returns headings on the home page state the free-shipping amount and the return window, so they are built from Settings rather than typed here, and can never disagree with checkout.
+- **Contact details are not the invoice identity.** The legal name, GSTIN and address printed on invoices stay under Admin → Settings (`store`).
+- **Where it lives**: the `homePage`, `contact`, `termsPage`, `privacyPage` and `aboutPage` settings (`apps/api/src/modules/settings/cms.ts`). Their defaults are the text the storefront had before it became editable. The home page and contact details reach the storefront through `/store/config`; a legal page's text through `/store/pages/:slug` and the About us page through `/store/about`. Links are limited to paths on this site, pictures to files uploaded through the editor, and page text to an allow-list of tags (`apps/api/src/common/utils/html.ts`).
+- **If the API cannot supply it** (unreachable, or an older build), the storefront falls back to the same text from `apps/web/src/lib/cms.ts`.
+- **Adding another page** (for example a shipping policy): add its schema and slug to `PAGE_SETTINGS` in `cms.ts` and to `settingSchemas`, extend `PageSlug` in `apps/web/src/lib/types.ts`, and add a storefront route, an admin route and a nav entry like the ones for `terms`.
+
+### Home page offers
+
+Admin → CMS → Home page offers (`/admin/home-offers`, needs `settings.read`; saving needs `settings.write`) edits the offers section under the banner on the home page.
+
+- **What it holds**: a heading, up to four offer cards (ribbon, title, a line above the price, price, link, optional picture), a gift banner and a sale banner with a big figure such as "20%". Every text is entered in English and Tamil; a shopper sees their language, and an empty one falls back to the other.
+- **Offer period**: the start and end dates are printed on the sale banner, and the whole section leaves the home page the day after the end date (India time). Clear the end date to keep it up.
+- **It is content only.** Nothing here changes a price. A discount that should apply at checkout or at the billing counter is set up under Admin → Discounts or Coupons.
+- **Where it lives**: the `homeOffers` setting (`apps/api/src/modules/settings/home-offers.ts`, whose defaults are the shop's grand-opening flyer), served to the storefront through `/store/config`. Links are limited to paths on this site and pictures to files uploaded through the editor. A save shows on the home page straight away.
+- The section itself is `apps/web/src/components/store/home-offers.tsx`. It is laid out with container queries, so the editor's preview and the home page render the same component.
+
+### Customer reviews
+
+Customers rate and review products they have received.
+
+- **Who can review**: a signed-in customer with a delivered order that contains the product. That makes every review a verified purchase. One review per customer and product; they can edit or remove it.
+- **Where**: "Write a review" appears on each item of a delivered order (Account → Orders), on Account → Reviews (which lists delivered products still waiting for a review) and on the product page. The "order delivered" email and notification invite the customer to review.
+- **Product page**: average rating, a breakdown by stars and the reviews, with the customer's first name and last initial only. The average is also in the page's structured data for search engines.
+- **Moderation**: Admin → Reviews (permissions `reviews.read` and `reviews.moderate`; store manager, sales manager and support have them by default). Staff publish, reject (with an internal note) or delete; the customer is notified either way and can edit a rejected review and send it again.
+- **Two settings**, Admin → Settings → Reviews: switch reviews on or off, and whether a review needs approval before it is shown (default: it does).
+- After pulling this change run `npm run db:migrate` (new `product_reviews` table) and `npm run db:seed` (registers the two permissions and grants them to the system roles above).
 
 ### Development adapters (no credentials needed)
 
@@ -127,7 +212,7 @@ Admin → Appearance (`/admin/appearance`, needs `settings.read`; saving needs `
 | SMS | `SMS_PROVIDER=console` | Logs the message to the API console. OTPs are masked in `sms_logs`. |
 | Email | `EMAIL_PROVIDER=smtp` → Mailpit | Real SMTP delivery to a local inbox |
 | Shipping | `SHIPPING_PROVIDER=mock` | Creates AWBs and labels. Admin → Order → "Simulate next courier status" walks a shipment through the lifecycle. |
-| Storage | MinIO | The same S3 API calls the app makes against Cloudflare R2 |
+| Storage | MinIO (`STORAGE_PROVIDER=r2`) | The same S3 API calls the app makes against Cloudflare R2 |
 
 ### Switching to real providers
 
@@ -137,6 +222,7 @@ Set the variables in `apps/api/.env` (all documented in `.env.example`) and rest
 | --- | --- |
 | **Razorpay** | `PAYMENT_PROVIDER=razorpay`, `RAZORPAY_KEY_ID`, `RAZORPAY_KEY_SECRET`, `RAZORPAY_WEBHOOK_SECRET`. For local webhooks, expose port 4100 with a tunnel (e.g. `cloudflared tunnel --url http://localhost:4100`) and register `<tunnel>/api/payments/webhook`. |
 | **Cloudflare R2** | `R2_ENDPOINT=https://<account>.r2.cloudflarestorage.com`, `R2_ACCESS_KEY_ID`, `R2_SECRET_ACCESS_KEY`, `R2_BUCKET_NAME`, `R2_PUBLIC_URL` (custom domain), `R2_FORCE_PATH_STYLE=false`. Set the bucket CORS as in DEPLOYMENT.md §3, and set `NEXT_PUBLIC_MEDIA_ORIGIN` in the web env. |
+| **Cloudinary** (instead of R2) | `STORAGE_PROVIDER=cloudinary` and `CLOUDINARY_URL` (the one line the Cloudinary console shows under Settings → API Keys) or `CLOUDINARY_CLOUD_NAME`, `CLOUDINARY_API_KEY`, `CLOUDINARY_API_SECRET`; `CLOUDINARY_FOLDER` (one folder per environment). In the web env set `NEXT_PUBLIC_MEDIA_ORIGIN="https://res.cloudinary.com https://api.cloudinary.com"` and rebuild the web app. Then `npm run storage:check -w apps/api`, and `npm run storage:migrate -w apps/api` to move pictures that are already on R2 / MinIO. See "Image storage" below. |
 | **MSG91** | `SMS_PROVIDER=msg91`, `SMS_API_KEY`, `SMS_SENDER_ID`, and `SMS_TEMPLATE_OTP/ORDER/SHIPPING` (DLT template ids; texts in `apps/api/src/integrations/sms/sms.types.ts`) |
 | **Brevo** | `EMAIL_PROVIDER=brevo`, `EMAIL_API_KEY`, `EMAIL_FROM_ADDRESS` (a verified sender) |
 | **Amazon SES** | `EMAIL_PROVIDER=ses`, `AWS_REGION`, `AWS_ACCESS_KEY_ID`, `AWS_SECRET_ACCESS_KEY` |
@@ -156,6 +242,7 @@ Money, tax and stock rules are **settings**, not code: Admin → Settings and Ad
 - return window
 - POS manual-discount cap
 - coupon stacking
+- whether customer reviews need approval before they are shown
 - invoice prefixes
 
 ARCHITECTURE.md §7 lists every configurable rule and its default.
@@ -185,8 +272,8 @@ CI (`.github/workflows/ci.yml`) runs the same suite on every push.
 | Command | What it does |
 | --- | --- |
 | `npm run infra:up` / `infra:down` | Start / stop the local Docker services |
-| `npm run db:migrate` | Create and apply a migration in development (`prisma migrate dev`) |
-| `npm run db:deploy --workspace apps/api` | Apply committed migrations only (what production runs) |
+| `npm run db:migrate` | Create and apply a migration in development (`prisma migrate dev`), always against a PostgreSQL on this machine |
+| `npm run db:deploy --workspace apps/api` | Apply committed migrations only (what production runs), then close the tables to Supabase's REST API when the database is on Supabase |
 | `npm run db:seed` | Seed core data, plus demo data outside production |
 | `npm run db:studio --workspace apps/api` | Prisma Studio |
 | `npm run build` | Production build of both apps |

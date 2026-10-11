@@ -14,6 +14,10 @@ export const getApp = () => (app ??= createApp());
 let allTables: string[] | null = null;
 
 export async function resetDatabase() {
+  // This empties every table. It must only ever reach a throwaway test database, never the one the
+  // application uses (tests/setup-env.ts points the tests at trendz_test; this is the second lock).
+  const [{ db }] = await prisma.$queryRaw<[{ db: string }]>`SELECT current_database() AS db`;
+  if (!db.endsWith("_test")) throw new Error(`Refusing to empty the database "${db}": tests only run against a database whose name ends in "_test".`);
   allTables ??= (
     await prisma.$queryRaw<{ tablename: string }[]>`
       SELECT tablename FROM pg_tables WHERE schemaname = 'public' AND tablename <> '_prisma_migrations'`

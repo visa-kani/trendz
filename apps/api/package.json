@@ -15,12 +15,15 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "db:generate": "prisma generate",
-    "db:migrate": "prisma migrate dev",
-    "db:deploy": "prisma migrate deploy",
+    "db:migrate": "tsx scripts/db-migrate-dev.ts",
+    "db:deploy": "prisma migrate deploy && tsx scripts/db-lockdown.ts",
+    "db:lockdown": "tsx scripts/db-lockdown.ts",
     "db:seed": "tsx prisma/seed.ts",
     "db:seed:bulk": "tsx prisma/seed-bulk.ts",
     "db:studio": "prisma studio",
-    "storage:init": "tsx scripts/storage-init.ts"
+    "storage:init": "tsx scripts/storage-init.ts",
+    "storage:check": "tsx scripts/storage-check.ts",
+    "storage:migrate": "tsx scripts/storage-migrate.ts"
   },
   "prisma": {
     "seed": "tsx prisma/seed.ts"

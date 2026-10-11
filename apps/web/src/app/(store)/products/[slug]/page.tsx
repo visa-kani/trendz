@@ -7,8 +7,14 @@ import { PdpAccordion, type AccordionSection } from "@/components/store/pdp-acco
 import { ProductPurchase } from "@/components/store/product-purchase";
 import { ProductRail } from "@/components/store/product-rail";
 import { Breadcrumbs } from "@/components/store/shop-breadcrumbs";
+import { msg } from "@/lib/i18n";
+import { getI18n } from "@/lib/i18n/server";
 import { NotFoundError, serverGet, SITE_URL } from "@/lib/server-api";
 import type { ProductDetail } from "@/lib/types";
+import { RichText } from "@/components/ui/rich-text";
+import { plainText } from "@/lib/rich-text";
+import { ProductReviewsSection } from "@/components/store/reviews";
+import type { ProductReviews } from "@/lib/reviews";
 
 async function load(slug: string) {
   try {
@@ -33,13 +39,17 @@ export async function generateMetadata({ params }: { params: Promise<{ slug: str
 }
 
 const PROMISES = [
-  { icon: Truck, title: "Tracked delivery", body: "Shipping is calculated at checkout." },
-  { icon: RotateCcw, title: "Easy returns", body: "Request a return from your account in a few taps." },
-  { icon: ShieldCheck, title: "Secure checkout", body: "Pay with UPI, cards or netbanking through Razorpay." },
+  { icon: Truck, title: msg("Tracked delivery"), body: msg("Shipping is calculated at checkout.") },
+  { icon: RotateCcw, title: msg("Easy returns"), body: msg("Request a return from your account in a few taps.") },
+  { icon: ShieldCheck, title: msg("Secure checkout"), body: msg("Pay with UPI, cards or netbanking through Razorpay.") },
 ];
 
 export default async function ProductPage({ params }: { params: Promise<{ slug: string }> }) {
   const p = await load((await params).slug);
+  const { t, tx } = await getI18n();
+  // The first reviews are part of the page's HTML and structured data. Reviews failing to load must not take the page down.
+  const reviews = await serverGet<ProductReviews>(`/store/products/${encodeURIComponent(p.slug)}/reviews?limit=5`, 60).catch(() => null);
+  const rating = reviews?.enabled && reviews.summary.count > 0 ? reviews.summary : null;
   const inStock = p.variants.some((v) => v.inStock);
   const prices = p.variants.map((v) => v.sellingPrice);
 
@@ -49,9 +59,10 @@ export default async function ProductPage({ params }: { params: Promise<{ slug: 
     "@type": "Product",
     name: p.name,
     sku: p.baseSku,
-    description: p.shortDescription ?? undefined,
+    description: plainText(p.shortDescription) || undefined,
     image: p.images.map((i) => i.large ?? i.url).filter(Boolean),
     brand: p.brand ? { "@type": "Brand", name: p.brand.name } : undefined,
+    aggregateRating: rating ? { "@type": "AggregateRating", ratingValue: rating.average, reviewCount: rating.count } : undefined,
     offers: {
       "@type": "AggregateOffer",
       priceCurrency: "INR",
@@ -63,29 +74,26 @@ export default async function ProductPage({ params }: { params: Promise<{ slug: 
     },
   };
 
-  const info: { label: string; value: string }[] = [{ label: "Style code", value: p.baseSku }];
-  if (p.productType) info.push({ label: "Type", value: p.productType });
-  if (p.brand) info.push({ label: "Brand", value: p.brand.name });
+  const info: { label: string; value: string }[] = [{ label: t("Style code"), value: p.baseSku }];
+  if (p.productType) info.push({ label: t("Type"), value: p.productType });
+  if (p.brand) info.push({ label: t("Brand"), value: p.brand.name });
   if (p.hsnCode) info.push({ label: "HSN", value: p.hsnCode });
 
   const sections: AccordionSection[] = [];
   if (p.description) {
     sections.push({
       id: "details",
-      title: "Details",
+      title: t("Details"),
       content: (
         // Descriptions are authored by staff in the admin panel.
-        <div
-          className="max-w-2xl space-y-3 text-[15px] leading-relaxed text-ink/70 [&_h3]:mt-5 [&_h3]:font-semibold [&_h3]:text-ink [&_h4]:font-semibold [&_h4]:text-ink [&_li]:ml-5 [&_li]:list-disc [&_strong]:text-ink"
-          dangerouslySetInnerHTML={{ __html: sanitize(p.description) }}
-        />
+        <RichText html={p.description} className="max-w-2xl text-[15px] leading-relaxed text-ink/70" />
       ),
     });
   }
   sections.push(
     {
       id: "delivery",
-      title: "Delivery & returns",
+      title: t("Delivery & returns"),
       content: (
         <ul className="grid gap-3 sm:grid-cols-3">
           {PROMISES.map(({ icon: Icon, title, body }) => (
@@ -93,8 +101,8 @@ export default async function ProductPage({ params }: { params: Promise<{ slug: 
               <span className="grid h-10 w-10 place-items-center rounded-2xl bg-offwhite">
                 <Icon size={17} strokeWidth={1.75} />
               </span>
-              <p className="mt-4 text-sm font-semibold">{title}</p>
-              <p className="mt-1 text-xs leading-relaxed text-ink/55">{body}</p>
+              <p className="mt-4 text-sm font-semibold">{t(title)}</p>
+              <p className="mt-1 text-xs leading-relaxed text-ink/55">{t(body)}</p>
             </li>
           ))}
         </ul>
@@ -102,7 +110,7 @@ export default async function ProductPage({ params }: { params: Promise<{ slug: 
     },
     {
       id: "info",
-      title: "Product info",
+      title: t("Product info"),
       content: (
         <dl className="max-w-xl divide-y divide-black/5 rounded-2xl bg-white px-5 shadow-neu">
           {info.map(({ label, value }) => (
@@ -119,19 +127,19 @@ export default async function ProductPage({ params }: { params: Promise<{ slug: 
   return (
     <div className="container-x pt-6 md:pt-8">
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd).replace(/</g, "\\u003c") }} />
-      <Breadcrumbs className="mb-6 md:mb-8" items={[{ name: "Home", href: "/" }, ...p.breadcrumb.map((b) => ({ name: b.name, href: `/category/${b.slug}` })), { name: p.name }]} />
+      <Breadcrumbs className="mb-6 md:mb-8" items={[{ name: t("Home"), href: "/" }, ...p.breadcrumb.map((b) => ({ name: tx(b.name), href: `/category/${b.slug}` })), { name: p.name }]} />
 
-      <ProductPurchase product={p} />
+      <ProductPurchase product={p} rating={rating} />
 
       <section className="mt-20 grid gap-8 md:mt-28 lg:grid-cols-12 lg:gap-16">
         <Reveal className="lg:col-span-4">
-          <p className="eyebrow">Know your piece</p>
-          <h2 className="mt-2 text-4xl font-bold tracking-tighter md:text-5xl">The details</h2>
+          <p className="eyebrow">{t("Know your piece")}</p>
+          <h2 className="mt-2 text-4xl font-bold tracking-tighter md:text-5xl">{t("The details")}</h2>
           {p.tags.length > 0 && (
-            <ul className="mt-6 flex flex-wrap gap-2" aria-label="Tags">
-              {p.tags.map((t) => (
-                <li key={t} className="rounded-full border border-black/10 bg-white px-3 py-1 text-xs font-medium text-ink/60">
-                  #{t}
+            <ul className="mt-6 flex flex-wrap gap-2" aria-label={t("Tags")}>
+              {p.tags.map((tag) => (
+                <li key={tag} className="rounded-full border border-black/10 bg-white px-3 py-1 text-xs font-medium text-ink/60">
+                  #{tag}
                 </li>
               ))}
             </ul>
@@ -142,29 +150,22 @@ export default async function ProductPage({ params }: { params: Promise<{ slug: 
         </Reveal>
       </section>
 
+      {reviews && <ProductReviewsSection slug={p.slug} productName={p.name} initial={reviews} />}
+
       {p.related.length > 0 && (
         <section className="mt-24 md:mt-32">
           <Reveal className="mb-8 flex flex-wrap items-end justify-between gap-4">
             <div>
-              <p className="eyebrow">Complete the look</p>
-              <h2 className="mt-2 text-4xl font-bold tracking-tighter md:text-5xl">You may also like</h2>
+              <p className="eyebrow">{t("Complete the look")}</p>
+              <h2 className="mt-2 text-4xl font-bold tracking-tighter md:text-5xl">{t("You may also like")}</h2>
             </div>
             <Link href={`/category/${p.category.slug}`} className="link-draw text-sm font-semibold">
-              More {p.category.name}
+              {t("More {category}", { category: tx(p.category.name) })}
             </Link>
           </Reveal>
-          <ProductRail products={p.related} label="You may also like" />
+          <ProductRail products={p.related} label={t("You may also like")} />
         </section>
       )}
     </div>
   );
-}
-
-/** Allows only simple formatting tags in product descriptions (defence in depth against stored XSS). */
-function sanitize(html: string) {
-  return html
-    .replace(/<\s*(script|style|iframe|object|embed|form|input|link|meta)[\s\S]*?(<\s*\/\s*\1\s*>|\/?>)/gi, "")
-    .replace(/\son\w+\s*=\s*("[^"]*"|'[^']*'|[^\s>]+)/gi, "")
-    .replace(/(href|src)\s*=\s*("|')\s*javascript:[^"']*\2/gi, "")
-    .replace(/<(?!\/?(p|ul|ol|li|strong|b|em|i|br|h3|h4|span)\b)[^>]*>/gi, "");
 }

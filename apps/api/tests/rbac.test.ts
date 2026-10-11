@@ -109,6 +109,119 @@ describe("authorization", () => {
     const { client: cashier } = await loginAs(["CASHIER"]);
     await cashier.put("/api/settings/appearance").send({ mode: "dark", brandColor: "#000000" }).expect(403);
   });
+
+  it("home page offers: bilingual content is validated, published and hidden when switched off", async () => {
+    const anonymous = await client();
+    const before = await anonymous.get("/api/store/config").expect(200);
+    expect(before.body.data.homeOffers).toMatchObject({ enabled: true, title: { en: expect.any(String), ta: expect.any(String) } });
+    expect(before.body.data.homeOffers.cards[0]).toMatchObject({ price: 89900, imageKey: null, imageUrl: null });
+
+    const { client: admin } = await loginAs(["ADMIN"]);
+    const offers = (await admin.get("/api/settings/homeOffers").expect(200)).body.data.value;
+
+    // Links must stay on the site, pictures must come from the upload endpoint, dates must be in order.
+    for (const href of ["https://evil.example", "//evil.example", "javascript:alert(1)"]) {
+      await admin.put("/api/settings/homeOffers").send({ ...offers, sale: { ...offers.sale, href } }).expect(400);
+    }
+    await admin.put("/api/settings/homeOffers").send({ ...offers, cards: [{ ...offers.cards[0], imageKey: "https://evil.example/x.png" }] }).expect(400);
+    await admin.put("/api/settings/homeOffers").send({ ...offers, startsOn: "2026-10-19", endsOn: "2026-10-12" }).expect(400);
+    await admin.put("/api/settings/homeOffers").send({ ...offers, cards: Array.from({ length: 5 }, () => offers.cards[0]) }).expect(400);
+
+    const card = { tag: { en: "New", ta: "புதியது" }, title: { en: "Kurti set", ta: "குர்த்தீ செட்" }, caption: { en: "From", ta: "" }, price: 129900, href: "/category/kurti-sets", imageKey: "public/content/abc.webp" };
+    const saved = await admin.put("/api/settings/homeOffers").send({ ...offers, cards: [card], endsOn: null }).expect(200);
+    expect(saved.body.data.cards).toEqual([{ ...card, imageUrl: expect.stringMatching(/\/public\/content\/abc\.webp$/) }]);
+
+    const after = await anonymous.get("/api/store/config").expect(200);
+    expect(after.body.data.homeOffers.cards).toEqual(saved.body.data.cards);
+
+    await admin.put("/api/settings/homeOffers").send({ ...saved.body.data, enabled: false }).expect(200);
+    expect((await anonymous.get("/api/store/config").expect(200)).body.data.homeOffers).toBeNull();
+
+    const { client: cashier } = await loginAs(["CASHIER"]);
+    await cashier.put("/api/settings/homeOffers").send(offers).expect(403);
+    await cashier.post("/api/uploads/presign").send({ purpose: "content", contentType: "image/webp", size: 1000 }).expect(403);
+  });
+
+  it("CMS: home page sections, contact details, legal pages and the About us page are validated and published", async () => {
+    const anonymous = await client();
+    const before = (await anonymous.get("/api/store/config").expect(200)).body.data;
+    expect(before.home.hero).toMatchObject({ titleTop: { en: "Luxury in", ta: expect.any(String) }, primaryHref: "/products", imageKey: null, imageUrl: null });
+    expect(before.home.editorial.points).toHaveLength(3);
+    expect(before.contact).toMatchObject({ phone: "+91 93607 34597", instagram: "trendz_womenswear_", email: "" });
+    // Legal pages start as empty drafts: not listed and not readable.
+    expect(before.pages).toEqual([]);
+    await anonymous.get("/api/store/pages/terms").expect(404);
+    await anonymous.get("/api/store/pages/refunds").expect(404);
+
+    const { client: admin } = await loginAs(["ADMIN"]);
+
+    // Home page: a section can be hidden and reworded; links stay on the site, pictures come from the upload endpoint.
+    const home = (await admin.get("/api/settings/homePage").expect(200)).body.data.value;
+    await admin.put("/api/settings/homePage").send({ ...home, hero: { ...home.hero, primaryHref: "https://evil.example" } }).expect(400);
+    await admin.put("/api/settings/homePage").send({ ...home, hero: { ...home.hero, imageKey: "https://evil.example/x.png" } }).expect(400);
+    await admin.put("/api/settings/homePage").send({ ...home, editorial: { ...home.editorial, points: Array.from({ length: 4 }, () => ({ en: "x", ta: "" })) } }).expect(400);
+    const savedHome = await admin
+      .put("/api/settings/homePage")
+      .send({ ...home, hero: { ...home.hero, titleTop: { en: "Festive", ta: "பண்டிகை" }, imageKey: "public/content/hero.webp" }, popular: { ...home.popular, enabled: false } })
+      .expect(200);
+    expect(savedHome.body.data.hero.imageUrl).toMatch(/\/public\/content\/hero\.webp$/);
+    // A section saved before a field existed still gets that field's default.
+    await admin.put("/api/settings/homePage").send({ closing: { enabled: false } }).expect(200);
+    const afterHome = (await anonymous.get("/api/store/config").expect(200)).body.data.home;
+    expect(afterHome.closing).toMatchObject({ enabled: false, buttonHref: "/products" });
+    expect(afterHome.hero.titleTop.en).toBe("Luxury in");
+
+    // Contact details.
+    const contact = (await admin.get("/api/settings/contact").expect(200)).body.data.value;
+    for (const bad of [{ phone: "call me" }, { whatsapp: "<script>" }, { email: "nobody" }, { instagram: "https://instagram.com/trendz" }, { mapUrl: "javascript:alert(1)" }, { mapUrl: "http://maps.example" }]) {
+      await admin.put("/api/settings/contact").send({ ...contact, ...bad }).expect(400);
+    }
+    const details = { phone: "+91 98765 43210", whatsapp: "", email: "hello@trendz.example", mapUrl: "https://maps.app.goo.gl/abc", hours: { en: "Mon–Sat 10am–9pm\nSun 10am–2pm", ta: "" } };
+    await admin.put("/api/settings/contact").send({ ...contact, ...details }).expect(200);
+    expect((await anonymous.get("/api/store/config").expect(200)).body.data.contact).toMatchObject(details);
+
+    // Legal pages: nothing to publish until something is written; markup is cleaned before it is stored.
+    const terms = (await admin.get("/api/settings/termsPage").expect(200)).body.data.value;
+    expect(terms).toMatchObject({ published: false, title: { en: "Terms & Conditions" }, body: { en: "", ta: "" } });
+    await admin.put("/api/settings/termsPage").send({ ...terms, published: true }).expect(400);
+    await admin.put("/api/settings/termsPage").send({ ...terms, published: true, body: { en: "<p><br></p>", ta: "" } }).expect(400);
+
+    const body = { en: '<h3>Orders</h3><p onclick="x()">All sales are <strong>final</strong>.</p><script>alert(1)</script><img src="x" onerror="alert(1)">', ta: "" };
+    const draft = await admin.put("/api/settings/termsPage").send({ ...terms, body }).expect(200);
+    expect(draft.body.data.body.en).toBe("<h3>Orders</h3><p>All sales are <strong>final</strong>.</p>");
+    await anonymous.get("/api/store/pages/terms").expect(404);
+
+    await admin.put("/api/settings/termsPage").send({ ...draft.body.data, published: true }).expect(200);
+    const page = (await anonymous.get("/api/store/pages/terms").expect(200)).body.data;
+    expect(page).toEqual({ slug: "terms", title: terms.title, body: draft.body.data.body, updatedAt: expect.any(String) });
+    expect((await anonymous.get("/api/store/config").expect(200)).body.data.pages).toEqual([{ slug: "terms", title: terms.title }]);
+    await anonymous.get("/api/store/pages/privacy").expect(404);
+
+    // About us: written and shown from the start. Its picture and markup follow the same rules; switched off, it is gone from the store.
+    expect(before.aboutPublished).toBe(true);
+    const about = (await admin.get("/api/settings/aboutPage").expect(200)).body.data.value;
+    expect(about).toMatchObject({ published: true, title: { en: "About Trendz" }, imageKey: null, imageUrl: null });
+    expect(about.body.en).toContain("<h3>Luxury in every stitch</h3>");
+    expect((await anonymous.get("/api/store/about").expect(200)).body.data).toMatchObject({ eyebrow: about.eyebrow, title: about.title, intro: about.intro, body: about.body, imageUrl: null });
+    await admin.put("/api/settings/aboutPage").send({ ...about, imageKey: "https://evil.example/x.png" }).expect(400);
+    await admin.put("/api/settings/aboutPage").send({ ...about, body: { en: "", ta: "" } }).expect(400);
+    const savedAbout = await admin
+      .put("/api/settings/aboutPage")
+      .send({ ...about, imageKey: "public/content/shop.webp", body: { en: "<p>Our shop</p><script>alert(1)</script>", ta: "" } })
+      .expect(200);
+    expect(savedAbout.body.data.imageUrl).toMatch(/\/public\/content\/shop\.webp$/);
+    const shownAbout = (await anonymous.get("/api/store/about").expect(200)).body.data;
+    expect(shownAbout).toMatchObject({ body: { en: "<p>Our shop</p>", ta: "" }, imageUrl: savedAbout.body.data.imageUrl, updatedAt: expect.any(String) });
+    expect(shownAbout).not.toHaveProperty("imageKey");
+    await admin.put("/api/settings/aboutPage").send({ ...savedAbout.body.data, published: false }).expect(200);
+    await anonymous.get("/api/store/about").expect(404);
+    expect((await anonymous.get("/api/store/config").expect(200)).body.data.aboutPublished).toBe(false);
+
+    const { client: cashier } = await loginAs(["CASHIER"]);
+    await cashier.put("/api/settings/homePage").send(home).expect(403);
+    await cashier.put("/api/settings/termsPage").send(terms).expect(403);
+    await cashier.put("/api/settings/aboutPage").send(about).expect(403);
+  });
 });
 
 describe("customer account", () => {

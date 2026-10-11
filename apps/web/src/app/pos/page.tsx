@@ -443,7 +443,7 @@ function ScanFeedbackCard({ feedback, onOverride, onDismiss }: { feedback: ScanF
     const p = feedback.product;
     return (
       <div key={feedback.at} role="status" className="flex animate-rise items-center gap-3 rounded-2xl border border-success/30 bg-success/5 p-3">
-        {p.image ? <img src={p.image} alt="" className="h-12 w-12 rounded-xl object-cover" /> : <span className="h-12 w-12 rounded-xl bg-white" />}
+        {p.image ? <img src={p.image} alt="" loading="lazy" decoding="async" className="h-12 w-12 rounded-xl object-cover" /> : <span className="h-12 w-12 rounded-xl bg-white" />}
         <div className="min-w-0 flex-1 text-sm">
           <p className="truncate font-semibold">
             {feedback.quantity > 1 && <span className="text-success">{feedback.quantity} × </span>}
@@ -560,7 +560,7 @@ function ProductSearch({ warehouseId, onPick, inputRef }: { warehouseId: string;
               onMouseEnter={() => setHighlight(i)}
               className={clsx("flex cursor-pointer items-center gap-3 rounded-xl px-3 py-2", i === highlight && "bg-offwhite")}
             >
-              {r.image ? <img src={r.image} alt="" className="h-9 w-9 rounded-lg object-cover" /> : <span className="h-9 w-9 rounded-lg bg-offwhite" />}
+              {r.image ? <img src={r.image} alt="" loading="lazy" decoding="async" className="h-9 w-9 rounded-lg object-cover" /> : <span className="h-9 w-9 rounded-lg bg-offwhite" />}
               <div className="min-w-0 flex-1 text-sm">
                 <p className="truncate font-medium">
                   {r.name} <span className="text-ink/50">· {r.variant}</span>

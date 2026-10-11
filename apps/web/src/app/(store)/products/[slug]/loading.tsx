@@ -1,7 +1,12 @@
+"use client";
+
+import { useI18n } from "@/lib/i18n/client";
+
 /** Product page placeholder: gallery with thumbnails, buy box and option pills. */
 export default function ProductLoading() {
+  const { t } = useI18n();
   return (
-    <div className="container-x pt-6 md:pt-8" aria-busy="true" aria-label="Loading product">
+    <div className="container-x pt-6 md:pt-8" aria-busy="true" aria-label={t("Loading product")}>
       <div className="skeleton mb-6 h-3 w-56 rounded-full md:mb-8" />
       <div className="grid gap-8 lg:grid-cols-12 lg:gap-12 xl:gap-16">
         <div className="min-w-0 sm:grid sm:grid-cols-[4.5rem_minmax(0,1fr)] sm:gap-4 lg:col-span-7 lg:grid-cols-[5rem_minmax(0,1fr)]">

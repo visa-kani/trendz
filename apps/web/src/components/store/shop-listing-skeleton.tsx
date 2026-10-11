@@ -1,32 +1,26 @@
 import { ProductGridSkeleton } from "./product-card";
 
-/** Loading placeholder that mirrors the listing layout (header, toolbar, filter column, 3-up grid). */
-export function ListingSkeleton({ breadcrumb = true, subcategories = false, description = false }: { breadcrumb?: boolean; subcategories?: boolean; description?: boolean }) {
+/**
+ * Loading placeholder that mirrors the listing layout (header, toolbar, filter column, 3-up grid).
+ * `banner` is for category pages, whose header is a framed banner rather than a big title.
+ */
+export function ListingSkeleton({ breadcrumb = true, banner = false }: { breadcrumb?: boolean; banner?: boolean }) {
   return (
     <div>
-      <div className="container-x pb-8 pt-8 md:pb-12 md:pt-12">
-        {breadcrumb && <div className="skeleton mb-8 h-3 w-44 rounded-full md:mb-12" />}
-        <div className="flex flex-col gap-6 lg:flex-row lg:items-end lg:justify-between">
+      {banner ? (
+        <div className="container-x pb-8 pt-6 md:pb-10 md:pt-8">
+          {breadcrumb && <div className="skeleton h-3 w-44 rounded-full" />}
+          <div className="skeleton mt-5 h-[26rem] rounded-[2rem] md:mt-6 md:h-80 lg:h-96 lg:rounded-[2.5rem]" />
+        </div>
+      ) : (
+        <div className="container-x pb-8 pt-8 md:pb-12 md:pt-12">
+          {breadcrumb && <div className="skeleton mb-8 h-3 w-44 rounded-full md:mb-12" />}
           <div className="w-full max-w-2xl">
             <div className="skeleton h-2.5 w-24 rounded-full" />
             <div className="skeleton mt-4 h-[clamp(2.75rem,8vw,6.5rem)] w-4/5 rounded-3xl" />
           </div>
-          {description && (
-            <div className="w-full max-w-sm space-y-2">
-              <div className="skeleton h-3 w-full rounded-full" />
-              <div className="skeleton h-3 w-11/12 rounded-full" />
-              <div className="skeleton h-3 w-2/3 rounded-full" />
-            </div>
-          )}
         </div>
-        {subcategories && (
-          <div className="mt-8 flex gap-2 overflow-hidden py-1">
-            {[96, 120, 88, 132, 104].map((w, i) => (
-              <div key={i} className="skeleton h-10 shrink-0 rounded-full" style={{ width: w }} />
-            ))}
-          </div>
-        )}
-      </div>
+      )}
 
       <div className="container-x">
         <div className="flex items-center justify-between gap-3 border-y border-black/[0.07] py-3">

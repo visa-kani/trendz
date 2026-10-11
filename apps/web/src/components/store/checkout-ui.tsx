@@ -10,6 +10,8 @@ import { AnimatePresence, m, type Variants } from "motion/react";
 import { clsx } from "clsx";
 import { ArrowUpRight, Check, Truck } from "lucide-react";
 import { money } from "@/lib/format";
+import { msg } from "@/lib/i18n";
+import { useI18n } from "@/lib/i18n/client";
 import { EASE_OUT } from "./motion";
 
 /** Inline style for a CSS entrance (animate-rise / animate-fade) that starts after `ms`. */
@@ -53,6 +55,7 @@ export function RollingNumber({ value, format = String, className }: { value: nu
 
 /** Progress towards the free-shipping threshold (server-provided numbers only). */
 export function FreeShippingMeter({ threshold, left, className }: { threshold: number; left: number; className?: string }) {
+  const { t, tr } = useI18n();
   const unlocked = left <= 0;
   const progress = threshold > 0 ? Math.min(1, Math.max(0, (threshold - left) / threshold)) : 1;
   return (
@@ -71,18 +74,16 @@ export function FreeShippingMeter({ threshold, left, className }: { threshold: n
             transition={{ duration: 0.3, ease: EASE_OUT }}
           >
             {unlocked ? (
-              <span className="font-semibold text-success">You&apos;ve unlocked free shipping</span>
+              <span className="font-semibold text-success">{t("You've unlocked free shipping")}</span>
             ) : (
-              <>
-                Add <RollingNumber value={left} format={money} className="align-bottom font-semibold text-ink" /> more for free shipping
-              </>
+              tr("Add {amount} more for free shipping", { amount: <RollingNumber value={left} format={money} className="align-bottom font-semibold text-ink" /> })
             )}
           </m.p>
         </AnimatePresence>
       </div>
       <div
         role="progressbar"
-        aria-label="Progress towards free shipping"
+        aria-label={t("Progress towards free shipping")}
         aria-valuemin={0}
         aria-valuemax={100}
         aria-valuenow={Math.round(progress * 100)}
@@ -94,12 +95,13 @@ export function FreeShippingMeter({ threshold, left, className }: { threshold: n
   );
 }
 
-const STEPS = ["Address", "Review", "Pay"] as const;
+const STEPS = [msg("Address"), msg("Review"), msg("Pay")] as const;
 
 /** Address → Review → Pay header with an animated progress line. */
 export function CheckoutSteps({ current }: { current: 0 | 1 | 2 }) {
+  const { t } = useI18n();
   return (
-    <nav aria-label="Checkout progress" className="relative">
+    <nav aria-label={t("Checkout progress")} className="relative">
       <div aria-hidden="true" className="absolute left-[16.667%] right-[16.667%] top-4.5 h-0.5 overflow-hidden rounded-full bg-black/10">
         <ProgressFill value={current / (STEPS.length - 1)} className="bg-ink" durationMs={900} />
       </div>
@@ -130,8 +132,8 @@ export function CheckoutSteps({ current }: { current: 0 | 1 | 2 }) {
                 </AnimatePresence>
               </span>
               <span className={clsx("text-xs font-semibold transition-colors duration-500", done || active ? "text-ink" : "text-ink/40")}>
-                {label}
-                <span className="sr-only">{done ? " (completed)" : active ? " (current step)" : ""}</span>
+                {t(label)}
+                <span className="sr-only">{done ? ` ${t("(completed)")}` : active ? ` ${t("(current step)")}` : ""}</span>
               </span>
             </li>
           );

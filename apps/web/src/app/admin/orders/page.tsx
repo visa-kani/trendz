@@ -68,7 +68,7 @@ export default function OrdersPage() {
                 header: "Order",
                 cell: (o) => (
                   <div className="flex items-center gap-3">
-                    {o.items[0]?.imageUrl ? <img src={o.items[0].imageUrl} alt="" className="h-9 w-9 shrink-0 rounded-lg bg-offwhite object-cover" /> : <span className="h-9 w-9 shrink-0 rounded-lg bg-offwhite" />}
+                    {o.items[0]?.imageUrl ? <img src={o.items[0].imageUrl} alt="" loading="lazy" decoding="async" className="h-9 w-9 shrink-0 rounded-lg bg-offwhite object-cover" /> : <span className="h-9 w-9 shrink-0 rounded-lg bg-offwhite" />}
                     <div className="min-w-0">
                       <RowLink href={`/admin/orders/${o.id}`}>{o.orderNumber}</RowLink>
                       <p className="max-w-48 truncate text-xs text-ink/50">

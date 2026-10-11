@@ -1,7 +1,8 @@
 import dotenv from "dotenv";
 import { z } from "zod";
 
-dotenv.config({ quiet: true });
+// .env.keys is an optional local file for a developer's own service keys; a value in it wins over .env.
+dotenv.config({ path: [".env.keys", ".env"], quiet: true });
 
 const bool = z
   .enum(["true", "false", "1", "0", ""])
@@ -36,6 +37,7 @@ const schema = z.object({
   RAZORPAY_KEY_SECRET: optionalString,
   RAZORPAY_WEBHOOK_SECRET: optionalString,
 
+  STORAGE_PROVIDER: z.enum(["r2", "cloudinary"]).default("r2"),
   R2_ACCOUNT_ID: optionalString,
   R2_ENDPOINT: optionalString,
   R2_ACCESS_KEY_ID: optionalString,
@@ -43,6 +45,17 @@ const schema = z.object({
   R2_BUCKET_NAME: optionalString,
   R2_PUBLIC_URL: optionalString,
   R2_FORCE_PATH_STYLE: bool,
+  // Either the one line the Cloudinary console shows (cloudinary://<api key>:<api secret>@<cloud name>) or the three values.
+  CLOUDINARY_URL: optionalString,
+  CLOUDINARY_CLOUD_NAME: optionalString,
+  CLOUDINARY_API_KEY: optionalString,
+  CLOUDINARY_API_SECRET: optionalString,
+  CLOUDINARY_FOLDER: z
+    .string()
+    .trim()
+    .regex(/^[\w-]+(\/[\w-]+)*$/, "CLOUDINARY_FOLDER is a folder path such as trendz or shops/trendz")
+    .default("trendz"),
+  CLOUDINARY_SIGNATURE_ALGORITHM: z.enum(["sha1", "sha256"]).default("sha1"),
 
   SMS_PROVIDER: z.enum(["msg91", "console"]).default("console"),
   SMS_API_KEY: optionalString,
@@ -82,6 +95,19 @@ function load() {
   }
   const env = parsed.data;
 
+  if (env.CLOUDINARY_URL) {
+    // The value holds the API secret, so a malformed one is reported without being echoed.
+    const parts = /^cloudinary:\/\/([^:@/]+):([^:@/]+)@([^:@/?]+)$/.exec(env.CLOUDINARY_URL);
+    if (!parts) throw new Error("Invalid environment configuration:\n  - CLOUDINARY_URL: expected cloudinary://<api key>:<api secret>@<cloud name>");
+    env.CLOUDINARY_API_KEY ??= parts[1];
+    env.CLOUDINARY_API_SECRET ??= parts[2];
+    env.CLOUDINARY_CLOUD_NAME ??= parts[3];
+  }
+  const cloudinaryReady = Boolean(env.CLOUDINARY_CLOUD_NAME && env.CLOUDINARY_API_KEY && env.CLOUDINARY_API_SECRET);
+  if (env.STORAGE_PROVIDER === "cloudinary" && !cloudinaryReady) {
+    throw new Error("STORAGE_PROVIDER=cloudinary requires CLOUDINARY_URL, or CLOUDINARY_CLOUD_NAME, CLOUDINARY_API_KEY and CLOUDINARY_API_SECRET");
+  }
+
   // Production guard rails: development adapters and insecure cookies are refused.
   if (env.NODE_ENV === "production") {
     const problems: string[] = [];
@@ -91,7 +117,9 @@ function load() {
     if (!env.COOKIE_SECURE) problems.push("COOKIE_SECURE must be true in production");
     if (env.PAYMENT_PROVIDER === "razorpay" && !env.RAZORPAY_WEBHOOK_SECRET) problems.push("RAZORPAY_WEBHOOK_SECRET is required (payment webhooks would be rejected)");
     if (env.SHIPPING_PROVIDER === "shiprocket" && !env.SHIPPING_WEBHOOK_TOKEN) problems.push("SHIPPING_WEBHOOK_TOKEN is required (tracking webhooks would be rejected)");
-    if (!env.R2_ENDPOINT || !env.R2_ACCESS_KEY_ID || !env.R2_SECRET_ACCESS_KEY || !env.R2_BUCKET_NAME || !env.R2_PUBLIC_URL) problems.push("R2_ENDPOINT, R2_ACCESS_KEY_ID, R2_SECRET_ACCESS_KEY, R2_BUCKET_NAME and R2_PUBLIC_URL are required");
+    if (env.STORAGE_PROVIDER === "r2" && (!env.R2_ENDPOINT || !env.R2_ACCESS_KEY_ID || !env.R2_SECRET_ACCESS_KEY || !env.R2_BUCKET_NAME || !env.R2_PUBLIC_URL)) {
+      problems.push("R2_ENDPOINT, R2_ACCESS_KEY_ID, R2_SECRET_ACCESS_KEY, R2_BUCKET_NAME and R2_PUBLIC_URL are required (or set STORAGE_PROVIDER=cloudinary)");
+    }
     if (/change-me/i.test(env.JWT_SECRET) || /change-me/i.test(env.OTP_SECRET)) problems.push("Replace the placeholder JWT_SECRET / OTP_SECRET with random values");
     if (env.JWT_SECRET === env.OTP_SECRET) problems.push("JWT_SECRET and OTP_SECRET must be different");
     if (problems.length) throw new Error(`Unsafe production configuration:\n  - ${problems.join("\n  - ")}`);

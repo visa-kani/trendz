@@ -1,4 +1,6 @@
 import { z } from "zod";
+import { aboutPageSchema, contactSchema, homePageSchema, privacyPageSchema, termsPageSchema } from "./cms";
+import { homeOffersSchema } from "./home-offers";
 
 /**
  * Typed business settings. Every rule that affects money, stock or tax and is
@@ -99,6 +101,20 @@ export const settingSchemas = {
     // Optional override for body text; null derives it from the mode and brand.
     textColor: hexColor.nullable().default(null),
   }),
+  // The offers block on the storefront home page. Content only.
+  reviews: z.object({
+    // Customers with a delivered order may rate and review its products. Off: reviews are neither taken nor shown.
+    enabled: z.boolean().default(true),
+    // true: a review appears on the product page only after staff publish it. false: it appears at once.
+    requireApproval: z.boolean().default(true),
+  }),
+  homeOffers: homeOffersSchema,
+  // Admin → CMS: the other home page sections, the contact details, the legal pages and the About us page. Content only.
+  homePage: homePageSchema,
+  contact: contactSchema,
+  termsPage: termsPageSchema,
+  privacyPage: privacyPageSchema,
+  aboutPage: aboutPageSchema,
 } as const;
 
 export type SettingKey = keyof typeof settingSchemas;
@@ -106,4 +122,4 @@ export type Settings = { [K in SettingKey]: z.infer<(typeof settingSchemas)[K]> 
 export const SETTING_KEYS = Object.keys(settingSchemas) as SettingKey[];
 
 /** Settings safe to expose to anonymous storefront visitors. */
-export const PUBLIC_SETTING_KEYS = ["store", "pricing", "shipping", "checkout", "returns", "appearance"] as const;
+export const PUBLIC_SETTING_KEYS = ["store", "pricing", "shipping", "checkout", "returns", "appearance", "homeOffers", "homePage", "contact", "termsPage", "privacyPage", "aboutPage"] as const;

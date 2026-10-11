@@ -2,16 +2,18 @@
 
 import { useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { useForm, useWatch } from "react-hook-form";
+import { Controller, useForm, useWatch } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { ImagePlus, Loader2 } from "lucide-react";
 import { Button, Checkbox, ErrorState, Field, Input, Modal, Select, Spinner, Textarea } from "@/components/ui";
 import { useToast } from "@/components/ui/toast";
 import { api, errorMessage } from "@/lib/api";
-import { IMAGE_TYPES, uploadSimpleImage } from "@/lib/upload";
+import { IMAGE_RULES, IMAGE_TYPES, uploadSimpleImage } from "@/lib/upload";
 import type { CategoryNode } from "@/lib/types";
 import { catalogKeys, categoryOptionLabel, flattenCategories, MAX_CATEGORY_DEPTH, splitApiErrors } from "./catalog-shared";
+import { RichTextEditor } from "@/components/ui/rich-text-editor";
+import { withinChars } from "@/lib/rich-text";
 
 /** GET /categories/:id (the raw row, including fields the tree omits). */
 interface CategoryDetail {
@@ -34,7 +36,7 @@ const schema = z.object({
   name: z.string().trim().min(2, "At least 2 characters").max(80, "At most 80 characters"),
   slug: z.string().trim().toLowerCase().max(80, "At most 80 characters").refine((v) => v === "" || SLUG.test(v), "Use lowercase letters, numbers and hyphens"),
   parentId: z.string(),
-  description: z.string().trim().max(2000, "At most 2,000 characters"),
+  description: z.string().refine(withinChars(2000), "At most 2,000 characters"),
   isActive: z.boolean(),
   seoTitle: z.string().trim().max(70, "At most 70 characters"),
   seoDescription: z.string().trim().max(170, "At most 170 characters"),
@@ -180,10 +182,17 @@ function CategoryForm({ category, defaultParentId, tree, onClose }: { category: 
             ))}
           </Select>
         </Field>
-        <Field label="Description" htmlFor="c-description" error={errors.description?.message}>
-          <Textarea id="c-description" rows={3} invalid={!!errors.description} {...register("description")} />
+        <Field label="Description" htmlFor="c-description" error={errors.description?.message} hint="Shown in the banner at the top of the category page.">
+          <Controller
+            control={control}
+            name="description"
+            render={({ field }) => <RichTextEditor id="c-description" aria-label="Description" value={field.value} onChange={field.onChange} onBlur={field.onBlur} invalid={!!errors.description} />}
+          />
         </Field>
-        <Field label="Image">
+        <Field
+          label="Image"
+          hint={`Shown in the banner of the category page and on its home page card; it is cropped from the bottom to fit, so keep faces near the top. Without one, a product photo from the category is used. ${IMAGE_RULES}.`}
+        >
           <div className="flex flex-wrap items-center gap-3">
             {image.url ? <img src={image.url} alt="" className="h-16 w-16 rounded-xl bg-offwhite object-cover" /> : <span className="h-16 w-16 rounded-xl bg-offwhite" />}
             <label className="inline-flex cursor-pointer items-center gap-2 rounded-full border border-black/15 px-3 py-1.5 text-xs font-semibold hover:bg-black/[0.03]">

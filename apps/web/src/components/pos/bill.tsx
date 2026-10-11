@@ -35,7 +35,7 @@ export function BillLines({
     <ul className="divide-y divide-black/5" aria-label="Bill items">
       {lines.map((l, i) => (
         <li key={l.id} className={clsx("flex items-center gap-3 px-1 py-3", i === lines.length - 1 && "animate-rise")}>
-          {l.image ? <img src={l.image} alt="" className="h-12 w-12 shrink-0 rounded-xl bg-offwhite object-cover" /> : <span className="h-12 w-12 shrink-0 rounded-xl bg-offwhite" />}
+          {l.image ? <img src={l.image} alt="" loading="lazy" decoding="async" className="h-12 w-12 shrink-0 rounded-xl bg-offwhite object-cover" /> : <span className="h-12 w-12 shrink-0 rounded-xl bg-offwhite" />}
           <div className="min-w-0 flex-1">
             <p className="truncate text-sm font-semibold">{l.name}</p>
             <p className="truncate text-xs text-ink/50">

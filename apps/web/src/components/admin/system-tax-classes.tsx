@@ -2,16 +2,18 @@
 
 import { useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { useFieldArray, useForm, type Path } from "react-hook-form";
+import { Controller, useFieldArray, useForm, type Path } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { Pencil, Plus, Trash2, X } from "lucide-react";
-import { Badge, Button, Card, Checkbox, ConfirmDialog, EmptyState, ErrorState, Field, Input, Modal, Spinner, Textarea, type Tone } from "@/components/ui";
+import { Badge, Button, Card, Checkbox, ConfirmDialog, EmptyState, ErrorState, Field, Input, Modal, Spinner, type Tone } from "@/components/ui";
 import { useToast } from "@/components/ui/toast";
 import { api, ApiError, errorMessage } from "@/lib/api";
 import { date, moneyExact, percent, toPaise, toRupees } from "@/lib/format";
 import { istDay, istDaysAgo, istStartOf } from "./system-data";
 import { AccountantNotice, MoneyMark } from "./system-settings-forms";
+import { RichTextEditor } from "@/components/ui/rich-text-editor";
+import { withinChars } from "@/lib/rich-text";
 
 interface TaxRateRow {
   rateBps: number;
@@ -205,7 +207,7 @@ const schema = z
   .object({
     code: z.string().trim().regex(/^[A-Z0-9_]{2,30}$/, "2–30 characters: A–Z, 0–9 and _"),
     name: z.string().trim().min(2, "At least 2 characters").max(80),
-    description: z.string().trim().max(500),
+    description: z.string().refine(withinChars(500), "At most 500 characters"),
     isDefault: z.boolean(),
     rates: z.array(rateSchema).min(1, "Add at least one rate").max(20, "At most 20 rates"),
   })
@@ -343,7 +345,13 @@ function TaxClassModal({ taxClass, onClose }: { taxClass: TaxClassRow | null; on
               <Input id="tc-code" className="font-mono uppercase" invalid={!!errors.code} {...register("code", { setValueAs: (v: string) => v.toUpperCase().trim() })} />
             </Field>
             <Field label="Description" htmlFor="tc-desc" error={errors.description?.message} className="sm:col-span-2">
-              <Textarea id="tc-desc" rows={2} className="min-h-0" invalid={!!errors.description} {...register("description")} />
+              <Controller
+                control={control}
+                name="description"
+                render={({ field }) => (
+                  <RichTextEditor id="tc-desc" variant="compact" aria-label="Description" value={field.value} onChange={field.onChange} onBlur={field.onBlur} invalid={!!errors.description} disabled={!!confirming} />
+                )}
+              />
             </Field>
             <div className="sm:col-span-2">
               <Checkbox label="Default class — used for products without a tax class" {...register("isDefault")} />

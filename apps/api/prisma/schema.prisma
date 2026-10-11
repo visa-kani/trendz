@@ -292,6 +292,7 @@ model User {
   verificationTokens VerificationToken[]
   cart               Cart?
   wishlist           WishlistItem[]
+  reviews            ProductReview[]
   orders             Order[]             @relation("CustomerOrders")
   ordersCreated      Order[]             @relation("OrderCreator")
   notifications      Notification[]
@@ -599,6 +600,7 @@ model Product {
   images         ProductImage[]
   codes          ProductCode[]
   wishlistItems  WishlistItem[]
+  reviews        ProductReview[]
   couponProducts CouponProduct[]
   discounts      DiscountTarget[]
 
@@ -696,7 +698,7 @@ model ProductImage {
   id        String      @id @default(uuid()) @db.Uuid
   productId String      @map("product_id") @db.Uuid
   variantId String?     @map("variant_id") @db.Uuid
-  objectKey String      @map("object_key") // upload key (deleted after optimisation)
+  objectKey String      @map("object_key") // upload key (on R2 the file is deleted after optimisation; Cloudinary keeps it and makes the sizes from it)
   url       String? // primary (large WebP) public URL
   altText   String?     @map("alt_text")
   sortOrder Int         @default(0) @map("sort_order")
@@ -1112,6 +1114,42 @@ model WishlistItem {
   @@map("wishlist_items")
 }
 
+enum ReviewStatus {
+  PENDING // waiting for a moderator
+  PUBLISHED // shown on the product page
+  REJECTED // kept for the record, never shown
+}
+
+/// A customer's rating and review of a product they received. Only customers
+/// with a delivered order for the product may write one, and each customer has
+/// at most one review per product (they can edit it).
+model ProductReview {
+  id             String       @id @default(uuid()) @db.Uuid
+  productId      String       @map("product_id") @db.Uuid
+  userId         String       @map("user_id") @db.Uuid
+  orderId        String?      @map("order_id") @db.Uuid // the delivered order that made the customer eligible
+  rating         Int // 1 to 5 (CHECK constraint in the migration)
+  title          String?
+  comment        String?
+  authorName     String       @map("author_name") // as shown publicly, e.g. "Asha R."
+  variantTitle   String?      @map("variant_title") // what they bought, e.g. "Red / M"
+  status         ReviewStatus @default(PENDING)
+  moderatedById  String?      @map("moderated_by_id") @db.Uuid
+  moderatedAt    DateTime?    @map("moderated_at")
+  moderationNote String?      @map("moderation_note") // internal: why it was rejected
+  createdAt      DateTime     @default(now()) @map("created_at")
+  updatedAt      DateTime     @updatedAt @map("updated_at")
+
+  product Product @relation(fields: [productId], references: [id], onDelete: Cascade)
+  user    User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  order   Order?  @relation(fields: [orderId], references: [id], onDelete: SetNull)
+
+  @@unique([userId, productId])
+  @@index([productId, status, createdAt])
+  @@index([status, createdAt])
+  @@map("product_reviews")
+}
+
 // -----------------------------------------------------------------------------
 // Coupons & automatic discounts
 // -----------------------------------------------------------------------------
@@ -1276,6 +1314,7 @@ model Order {
   createdBy        User?                @relation("OrderCreator", fields: [createdById], references: [id], onDelete: SetNull)
   warehouse        Warehouse?           @relation(fields: [warehouseId], references: [id], onDelete: SetNull)
   items            OrderItem[]
+  reviews          ProductReview[]
   statusHistory    OrderStatusHistory[]
   payments         Payment[]
   refunds          Refund[]

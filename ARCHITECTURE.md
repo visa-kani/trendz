@@ -25,7 +25,7 @@ flowchart TB
         api -. enqueue jobs .-> redis
     end
 
-    api -->|presigned URLs| r2[(Cloudflare R2<br/>product images · invoices)]
+    api -->|upload tickets| r2[(Cloudflare R2 or Cloudinary<br/>images)]
     worker --> r2
     user -. direct upload/download .-> r2
     api <--> rzp[Razorpay<br/>orders · payments · refunds]
@@ -72,7 +72,7 @@ Routes never contain business logic; services never touch `req`/`res`.
 | `users` | Profile, addresses, staff user management, role assignment |
 | `rbac` | Roles, permissions, role-permission mapping, permission cache |
 | `catalog` | Categories (nested), brands, products, variants, options, public listing/search |
-| `media` | Presigned R2 uploads, image processing pipeline (WebP/AVIF sizes), ordering, deletion |
+| `media` | Direct browser uploads to image storage, the WebP/AVIF sizes (made by the worker on R2, by Cloudinary on Cloudinary), ordering, deletion |
 | `codes` | QR / EAN-13 / UPC / Code 128 product codes, label sheets, scan lookup |
 | `tax` | Tax classes and slab rates, GST split (CGST/SGST vs IGST) |
 | `pricing` | Single pricing engine used by cart, checkout and POS: discounts, coupons, tax, shipping, totals |
@@ -114,7 +114,7 @@ trendz/
 │   │   │   ├── jobs/             queues, processors, schedulers
 │   │   │   ├── integrations/
 │   │   │   │   ├── razorpay/     real + mock gateway
-│   │   │   │   ├── r2/           S3-compatible storage
+│   │   │   │   ├── object-storage/  image storage: R2 (S3 API) or Cloudinary
 │   │   │   │   ├── shipping/     Shiprocket + mock
 │   │   │   │   ├── sms/          MSG91 + console
 │   │   │   │   └── email/        Brevo, SES, SMTP + templates
@@ -217,7 +217,7 @@ a credit note against the original invoice.
 | Concern | Production adapter | Local / test adapter | Selected by |
 |---|---|---|---|
 | Payments | Razorpay (`razorpay` SDK + HMAC verification + webhooks) | `MockPaymentGateway`: simulated orders/payments, signed with a local secret so the same verification code runs | `PAYMENT_PROVIDER=razorpay\|mock` |
-| Object storage | Cloudflare R2 via S3 API (`@aws-sdk/client-s3`, presigned PUT) | MinIO container (same S3 code path) | `R2_*` variables |
+| Image storage | Cloudflare R2 via S3 API (`@aws-sdk/client-s3`, presigned PUT), or Cloudinary via its REST API (signed form uploads, sizes made by Cloudinary) | MinIO container (same S3 code path) | `STORAGE_PROVIDER=r2\|cloudinary`, `R2_*` / `CLOUDINARY_*` |
 | Email | Brevo HTTP API or Amazon SES v2 | SMTP → Mailpit container | `EMAIL_PROVIDER=brevo\|ses\|smtp` |
 | SMS / OTP | MSG91 (DLT template ids) | `ConsoleSmsProvider` (logs masked messages) | `SMS_PROVIDER=msg91\|console` |
 | Shipping | Shiprocket (token auth, serviceability rates, AWB, pickup, label, tracking, webhooks) | `MockShippingProvider` (deterministic AWB, simulated tracking) | `SHIPPING_PROVIDER=shiprocket\|mock` |
@@ -245,6 +245,8 @@ the seeded defaults must be confirmed by the business before go-live
 | `returns.windowDays` | 7 | Days after delivery a return may be requested |
 | `returns.autoRestockGood` | `true` | GOOD items return to sellable stock on receipt |
 | `refunds.allowPartial` | `true` | Partial refunds |
+| `reviews.enabled` | `true` | Customers with a delivered order may review its products; off hides reviews as well |
+| `reviews.requireApproval` | `true` | A review is shown only after staff publish it; off shows it at once |
 | `pos.maxManualDiscountBps` | 1000 (10%) | Cap for cashier manual discounts |
 | `coupons.allowWithAutomaticDiscounts` | `true` | Whether coupons apply on top of automatic discounts |
 | `invoice.prefix`, `invoice.creditNotePrefix` | `INV`, `CN` | Numbering restarts every financial year (April–March) |

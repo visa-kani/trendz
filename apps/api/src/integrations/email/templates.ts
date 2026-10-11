@@ -52,7 +52,7 @@ export interface EmailTemplateData {
   "order.invoice": { orderNumber: string; invoiceNumber: string; url: string };
   "order.shipped": { orderNumber: string; courier?: string | null; awb?: string | null; trackingUrl?: string | null };
   "order.out_for_delivery": { orderNumber: string };
-  "order.delivered": { orderNumber: string };
+  "order.delivered": { orderNumber: string; reviewUrl?: string | null };
   "order.cancelled": { orderNumber: string; reason?: string | null; refundNote?: string | null };
   "order.refunded": { orderNumber: string; amount: number; refundNumber: string };
   "admin.new_order": { orderNumber: string; grandTotal: number; channel: string; url: string };
@@ -128,8 +128,12 @@ const renderers: { [K in EmailTemplate]: Renderer<K> } = {
   }),
   "order.delivered": (d) => ({
     subject: `Order ${d.orderNumber} delivered`,
-    html: layout("Delivered", p(`Order ${esc(d.orderNumber)} has been delivered. Enjoy!`)),
-    text: `Order ${d.orderNumber} has been delivered.`,
+    html: layout(
+      "Delivered",
+      p(`Order ${esc(d.orderNumber)} has been delivered. Enjoy!`) + (d.reviewUrl ? p("We would love to know what you think. Rating your items takes a minute and helps other shoppers choose.") : ""),
+      d.reviewUrl ? { label: "Rate and review", url: d.reviewUrl } : undefined,
+    ),
+    text: `Order ${d.orderNumber} has been delivered.` + (d.reviewUrl ? ` Rate and review your items: ${d.reviewUrl}` : ""),
   }),
   "order.cancelled": (d) => ({
     subject: `Order ${d.orderNumber} cancelled`,

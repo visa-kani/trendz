@@ -9,6 +9,7 @@ import { CtaLink } from "@/components/store/checkout-ui";
 import { Pagination, StatusBadge } from "@/components/ui";
 import { api } from "@/lib/api";
 import { date } from "@/lib/format";
+import { useI18n } from "@/lib/i18n/client";
 
 interface ReturnRow {
   id: string;
@@ -21,26 +22,27 @@ interface ReturnRow {
 }
 
 export default function MyReturnsPage() {
+  const { t, tn, tx, locale } = useI18n();
   const [page, setPage] = useState(1);
   const q = useQuery({ queryKey: ["my-returns", page], queryFn: () => api.page<ReturnRow[]>("/account/returns", { page, limit: 10 }) });
   return (
     <div className="space-y-8">
-      <AccountHeader eyebrow="Returns" title="Returns & refunds" description="To start a return, open a delivered order and choose “Return items”." />
+      <AccountHeader eyebrow={t("Returns")} title={t("Returns & refunds")} description={t("To start a return, open a delivered order and choose “Return items”.")} />
       {!q.isLoading && !q.data?.data.length ? (
         <EmptyPanel
           icon={<RotateCcw size={28} strokeWidth={1.5} />}
-          title="No returns"
-          body="Returns you request will appear here with their refund status."
+          title={t("No returns")}
+          body={t("Returns you request will appear here with their refund status.")}
           action={
             <CtaLink href="/account/orders" tone="light">
-              View your orders
+              {t("View your orders")}
             </CtaLink>
           }
         />
       ) : (
         <Panel padded={false}>
           {q.isLoading ? (
-            <RowsSkeleton thumb={false} label="Loading your returns" />
+            <RowsSkeleton thumb={false} label={t("Loading your returns")} />
           ) : (
             <StaggerList key={page} className="divide-y divide-black/5 py-1">
               {q.data?.data.map((r) => (
@@ -55,7 +57,7 @@ export default function MyReturnsPage() {
                     <div className="min-w-0 flex-1">
                       <p className="truncate text-sm font-semibold">{r.returnNumber}</p>
                       <p className="truncate text-xs text-ink/55">
-                        Order {r.order.orderNumber} · {date(r.createdAt)} · {r.items.reduce((s, i) => s + i.quantity, 0)} item(s) · {r.reason}
+                        {t("Order {number}", { number: r.order.orderNumber })} · {date(r.createdAt, locale)} · {tn(r.items.reduce((s, i) => s + i.quantity, 0), "{n} item", "{n} items")} · {tx(r.reason)}
                       </p>
                     </div>
                     <StatusBadge status={r.status} />

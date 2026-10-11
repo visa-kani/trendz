@@ -132,7 +132,10 @@ export default function AppearancePage() {
       <div className="grid items-start gap-6 xl:grid-cols-2">
         <div className="min-w-0 space-y-6">
           <Card title="Theme mode" actions={<span className="text-right text-xs text-ink/45">{savedLabel}</span>}>
-            <p className="text-xs text-ink/55">Changes only the surfaces and text. Your brand colour is the same in both.</p>
+            <p className="text-xs leading-relaxed text-ink/55">
+              Changes only the surfaces and text. Your brand colour is the same in both. This is what everyone sees first; shoppers can switch between light and dark for themselves with the icon in the
+              storefront header, and that choice stays in their own browser.
+            </p>
             <div className="mt-4 grid gap-3 sm:grid-cols-2">
               {MODES.map(({ value, label, hint, icon: Icon }) => {
                 const active = draft.mode === value;

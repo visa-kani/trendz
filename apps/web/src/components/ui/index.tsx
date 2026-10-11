@@ -1,9 +1,10 @@
 "use client";
 
-import { forwardRef, useEffect, type ButtonHTMLAttributes, type InputHTMLAttributes, type ReactNode, type SelectHTMLAttributes, type TextareaHTMLAttributes } from "react";
+import { forwardRef, useEffect, type ButtonHTMLAttributes, type InputHTMLAttributes, type ReactNode, type TextareaHTMLAttributes } from "react";
 import { clsx } from "clsx";
 import { Loader2, X, ChevronLeft, ChevronRight, Inbox } from "lucide-react";
 import type { PageMeta } from "@/lib/api";
+import { useI18n } from "@/lib/i18n/client";
 
 // ---------------------------------------------------------------------------
 // Button
@@ -92,13 +93,8 @@ export const Textarea = forwardRef<HTMLTextAreaElement, TextareaHTMLAttributes<H
   return <textarea ref={ref} className={clsx("input min-h-24", invalid && "border-danger/60", className)} aria-invalid={invalid || undefined} {...rest} />;
 });
 
-export const Select = forwardRef<HTMLSelectElement, SelectHTMLAttributes<HTMLSelectElement> & { invalid?: boolean }>(function Select({ className, invalid, children, ...rest }, ref) {
-  return (
-    <select ref={ref} className={clsx("input appearance-none bg-[length:16px] bg-[right_0.75rem_center] bg-no-repeat pr-9", invalid && "border-danger/60", className)} style={{ backgroundImage: "url(\"data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23908a8e' stroke-width='2'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E\")" }} {...rest}>
-      {children}
-    </select>
-  );
-});
+// Every select in the app: a native <select> API drawn with react-select (see ./select).
+export { Select } from "./select";
 
 export function Checkbox({ label, className, ...rest }: InputHTMLAttributes<HTMLInputElement> & { label: ReactNode }) {
   return (
@@ -154,7 +150,8 @@ const STATUS_TONES: Record<string, Tone> = {
 };
 
 export function StatusBadge({ status }: { status: string }) {
-  return <Badge tone={STATUS_TONES[status] ?? "neutral"}>{status.replace(/_/g, " ").toLowerCase().replace(/^\w/, (c) => c.toUpperCase())}</Badge>;
+  const { ts } = useI18n();
+  return <Badge tone={STATUS_TONES[status] ?? "neutral"}>{ts(status)}</Badge>;
 }
 
 export function Card({ title, actions, children, className, padded = true }: { title?: ReactNode; actions?: ReactNode; children: ReactNode; className?: string; padded?: boolean }) {
@@ -171,11 +168,12 @@ export function Card({ title, actions, children, className, padded = true }: { t
   );
 }
 
-export function Spinner({ className, label = "Loading" }: { className?: string; label?: string }) {
+export function Spinner({ className, label }: { className?: string; label?: string }) {
+  const { t } = useI18n();
   return (
     <div role="status" className={clsx("flex items-center justify-center gap-2 py-10 text-sm text-ink/50", className)}>
       <Loader2 className="animate-spin" size={18} />
-      <span>{label}…</span>
+      <span>{label ?? t("Loading")}…</span>
     </div>
   );
 }
@@ -192,14 +190,15 @@ export function EmptyState({ title, body, action, icon }: { title: string; body?
 }
 
 export function ErrorState({ error, retry }: { error: unknown; retry?: () => void }) {
-  const message = error instanceof Error ? error.message : "Something went wrong";
+  const { t } = useI18n();
+  const message = error instanceof Error ? error.message : t("Something went wrong");
   return (
     <div className="flex flex-col items-center gap-3 px-6 py-12 text-center">
-      <p className="text-sm font-semibold text-danger">Could not load this page</p>
+      <p className="text-sm font-semibold text-danger">{t("Could not load this page")}</p>
       <p className="text-sm text-ink/60">{message}</p>
       {retry && (
         <Button variant="outline" size="sm" onClick={retry}>
-          Try again
+          {t("Try again")}
         </Button>
       )}
     </div>
@@ -207,18 +206,17 @@ export function ErrorState({ error, retry }: { error: unknown; retry?: () => voi
 }
 
 export function Pagination({ meta, onPage }: { meta?: PageMeta; onPage: (page: number) => void }) {
+  const { t } = useI18n();
   if (!meta || meta.totalPages <= 1) return null;
   return (
-    <nav aria-label="Pagination" className="flex items-center justify-between gap-3 px-1 pt-4 text-sm text-ink/60">
-      <span>
-        Page {meta.page} of {meta.totalPages} · {meta.total.toLocaleString("en-IN")} results
-      </span>
+    <nav aria-label={t("Pagination")} className="flex items-center justify-between gap-3 px-1 pt-4 text-sm text-ink/60">
+      <span>{t("Page {page} of {pages} · {total} results", { page: meta.page, pages: meta.totalPages, total: meta.total.toLocaleString("en-IN") })}</span>
       <div className="flex gap-2">
         <Button variant="outline" size="sm" disabled={meta.page <= 1} onClick={() => onPage(meta.page - 1)} icon={<ChevronLeft size={14} />}>
-          Prev
+          {t("Prev")}
         </Button>
         <Button variant="outline" size="sm" disabled={meta.page >= meta.totalPages} onClick={() => onPage(meta.page + 1)}>
-          Next <ChevronRight size={14} />
+          {t("Next")} <ChevronRight size={14} />
         </Button>
       </div>
     </nav>
@@ -230,6 +228,7 @@ export function Pagination({ meta, onPage }: { meta?: PageMeta; onPage: (page: n
 // ---------------------------------------------------------------------------
 
 export function Modal({ open, onClose, title, children, footer, size = "md" }: { open: boolean; onClose: () => void; title: string; children: ReactNode; footer?: ReactNode; size?: "sm" | "md" | "lg" | "xl" }) {
+  const { t } = useI18n();
   useEffect(() => {
     if (!open) return;
     const onKey = (e: KeyboardEvent) => e.key === "Escape" && onClose();
@@ -247,7 +246,7 @@ export function Modal({ open, onClose, title, children, footer, size = "md" }: {
       <div role="dialog" aria-modal="true" aria-label={title} className={clsx("flex max-h-[92vh] w-full flex-col rounded-t-3xl bg-white shadow-neu-lg animate-rise sm:rounded-3xl", width)}>
         <header className="flex items-center justify-between border-b border-black/5 px-5 py-4">
           <h2 className="text-base font-semibold">{title}</h2>
-          <button onClick={onClose} aria-label="Close" className="rounded-full p-1.5 text-ink/50 hover:bg-black/5 hover:text-ink">
+          <button onClick={onClose} aria-label={t("Close")} className="rounded-full p-1.5 text-ink/50 hover:bg-black/5 hover:text-ink">
             <X size={18} />
           </button>
         </header>
@@ -262,7 +261,7 @@ export function ConfirmDialog({
   open,
   title,
   body,
-  confirmLabel = "Confirm",
+  confirmLabel,
   tone = "primary",
   loading,
   onConfirm,
@@ -279,6 +278,7 @@ export function ConfirmDialog({
   onClose: () => void;
   children?: ReactNode;
 }) {
+  const { t } = useI18n();
   return (
     <Modal
       open={open}
@@ -288,10 +288,10 @@ export function ConfirmDialog({
       footer={
         <>
           <Button variant="ghost" onClick={onClose}>
-            Cancel
+            {t("Cancel")}
           </Button>
           <Button variant={tone === "danger" ? "danger" : "primary"} loading={loading} onClick={onConfirm}>
-            {confirmLabel}
+            {confirmLabel ?? t("Confirm")}
           </Button>
         </>
       }
@@ -315,8 +315,9 @@ export interface Column<T> {
 }
 
 export function DataTable<T>({ columns, rows, rowKey, onRowClick, empty, loading }: { columns: Column<T>[]; rows: T[] | undefined; rowKey: (row: T) => string; onRowClick?: (row: T) => void; empty?: ReactNode; loading?: boolean }) {
+  const { t } = useI18n();
   if (loading && !rows) return <Spinner />;
-  if (!rows?.length) return <>{empty ?? <EmptyState title="Nothing here yet" />}</>;
+  if (!rows?.length) return <>{empty ?? <EmptyState title={t("Nothing here yet")} />}</>;
   return (
     <div className="-mx-5 overflow-x-auto">
       <table className="w-full min-w-[640px] text-left text-sm">

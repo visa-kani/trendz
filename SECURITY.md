@@ -9,6 +9,7 @@ How Trendz protects customer data, money and stock, and what operators have to d
 | Secrets never reach the browser | Only `NEXT_PUBLIC_*` variables are bundled into the web app: site URL, media origin and store name. The Razorpay **key id** is public by design and is served from `/api/store/config`. The key secret, webhook secret, R2 keys, SMS and email keys, JWT/OTP secrets and the database URL exist only in the API process. |
 | No secrets in git | `.gitignore` excludes every `.env*` except `.env.example`. Production values live in `/srv/trendz/shared/*.env` (mode 600, owned by `trendz`) and are symlinked into each release. |
 | No unsafe production config | `apps/api/src/config/env.ts` refuses to start with `NODE_ENV=production` if any of these apply: a mock provider (payment, SMS, shipping), `COOKIE_SECURE=false`, a missing Razorpay webhook secret or Shiprocket webhook token, missing R2 settings, placeholder JWT/OTP secrets, or identical JWT/OTP secrets. |
+| A hosted database is not a public API | On Supabase the roles behind the project's public key (`anon`, `authenticated`) could by default read and write every table through Supabase's REST API. `apps/api/scripts/db-lockdown.ts` revokes all their privileges and enables row level security with no policy on every table; it runs after every `npm run db:deploy` and fails the deploy if any table is still reachable. The application connects as the tables' owner over TLS; the anon and service_role keys are not used and are not stored anywhere in this project. |
 | Least-privilege provider keys | Use an R2 API token scoped to the media bucket, and a separate token scoped to the backup bucket. Use a Razorpay key pair per environment, and SES/Brevo keys limited to sending. |
 
 Rotate a secret by changing it in `/srv/trendz/shared/api.env` and running `pm2 reload trendz-api trendz-worker --update-env`.
@@ -65,8 +66,9 @@ Rotate a secret by changing it in `/srv/trendz/shared/api.env` and running `pm2 
 - Every request body, query and param is parsed with zod; unknown fields are stripped. Prisma parameterises all SQL, and the few raw queries use tagged templates with bound parameters.
 - Product descriptions allow a small HTML subset: paragraphs, lists, emphasis, headings and `http(s)`/`mailto` links. `sanitize-html` enforces this allow-list on the API before storing (`apps/api/src/common/utils/html.ts`). The storefront filters again when rendering, and JSON-LD is escaped.
 - Uploads never pass through the API.
-  - The API issues a presigned R2 `PUT` that is bound to the content type and exact content length, and only for JPEG, PNG, WebP or AVIF: product images up to 15 MB, brand and category images up to 3 MB.
-  - The worker re-decodes every image with sharp, which strips metadata and rejects non-images, and writes WebP/AVIF sizes. The original upload is then deleted.
+  - On Cloudinary (`STORAGE_PROVIDER=cloudinary`) the API signs an upload form instead: the signature fixes the picture's name and the allowed formats (JPEG, PNG, WebP, AVIF), and the API secret that made it stays on the server. Cloudinary does not let a signature fix the file size, so the size is checked when the upload is completed and by the plan's own limit.
+  - On R2 the API issues a presigned `PUT` that is bound to the content type and exact content length, and only for JPEG, PNG, WebP or AVIF: product images up to 15 MB, brand and category images up to 3 MB.
+  - On R2 the worker re-decodes every image with sharp, which strips metadata and rejects non-images, and writes WebP/AVIF sizes. The original upload is then deleted. On Cloudinary the sizes are re-encoded by Cloudinary from the stored photo, and only those sizes are shown on the site.
   - Private objects (invoices, labels) live outside the `public/` prefix and are only served through authenticated API routes.
 - Headers:
   - Helmet on the API, with `default-src 'none'` for JSON.

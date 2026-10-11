@@ -10,6 +10,8 @@ import { CtaLink, DrawnCheck } from "@/components/store/checkout-ui";
 import { EASE_OUT } from "@/components/store/motion";
 import { api, errorMessage } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
+import { msg } from "@/lib/i18n";
+import { useI18n } from "@/lib/i18n/client";
 
 export default function VerifyEmailPage() {
   return (
@@ -19,16 +21,17 @@ export default function VerifyEmailPage() {
   );
 }
 
-const TITLES = { working: "Verifying your email", done: "Email verified", error: "Could not verify" } as const;
+const TITLES = { working: msg("Verifying your email"), done: msg("Email verified"), error: msg("Could not verify") } as const;
 
 function Verify() {
+  const { t } = useI18n();
   const token = useSearchParams().get("token");
   const { reload } = useAuth();
   const [result, setState] = useState<"working" | "done" | "error">("working");
   const [error, setMessage] = useState("");
   // A link without a token is an error straight away; no request is made.
   const state = token ? result : "error";
-  const message = token ? error : "This verification link is incomplete.";
+  const message = token ? error : t("This verification link is incomplete.");
   const started = useRef(false);
 
   useEffect(() => {
@@ -47,7 +50,7 @@ function Verify() {
   }, [token, reload]);
 
   return (
-    <AuthShell eyebrow="Email verification" title={TITLES[state]} tagline="Almost there.">
+    <AuthShell eyebrow={t("Email verification")} title={t(TITLES[state])} tagline={t("Almost there.")}>
       <AnimatePresence mode="wait" initial={false}>
         <m.div
           key={state}
@@ -63,7 +66,7 @@ function Verify() {
               <AuthMedallion>
                 <Loader2 size={28} className="animate-spin" />
               </AuthMedallion>
-              <p className="text-sm text-ink/60">Verifying your email…</p>
+              <p className="text-sm text-ink/60">{t("Verifying your email")}…</p>
             </>
           )}
           {state === "done" && (
@@ -71,8 +74,8 @@ function Verify() {
               <span className="grid h-20 w-20 place-items-center rounded-full bg-success/10 text-success">
                 <DrawnCheck className="h-14 w-14" />
               </span>
-              <p className="text-sm text-ink/60">Thanks — your email address is confirmed.</p>
-              <CtaLink href="/account">Go to my account</CtaLink>
+              <p className="text-sm text-ink/60">{t("Thanks — your email address is confirmed.")}</p>
+              <CtaLink href="/account">{t("Go to my account")}</CtaLink>
             </>
           )}
           {state === "error" && (
@@ -82,7 +85,7 @@ function Verify() {
               </AuthMedallion>
               <p className="text-sm text-ink/60">{message}</p>
               <Link href="/account" className="link text-sm">
-                Request a new link from your account
+                {t("Request a new link from your account")}
               </Link>
             </>
           )}

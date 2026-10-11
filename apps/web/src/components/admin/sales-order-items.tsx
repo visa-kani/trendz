@@ -20,7 +20,7 @@ export function OrderItemsCard({ order }: { order: StaffOrder }) {
             header: "Item",
             cell: (i) => (
               <div className="flex items-center gap-3">
-                {i.imageUrl ? <img src={i.imageUrl} alt="" className="h-11 w-11 shrink-0 rounded-xl bg-offwhite object-cover" /> : <span className="h-11 w-11 shrink-0 rounded-xl bg-offwhite" />}
+                {i.imageUrl ? <img src={i.imageUrl} alt="" loading="lazy" decoding="async" className="h-11 w-11 shrink-0 rounded-xl bg-offwhite object-cover" /> : <span className="h-11 w-11 shrink-0 rounded-xl bg-offwhite" />}
                 <div className="min-w-0">
                   <p className="font-medium">{i.productName}</p>
                   <p className="text-xs text-ink/50">

@@ -2,15 +2,17 @@
 
 import { useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { useForm } from "react-hook-form";
+import { Controller, useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { ImagePlus, Pencil, Plus, Trash2 } from "lucide-react";
 import { Can, PageHeader } from "@/components/admin/page";
-import { Badge, Button, Card, Checkbox, ConfirmDialog, DataTable, EmptyState, ErrorState, Field, Input, Modal, Textarea } from "@/components/ui";
+import { Badge, Button, Card, Checkbox, ConfirmDialog, DataTable, EmptyState, ErrorState, Field, Input, Modal } from "@/components/ui";
 import { useToast } from "@/components/ui/toast";
 import { api, ApiError, errorMessage } from "@/lib/api";
-import { uploadSimpleImage } from "@/lib/upload";
+import { IMAGE_RULES, IMAGE_TYPES, uploadSimpleImage } from "@/lib/upload";
+import { RichTextEditor } from "@/components/ui/rich-text-editor";
+import { withinChars } from "@/lib/rich-text";
 
 interface Brand {
   id: string;
@@ -26,7 +28,7 @@ interface Brand {
 const schema = z.object({
   name: z.string().trim().min(1, "Required").max(80),
   slug: z.string().trim().regex(/^$|^[a-z0-9]+(?:-[a-z0-9]+)*$/, "Lowercase letters, numbers and hyphens").optional(),
-  description: z.string().trim().max(2000).optional(),
+  description: z.string().refine(withinChars(2000), "At most 2,000 characters").optional(),
   isActive: z.boolean(),
 });
 type Values = z.infer<typeof schema>;
@@ -76,7 +78,7 @@ export default function BrandsPage() {
                 header: "Brand",
                 cell: (b) => (
                   <div className="flex items-center gap-3">
-                    {b.logoUrl ? <img src={b.logoUrl} alt="" className="h-8 w-8 rounded-lg object-contain" /> : <span className="h-8 w-8 rounded-lg bg-offwhite" />}
+                    {b.logoUrl ? <img src={b.logoUrl} alt="" loading="lazy" decoding="async" className="h-8 w-8 rounded-lg object-contain" /> : <span className="h-8 w-8 rounded-lg bg-offwhite" />}
                     <div>
                       <p className="font-medium">{b.name}</p>
                       <p className="text-xs text-ink/45">/{b.slug}</p>
@@ -125,6 +127,7 @@ function BrandForm({ brand, onClose }: { brand: Brand | null; onClose: () => voi
   const [uploading, setUploading] = useState(false);
   const {
     register,
+    control,
     handleSubmit,
     setError,
     formState: { errors, isSubmitting },
@@ -183,15 +186,29 @@ function BrandForm({ brand, onClose }: { brand: Brand | null; onClose: () => voi
         <Field label="URL slug" error={errors.slug?.message} htmlFor="slug" hint="Leave empty to generate from the name">
           <Input id="slug" invalid={!!errors.slug} {...register("slug")} />
         </Field>
-        <Field label="Description" htmlFor="description">
-          <Textarea id="description" {...register("description")} />
+        <Field label="Description" htmlFor="description" error={errors.description?.message}>
+          <Controller
+            control={control}
+            name="description"
+            render={({ field }) => <RichTextEditor id="description" aria-label="Description" value={field.value} onChange={field.onChange} onBlur={field.onBlur} invalid={!!errors.description} />}
+          />
         </Field>
-        <Field label="Logo">
+        <Field label="Logo" hint={`${IMAGE_RULES}.`}>
           <div className="flex items-center gap-3">
             {logo.url ? <img src={logo.url} alt="" className="h-14 w-14 rounded-xl bg-offwhite object-contain" /> : <span className="h-14 w-14 rounded-xl bg-offwhite" />}
             <label className="inline-flex cursor-pointer items-center gap-2 rounded-full border border-black/15 px-3 py-1.5 text-xs font-semibold hover:bg-black/[0.03]">
               <ImagePlus size={14} /> {uploading ? "Uploading…" : "Upload"}
-              <input type="file" accept="image/png,image/jpeg,image/webp,image/avif" className="sr-only" onChange={(e) => onFile(e.target.files?.[0])} />
+              <input
+                type="file"
+                accept={IMAGE_TYPES.join(",")}
+                className="sr-only"
+                onChange={(e) => {
+                  const file = e.target.files?.[0];
+                  // Cleared, so choosing the same file again after a refusal is noticed.
+                  e.target.value = "";
+                  void onFile(file);
+                }}
+              />
             </label>
             {logo.key && (
               <button type="button" onClick={() => setLogo({ key: null, url: null })} className="text-xs text-ink/50 underline">

@@ -4,11 +4,13 @@ import { useQueryClient } from "@tanstack/react-query";
 import { Controller, useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
-import { Button, Checkbox, Field, Input, Modal, Select, Textarea } from "@/components/ui";
+import { Button, Checkbox, Field, Input, Modal, Select } from "@/components/ui";
 import { useToast } from "@/components/ui/toast";
 import { api } from "@/lib/api";
 import { applyApiErrors, FormError, GSTIN_PATTERN, orNull, PIN_PATTERN, StateOptions, useIndianStates } from "./inventory-shared";
 import type { IndianState, WarehouseBase, WarehouseLocation } from "./inventory-types";
+import { RichTextEditor } from "@/components/ui/rich-text-editor";
+import { withinChars } from "@/lib/rich-text";
 
 // ---------------------------------------------------------------------------
 // Warehouse create / edit
@@ -212,7 +214,7 @@ export function WarehouseFormModal({ warehouse, onClose, onSaved }: { warehouse:
 const locationSchema = z.object({
   code: z.string().trim().regex(/^[A-Za-z0-9-]{1,30}$/, "1–30 letters, numbers or hyphens (e.g. A-01-03)"),
   name: z.string().trim().max(100),
-  description: z.string().trim().max(300, "300 characters at most"),
+  description: z.string().refine(withinChars(300), "300 characters at most"),
   isActive: z.boolean(),
 });
 type LocationValues = z.infer<typeof locationSchema>;
@@ -222,6 +224,7 @@ export function LocationFormModal({ warehouseId, location, onClose }: { warehous
   const toast = useToast();
   const {
     register,
+    control,
     handleSubmit,
     setError,
     formState: { errors, isSubmitting },
@@ -270,7 +273,11 @@ export function LocationFormModal({ warehouseId, location, onClose }: { warehous
           </Field>
         </div>
         <Field label="Description" htmlFor="loc-desc" error={errors.description?.message}>
-          <Textarea id="loc-desc" rows={2} className="min-h-0" invalid={!!errors.description} {...register("description")} />
+          <Controller
+            control={control}
+            name="description"
+            render={({ field }) => <RichTextEditor id="loc-desc" variant="compact" aria-label="Description" value={field.value} onChange={field.onChange} onBlur={field.onBlur} invalid={!!errors.description} />}
+          />
         </Field>
         <Checkbox label="Active (available for putaway and picking)" {...register("isActive")} />
         <FormError message={errors.root?.message} />

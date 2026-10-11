@@ -4,17 +4,19 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Controller, useForm, useWatch } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
-import { Button, Checkbox, ErrorState, Field, Input, Modal, MoneyInput, Select, Spinner, Textarea } from "@/components/ui";
+import { Button, Checkbox, ErrorState, Field, Input, Modal, MoneyInput, Select, Spinner } from "@/components/ui";
 import { useToast } from "@/components/ui/toast";
 import { api } from "@/lib/api";
 import { BrandPicker, CategoryPicker, ProductPicker } from "./sales-promo-pickers";
 import { applyApiErrors, fromLocalInput, Notice, numberOrNull, toLocalInput } from "./sales-shared";
 import type { DiscountDetail } from "./sales-types";
+import { RichTextEditor } from "@/components/ui/rich-text-editor";
+import { withinChars } from "@/lib/rich-text";
 
 const schema = z
   .object({
     name: z.string().trim().min(2, "At least 2 characters").max(100, "At most 100 characters"),
-    description: z.string().trim().max(500, "At most 500 characters"),
+    description: z.string().refine(withinChars(500), "At most 500 characters"),
     discountType: z.enum(["PERCENTAGE", "FIXED"]),
     percent: z.number().nullable(),
     amount: z.number().int().nullable(),
@@ -149,7 +151,11 @@ function DiscountForm({ discount, onClose }: { discount: DiscountDetail | null; 
             <Input id="d-priority" type="number" inputMode="numeric" min="0" max="1000" step="1" invalid={!!errors.priority} {...register("priority", { setValueAs: (x) => numberOrNull(x) ?? Number.NaN })} />
           </Field>
           <Field label="Description" htmlFor="d-desc" error={errors.description?.message} className="sm:col-span-2">
-            <Textarea id="d-desc" invalid={!!errors.description} className="min-h-16" {...register("description")} />
+            <Controller
+              control={control}
+              name="description"
+              render={({ field }) => <RichTextEditor id="d-desc" variant="compact" aria-label="Description" value={field.value} onChange={field.onChange} onBlur={field.onBlur} invalid={!!errors.description} />}
+            />
           </Field>
         </section>
 

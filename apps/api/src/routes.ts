@@ -25,6 +25,7 @@ import { refundsRouter } from "./modules/refunds/refunds.routes";
 import { creditNotesRouter, invoicesRouter } from "./modules/invoices/invoices.routes";
 import { couponsRouter, discountsRouter } from "./modules/promotions/promotions.routes";
 import { accountReturnsRouter, returnsRouter } from "./modules/returns/returns.routes";
+import { accountReviewsRouter, reviewsRouter, storeReviewsRouter } from "./modules/reviews/reviews.routes";
 import { accountTrackingRouter, shipmentsRouter, shippingRouter } from "./modules/shipping/shipping.routes";
 import { posRouter } from "./modules/pos/pos.routes";
 import { dashboardRouter, reportsRouter } from "./modules/reports/reports.routes";
@@ -44,6 +45,7 @@ export function apiRouter(): Router {
   api.use("/account", accountReturnsRouter);
   api.use("/account", accountTrackingRouter);
   api.use("/account", wishlistRouter);
+  api.use("/account", accountReviewsRouter);
   api.use("/users", usersRouter);
   api.use("/roles", rolesRouter);
   api.use("/permissions", permissionsRouter);
@@ -51,6 +53,7 @@ export function apiRouter(): Router {
   api.use("/audit-logs", auditRouter);
 
   api.use("/store", storefrontRouter);
+  api.use("/store", storeReviewsRouter);
   api.use("/categories", categoriesRouter);
   api.use("/brands", brandsRouter);
   api.use("/products", scanRouter); // /products/scan and /products/code/:code before /products/:id
@@ -73,6 +76,7 @@ export function apiRouter(): Router {
   api.use("/coupons", couponsRouter);
   api.use("/discounts", discountsRouter);
   api.use("/returns", returnsRouter);
+  api.use("/reviews", reviewsRouter);
   api.use("/shipping", shippingRouter);
   api.use("/shipments", shipmentsRouter);
   api.use("/pos", posRouter);

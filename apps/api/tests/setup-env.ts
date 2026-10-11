@@ -8,6 +8,8 @@ process.env.OTP_SECRET = "test-otp-secret-test-otp-secret-test-otp-secret";
 process.env.PAYMENT_PROVIDER = "mock";
 process.env.SMS_PROVIDER = "console";
 process.env.SHIPPING_PROVIDER = "mock";
+// Images go to the local MinIO bucket whatever the developer's .env says, so a test run never writes to a real Cloudinary account.
+process.env.STORAGE_PROVIDER = "r2";
 process.env.RAZORPAY_WEBHOOK_SECRET = "test_webhook_secret";
 process.env.WEB_URL = "http://localhost:3100";
 process.env.COOKIE_SECURE = "false";

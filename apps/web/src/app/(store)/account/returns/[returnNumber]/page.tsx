@@ -8,6 +8,7 @@ import { AccountHeader, DetailSkeleton, Panel, StaggerList, StaggerRow, StatusTr
 import { StatusBadge } from "@/components/ui";
 import { api } from "@/lib/api";
 import { dateTime, money } from "@/lib/format";
+import { useI18n } from "@/lib/i18n/client";
 
 interface ReturnDetail {
   returnNumber: string;
@@ -27,27 +28,27 @@ const STEPS = ["REQUESTED", "APPROVED", "RECEIVED", "REFUNDED"];
 
 export default function ReturnDetailPage({ params }: { params: Promise<{ returnNumber: string }> }) {
   const { returnNumber } = use(params);
+  const { t, tr, tx, ts, locale } = useI18n();
   const q = useQuery({ queryKey: ["return", returnNumber], queryFn: () => api.get<ReturnDetail>(`/account/returns/${encodeURIComponent(returnNumber)}`) });
-  if (q.isLoading || !q.data) return <DetailSkeleton label="Loading your return" />;
+  if (q.isLoading || !q.data) return <DetailSkeleton label={t("Loading your return")} />;
   const r = q.data;
   const step = STEPS.indexOf(r.status === "CLOSED" ? "REFUNDED" : r.status);
 
   return (
     <div className="space-y-6">
       <AccountHeader
-        eyebrow="Return"
+        eyebrow={t("Return")}
         title={r.returnNumber}
         long
-        back={{ href: "/account/returns", label: "All returns" }}
-        description={
-          <>
-            For order{" "}
+        back={{ href: "/account/returns", label: t("All returns") }}
+        description={tr("For order {order} · requested {date}", {
+          order: (
             <Link href={`/account/orders/${r.order.orderNumber}`} className="link">
               {r.order.orderNumber}
-            </Link>{" "}
-            · requested {dateTime(r.requestedAt)}
-          </>
-        }
+            </Link>
+          ),
+          date: dateTime(r.requestedAt, locale),
+        })}
       >
         <div className="mt-4">
           <StatusBadge status={r.status} />
@@ -55,19 +56,19 @@ export default function ReturnDetailPage({ params }: { params: Promise<{ returnN
       </AccountHeader>
 
       {r.status !== "REJECTED" && r.status !== "CANCELLED" && (
-        <Panel eyebrow="Progress" title={r.reason}>
-          <StatusTrack steps={STEPS.map((s) => s.charAt(0) + s.slice(1).toLowerCase())} current={step} label="Return progress" />
+        <Panel eyebrow={t("Progress")} title={tx(r.reason)}>
+          <StatusTrack steps={STEPS.map((s) => ts(s))} current={step} label={t("Return progress")} />
         </Panel>
       )}
       {r.adminNotes && (
-        <Panel eyebrow="Message from our team" delay={0.05}>
+        <Panel eyebrow={t("Message from our team")} delay={0.05}>
           <div className="flex gap-3">
             <MessageSquareText size={18} strokeWidth={1.75} className="mt-0.5 shrink-0 text-ink/40" />
             <p className="text-sm leading-relaxed text-ink/70">{r.adminNotes}</p>
           </div>
         </Panel>
       )}
-      <Panel title="Items" padded={false} delay={0.1}>
+      <Panel title={t("Items")} padded={false} delay={0.1}>
         <StaggerList className="divide-y divide-black/5 pb-1">
           {r.items.map((i) => (
             <StaggerRow key={i.id} className="flex items-center gap-4 px-5 py-4 text-sm sm:px-7">
@@ -84,7 +85,7 @@ export default function ReturnDetailPage({ params }: { params: Promise<{ returnN
         </StaggerList>
       </Panel>
       {r.refunds.length > 0 && (
-        <Panel eyebrow="Refund" delay={0.15}>
+        <Panel eyebrow={t("Refund")} delay={0.15}>
           <ul className="space-y-3">
             {r.refunds.map((f) => (
               <li key={f.id} className="flex flex-wrap items-center justify-between gap-3 text-sm">
@@ -93,14 +94,14 @@ export default function ReturnDetailPage({ params }: { params: Promise<{ returnN
                     <Wallet size={16} strokeWidth={1.75} />
                   </span>
                   <span>
-                    <span className="font-semibold">{f.refundNumber}</span> · {money(f.amount)} <span className="text-ink/50">· {dateTime(f.createdAt)}</span>
+                    <span className="font-semibold">{f.refundNumber}</span> · {money(f.amount)} <span className="text-ink/50">· {dateTime(f.createdAt, locale)}</span>
                   </span>
                 </span>
                 <StatusBadge status={f.status} />
               </li>
             ))}
           </ul>
-          <p className="mt-4 text-xs text-ink/50">Refunds to cards and UPI usually reach your account in 5–7 business days.</p>
+          <p className="mt-4 text-xs text-ink/50">{t("Refunds to cards and UPI usually reach your account in 5–7 business days.")}</p>
         </Panel>
       )}
     </div>

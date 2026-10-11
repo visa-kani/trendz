@@ -14,6 +14,8 @@ import { EASE_OUT } from "@/components/store/motion";
 import { Field, Input } from "@/components/ui";
 import { api, errorMessage } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
+import { msg, type Message } from "@/lib/i18n";
+import { useI18n } from "@/lib/i18n/client";
 
 /** Only same-site relative paths are allowed as post-login redirects (no open redirect). */
 function safeNext(next: string | null, fallback: string) {
@@ -29,12 +31,13 @@ export default function LoginPage() {
 }
 
 type Mode = "password" | "otp";
-const MODES: { value: Mode; label: string; icon: typeof KeyRound }[] = [
-  { value: "password", label: "Password", icon: KeyRound },
-  { value: "otp", label: "Mobile OTP", icon: Smartphone },
+const MODES: { value: Mode; label: Message; icon: typeof KeyRound }[] = [
+  { value: "password", label: msg("Password"), icon: KeyRound },
+  { value: "otp", label: msg("Mobile OTP"), icon: Smartphone },
 ];
 
 function Login() {
+  const { t, tr } = useI18n();
   const { status, user } = useAuth();
   const router = useRouter();
   const params = useSearchParams();
@@ -46,18 +49,17 @@ function Login() {
 
   return (
     <AuthShell
-      eyebrow="Sign in"
-      title="Welcome back"
-      subtitle="Sign in to track orders, save addresses and check out faster."
-      tagline="Good to see you again."
-      footer={
-        <>
-          New here?{" "}
+      eyebrow={t("Sign in")}
+      title={t("Welcome back")}
+      subtitle={t("Sign in to track orders, save addresses and check out faster.")}
+      tagline={t("Good to see you again.")}
+      footer={tr("New here? {link}", {
+        link: (
           <Link href={`/register${params.get("next") ? `?next=${encodeURIComponent(params.get("next")!)}` : ""}`} className="link">
-            Create an account
+            {t("Create an account")}
           </Link>
-        </>
-      }
+        ),
+      })}
     >
       <ModeTabs mode={mode} onChange={setMode} />
       <div className="mt-7">
@@ -82,12 +84,13 @@ function Login() {
 
 /** Password / OTP switch with a sliding pill (arrow keys move between tabs). */
 function ModeTabs({ mode, onChange }: { mode: Mode; onChange: (m: Mode) => void }) {
+  const { t } = useI18n();
   const focusTab = (next: Mode) => {
     onChange(next);
     document.getElementById(`login-tab-${next}`)?.focus();
   };
   return (
-    <div role="tablist" aria-label="Sign-in method" className="grid grid-cols-2 gap-1 rounded-full bg-offwhite p-1">
+    <div role="tablist" aria-label={t("Sign-in method")} className="grid grid-cols-2 gap-1 rounded-full bg-offwhite p-1">
       {MODES.map(({ value, label, icon: Icon }) => {
         const selected = mode === value;
         return (
@@ -113,7 +116,7 @@ function ModeTabs({ mode, onChange }: { mode: Mode; onChange: (m: Mode) => void 
           >
             {selected && <m.span layoutId="login-mode-pill" className="absolute inset-0 -z-10 rounded-full bg-white shadow-neu" transition={{ type: "spring", stiffness: 420, damping: 34 }} />}
             <Icon size={15} strokeWidth={1.9} />
-            {label}
+            {t(label)}
           </button>
         );
       })}
@@ -121,9 +124,10 @@ function ModeTabs({ mode, onChange }: { mode: Mode; onChange: (m: Mode) => void 
   );
 }
 
-const passwordSchema = z.object({ identifier: z.string().trim().min(3, "Enter your email or mobile number"), password: z.string().min(1, "Enter your password") });
+const passwordSchema = z.object({ identifier: z.string().trim().min(3, msg("Enter your email or mobile number")), password: z.string().min(1, msg("Enter your password")) });
 
 function PasswordLogin() {
+  const { t, tx } = useI18n();
   const { login } = useAuth();
   const {
     register,
@@ -140,17 +144,17 @@ function PasswordLogin() {
   });
   return (
     <form onSubmit={submit} className="space-y-5" noValidate>
-      <Field label="Email or mobile number" error={errors.identifier?.message} htmlFor="identifier">
+      <Field label={t("Email or mobile number")} error={tx(errors.identifier?.message)} htmlFor="identifier">
         <Input id="identifier" autoComplete="username" className="h-12" invalid={!!errors.identifier} {...register("identifier")} />
       </Field>
-      <Field label="Password" error={errors.password?.message} htmlFor="password">
+      <Field label={t("Password")} error={tx(errors.password?.message)} htmlFor="password">
         <Input id="password" type="password" autoComplete="current-password" className="h-12" invalid={!!errors.password} {...register("password")} />
       </Field>
       <FormAlert message={errors.root?.message} />
-      <AuthSubmit loading={isSubmitting}>Sign in</AuthSubmit>
+      <AuthSubmit loading={isSubmitting}>{t("Sign in")}</AuthSubmit>
       <p className="text-center">
         <Link href="/forgot-password" className="link-draw text-sm text-ink/55 hover:text-ink">
-          Forgot password?
+          {t("Forgot password?")}
         </Link>
       </p>
     </form>
@@ -158,6 +162,7 @@ function PasswordLogin() {
 }
 
 function OtpLogin() {
+  const { t } = useI18n();
   const { verifyOtp } = useAuth();
   const [phone, setPhone] = useState("");
   const [code, setCode] = useState("");
@@ -168,8 +173,8 @@ function OtpLogin() {
 
   useEffect(() => {
     if (!cooldown) return;
-    const t = setTimeout(() => setCooldown((c) => c - 1), 1000);
-    return () => clearTimeout(t);
+    const timer = setTimeout(() => setCooldown((c) => c - 1), 1000);
+    return () => clearTimeout(timer);
   }, [cooldown]);
 
   const request = async () => {
@@ -200,13 +205,13 @@ function OtpLogin() {
 
   return (
     <form onSubmit={sent ? verify : (e) => (e.preventDefault(), void request())} className="space-y-5" noValidate>
-      <Field label="Mobile number" htmlFor="phone" hint="We will send a 6-digit code by SMS.">
+      <Field label={t("Mobile number")} htmlFor="phone" hint={t("We will send a 6-digit code by SMS.")}>
         <Input id="phone" type="tel" inputMode="numeric" autoComplete="tel" className="h-12" value={phone} onChange={(e) => setPhone(e.target.value)} disabled={sent} placeholder="98765 43210" />
       </Field>
       <AnimatePresence initial={false}>
         {sent && (
           <m.div key="code" className="overflow-hidden" initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: "auto" }} exit={{ opacity: 0, height: 0 }} transition={{ duration: 0.45, ease: EASE_OUT }}>
-            <Field label="Verification code" htmlFor="code">
+            <Field label={t("Verification code")} htmlFor="code">
               <Input
                 id="code"
                 inputMode="numeric"
@@ -224,7 +229,7 @@ function OtpLogin() {
       </AnimatePresence>
       <FormAlert message={error} />
       <AuthSubmit loading={busy} disabled={sent ? code.length !== 6 : phone.length < 10}>
-        {sent ? "Verify and sign in" : "Send code"}
+        {sent ? t("Verify and sign in") : t("Send code")}
       </AuthSubmit>
       {sent && (
         <button
@@ -233,7 +238,7 @@ function OtpLogin() {
           disabled={cooldown > 0 || busy}
           className="block w-full rounded-full py-1 text-center text-sm text-ink/55 tabular-nums transition hover:text-ink focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-accent/25 disabled:opacity-50"
         >
-          {cooldown > 0 ? `Resend code in ${cooldown}s` : "Resend code"}
+          {cooldown > 0 ? t("Resend code in {seconds}s", { seconds: cooldown }) : t("Resend code")}
         </button>
       )}
     </form>

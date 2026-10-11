@@ -1,5 +1,6 @@
 import { Router } from "express";
 import { z } from "zod";
+import { richText } from "../../common/utils/html";
 import { prisma, withTransaction } from "../../database/prisma";
 import { authenticate, requireStaff } from "../../common/middleware/authenticate";
 import { requireAnyPermission, requirePermission } from "../../common/guards/permissions";
@@ -36,7 +37,7 @@ const warehouseSchema = z
 const locationSchema = z.object({
   code: z.string().trim().toUpperCase().regex(/^[A-Z0-9-]{1,30}$/),
   name: z.string().trim().max(100).nullable().optional(),
-  description: z.string().trim().max(300).nullable().optional(),
+  description: richText(300),
   isActive: z.boolean().default(true),
 });
 

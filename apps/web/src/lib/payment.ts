@@ -1,6 +1,7 @@
 "use client";
 
 import { api, newIdempotencyKey } from "./api";
+import { msg } from "./i18n";
 import type { PaymentSession } from "./types";
 
 /**
@@ -34,7 +35,7 @@ function loadRazorpay(): Promise<void> {
     s.src = "https://checkout.razorpay.com/v1/checkout.js";
     s.async = true;
     s.onload = () => resolve();
-    s.onerror = () => reject(new Error("Could not load the payment window. Check your connection and try again."));
+    s.onerror = () => reject(new Error(msg("Could not load the payment window. Check your connection and try again.")));
     document.body.appendChild(s);
   });
 }
@@ -66,14 +67,14 @@ export async function payWithRazorpay(session: PaymentSession, theme = "#111111"
           const order = await verifyPayment(resp);
           resolve({ status: "paid", orderNumber: order.orderNumber });
         } catch (err) {
-          resolve({ status: "failed", message: err instanceof Error ? err.message : "Payment could not be verified" });
+          resolve({ status: "failed", message: err instanceof Error ? err.message : msg("Payment could not be verified") });
         }
       },
       modal: { ondismiss: () => !settled && resolve({ status: "dismissed" }) },
     });
     rzp.on("payment.failed", (r) => {
       settled = true;
-      resolve({ status: "failed", message: r.error.description || "Payment failed" });
+      resolve({ status: "failed", message: r.error.description || msg("Payment failed") });
     });
     rzp.open();
   });
@@ -85,7 +86,7 @@ export async function payWithMock(session: PaymentSession, outcome: "success" | 
     razorpayOrderId: session.razorpayOrderId,
     outcome,
   });
-  if (!res.checkoutResponse) return { status: "failed", message: res.error?.description ?? "Payment failed" };
+  if (!res.checkoutResponse) return { status: "failed", message: res.error?.description ?? msg("Payment failed") };
   const order = await verifyPayment(res.checkoutResponse);
   return { status: "paid", orderNumber: order.orderNumber };
 }

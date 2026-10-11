@@ -12,9 +12,12 @@ import { Field, Select, Textarea } from "@/components/ui";
 import { useToast } from "@/components/ui/toast";
 import { api, errorMessage } from "@/lib/api";
 import { money } from "@/lib/format";
+import { msg } from "@/lib/i18n";
+import { useI18n } from "@/lib/i18n/client";
 import type { Order } from "@/lib/types";
 
-const REASONS = ["Size too small", "Size too large", "Damaged or defective", "Not as described", "Wrong item received", "Changed my mind"];
+// Sent to the API as written here (English); only the label shown to the shopper is translated.
+const REASONS = [msg("Size too small"), msg("Size too large"), msg("Damaged or defective"), msg("Not as described"), msg("Wrong item received"), msg("Changed my mind")];
 
 export default function NewReturnPage() {
   return (
@@ -28,6 +31,7 @@ function NewReturn() {
   const orderNumber = useSearchParams().get("order") ?? "";
   const router = useRouter();
   const toast = useToast();
+  const { t, tr } = useI18n();
   const q = useQuery({ queryKey: ["order", orderNumber], queryFn: () => api.get<Order>(`/account/orders/${orderNumber}`), enabled: !!orderNumber });
   const [qty, setQty] = useState<Record<string, number>>({});
   const [reason, setReason] = useState(REASONS[0]!);
@@ -44,23 +48,23 @@ function NewReturn() {
           .map(([orderItemId, quantity]) => ({ orderItemId, quantity })),
       }),
     onSuccess: (r) => {
-      toast(`Return ${r.returnNumber} requested`);
+      toast(t("Return {number} requested", { number: r.returnNumber }));
       router.replace(`/account/returns/${r.returnNumber}`);
     },
     onError: (e) => toast(errorMessage(e), "error"),
   });
 
-  if (q.isLoading || !q.data) return <DetailSkeleton label="Loading your order" />;
+  if (q.isLoading || !q.data) return <DetailSkeleton label={t("Loading your order")} />;
   const o = q.data;
   if (!o.canReturn) {
     return (
       <EmptyPanel
         icon={<PackageX size={28} strokeWidth={1.5} />}
-        title="This order is not eligible for return."
-        body="Returns open once an order is delivered and stay open for the return window."
+        title={t("This order is not eligible for return.")}
+        body={t("Returns open once an order is delivered and stay open for the return window.")}
         action={
           <CtaLink href={`/account/orders/${o.orderNumber}`} tone="light">
-            Back to the order
+            {t("Back to the order")}
           </CtaLink>
         }
       />
@@ -70,12 +74,13 @@ function NewReturn() {
   // Units already in another return request cannot be requested again.
   const inReturn = (itemId: string) => o.returnRequests.filter((r) => !["REJECTED", "CANCELLED"].includes(r.status)).flatMap((r) => r.items).filter((i) => i.orderItemId === itemId).reduce((s, i) => s + i.quantity, 0);
   const selected = Object.values(qty).reduce((s, n) => s + n, 0);
+  const selectedCount = <RollingNumber value={selected} />;
 
   return (
     <div className="space-y-6">
-      <AccountHeader eyebrow="New return" title={`Return items from ${o.orderNumber}`} long back={{ href: `/account/orders/${o.orderNumber}`, label: "Back to order" }} />
+      <AccountHeader eyebrow={t("New return")} title={t("Return items from {number}", { number: o.orderNumber })} long back={{ href: `/account/orders/${o.orderNumber}`, label: t("Back to order") }} />
 
-      <Panel eyebrow="Step 1" title="Choose items" padded={false}>
+      <Panel eyebrow={t("Step {n}", { n: 1 })} title={t("Choose items")} padded={false}>
         <StaggerList className="divide-y divide-black/5">
           {o.items.map((i) => {
             const max = i.quantity - inReturn(i.id);
@@ -87,11 +92,11 @@ function NewReturn() {
                 <div className="min-w-0 flex-1 text-sm">
                   <p className="font-semibold">{i.productName}</p>
                   <p className="text-ink/55">
-                    {i.variantTitle} · paid {money(Math.round(i.lineTotal / i.quantity))} each
+                    {i.variantTitle} · {t("paid {amount} each", { amount: money(Math.round(i.lineTotal / i.quantity)) })}
                   </p>
-                  {max <= 0 && <p className="mt-0.5 text-xs text-ink/50">Already in a return request</p>}
+                  {max <= 0 && <p className="mt-0.5 text-xs text-ink/50">{t("Already in a return request")}</p>}
                 </div>
-                <Select aria-label={`Quantity to return for ${i.productName}`} className="w-22 rounded-full" value={qty[i.id] ?? 0} disabled={max <= 0} onChange={(e) => setQty((s) => ({ ...s, [i.id]: Number(e.target.value) }))}>
+                <Select aria-label={t("Quantity to return for {name}", { name: i.productName })} className="w-22 rounded-full" value={qty[i.id] ?? 0} disabled={max <= 0} onChange={(e) => setQty((s) => ({ ...s, [i.id]: Number(e.target.value) }))}>
                   {Array.from({ length: Math.max(0, max) + 1 }, (_, n) => (
                     <option key={n} value={n}>
                       {n}
@@ -105,9 +110,9 @@ function NewReturn() {
         </StaggerList>
       </Panel>
 
-      <Panel eyebrow="Step 2" title="Why are you returning?" delay={0.08}>
+      <Panel eyebrow={t("Step {n}", { n: 2 })} title={t("Why are you returning?")} delay={0.08}>
         <fieldset>
-          <legend className="label">Reason</legend>
+          <legend className="label">{t("Reason")}</legend>
           <div className="mt-1 flex flex-wrap gap-2">
             {REASONS.map((r) => {
               const active = reason === r;
@@ -121,13 +126,13 @@ function NewReturn() {
                 >
                   <input type="radio" name="reason" value={r} checked={active} onChange={() => setReason(r)} className="sr-only" />
                   {active && <m.span layoutId="return-reason-pill" aria-hidden="true" className="absolute inset-0 -z-10 rounded-full bg-accent" transition={{ type: "spring", stiffness: 420, damping: 34 }} />}
-                  {r}
+                  {t(r)}
                 </label>
               );
             })}
           </div>
         </fieldset>
-        <Field label="Anything else? (optional)" htmlFor="notes" className="mt-6">
+        <Field label={t("Anything else? (optional)")} htmlFor="notes" className="mt-6">
           <Textarea id="notes" value={notes} onChange={(e) => setNotes(e.target.value)} maxLength={1000} className="rounded-2xl" />
         </Field>
       </Panel>
@@ -140,9 +145,7 @@ function NewReturn() {
           onClick={() => submit.mutate()}
           className="group flex h-14 items-center gap-5 rounded-full bg-ink py-1.5 pl-7 pr-2 text-sm font-semibold text-white shadow-neu-lg transition-[background-color,box-shadow] duration-300 hover:bg-ink/90 focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-accent/35 disabled:cursor-not-allowed disabled:bg-ink/35 disabled:shadow-none"
         >
-          <span>
-            Request return (<RollingNumber value={selected} /> item{selected === 1 ? "" : "s"})
-          </span>
+          <span>{selected === 1 ? tr("Request return ({n} item)", { n: selectedCount }) : tr("Request return ({n} items)", { n: selectedCount })}</span>
           <span className="grid h-10 w-10 place-items-center rounded-full bg-white text-ink transition-transform duration-500 group-enabled:group-hover:rotate-45">
             {submit.isPending ? <Loader2 size={16} className="animate-spin" /> : <ArrowUpRight size={17} />}
           </span>
@@ -150,7 +153,7 @@ function NewReturn() {
         <AnimatePresence initial={false}>
           {!selected && (
             <m.p key="hint" className="text-xs text-ink/50" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
-              Pick at least one item to continue.
+              {t("Pick at least one item to continue.")}
             </m.p>
           )}
         </AnimatePresence>

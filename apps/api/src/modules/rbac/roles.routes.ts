@@ -1,5 +1,6 @@
 import { Router } from "express";
 import { z } from "zod";
+import { richText } from "../../common/utils/html";
 import { prisma, withTransaction } from "../../database/prisma";
 import { authenticate, requireStaff } from "../../common/middleware/authenticate";
 import { requirePermission } from "../../common/guards/permissions";
@@ -17,7 +18,7 @@ permissionsRouter.use(authenticate, requireStaff);
 const roleSchema = z.object({
   code: z.string().trim().regex(/^[A-Z][A-Z0-9_]{1,49}$/, "Use UPPER_SNAKE_CASE"),
   name: z.string().trim().min(2).max(80),
-  description: z.string().trim().max(300).nullable().optional(),
+  description: richText(300),
   permissions: z.array(z.string()).default([]),
 });
 

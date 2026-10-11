@@ -3,7 +3,7 @@ import sharp from "sharp";
 import { prisma } from "../src/database/prisma";
 import { closeQueues } from "../src/jobs/queues";
 import { processImage } from "../src/modules/media/images.service";
-import { storage } from "../src/integrations/r2/storage";
+import { storage } from "../src/integrations/object-storage";
 import { client, latestJob, loginAs, resetDatabase, type TestClient } from "./helpers";
 
 beforeEach(resetDatabase);
@@ -84,6 +84,36 @@ describe("products and variants", () => {
     const res = await admin.post("/api/products").send(productBody(cat.id, { description })).expect(201);
     const stored = (await prisma.product.findUniqueOrThrow({ where: { id: res.body.data.id } })).description!;
     expect(stored).toBe(`<p>Soft <strong>cotton</strong></p><a rel="noopener noreferrer nofollow">x</a><ul><li>Pre-shrunk</li></ul>`);
+  });
+
+  it("treats every description from the rich text editor the same way: safe HTML, limited by its text", async () => {
+    const { client: admin } = await loginAs(["ADMIN"]);
+    const typed = `<p onclick="steal()">Hand <strong>block</strong> print &amp; <s>plain</s> dye</p><script>alert(1)</script><img src=x onerror=alert(1)>`;
+    const clean = `<p>Hand <strong>block</strong> print &amp; <s>plain</s> dye</p>`;
+
+    const category = (await admin.post("/api/categories").send({ name: "Kurti Sets", description: typed }).expect(201)).body.data;
+    expect(category.description).toBe(clean);
+    const brand = (await admin.post("/api/brands").send({ name: "Trendz Studio", description: typed }).expect(201)).body.data;
+    expect(brand.description).toBe(clean);
+
+    // Short description: rich on the product page, plain text where a meta description is built from it.
+    const product = (await admin.post("/api/products").send(productBody(category.id, { shortDescription: typed })).expect(201)).body.data;
+    const anon = await client();
+    const detail = (await anon.get(`/api/store/products/${product.slug}`).expect(200)).body.data;
+    expect(detail.shortDescription).toBe(clean);
+    expect(detail.seo.description).toBe("Hand block print & plain dye");
+
+    // What an editor holds when it looks empty is stored as nothing.
+    const empty = (await admin.post("/api/categories").send({ name: "Lehenga", description: "<p><br></p>" }).expect(201)).body.data;
+    expect(empty.description).toBeNull();
+
+    // The limit counts the words, not the markup around them (roles allow 300 characters).
+    const { client: owner } = await loginAs(["SUPER_ADMIN"]);
+    const role = { code: "STYLIST", name: "Stylist", permissions: [] };
+    const exactly300 = `<p><strong>${"a".repeat(150)}</strong> <em>${"b".repeat(149)}</em></p>`;
+    await owner.post("/api/roles").send({ ...role, description: exactly300 }).expect(201);
+    const tooLong = await owner.post("/api/roles").send({ ...role, code: "STYLIST_2", description: `<p>${"a".repeat(301)}</p>` }).expect(400);
+    expect(tooLong.body.errors[0]).toMatchObject({ path: "description", message: "Keep this to 300 characters or fewer" });
   });
 
   it("validates prices, option combinations and SKU uniqueness", async () => {
@@ -198,6 +228,17 @@ describe("product images", () => {
     const product = (await admin.post("/api/products").send(productBody(cat.id)).expect(201)).body.data;
     await admin.post(`/api/products/${product.id}/images/upload-url`).send({ fileName: "a.gif", contentType: "image/gif", size: 100 }).expect(400);
     await admin.post(`/api/products/${product.id}/images/upload-url`).send({ fileName: "a.png", contentType: "image/png", size: 50 * 1024 * 1024 }).expect(400);
+
+    // One limit for every picture: 2 MB is accepted, one byte more is refused before anything is uploaded.
+    const limit = 2 * 1024 * 1024;
+    const refused = await admin.post(`/api/products/${product.id}/images/upload-url`).send({ fileName: "a.png", contentType: "image/png", size: limit + 1 }).expect(400);
+    expect(JSON.stringify(refused.body)).toContain("Images must be at most 2 MB");
+    await admin.post(`/api/products/${product.id}/images/upload-url`).send({ fileName: "a.png", contentType: "image/png", size: limit }).expect(201);
+    for (const purpose of ["category", "brand", "content"]) {
+      const over = await admin.post("/api/uploads/presign").send({ purpose, contentType: "image/png", size: limit + 1 }).expect(400);
+      expect(JSON.stringify(over.body)).toContain("Images must be at most 2 MB");
+      await admin.post("/api/uploads/presign").send({ purpose, contentType: "image/png", size: limit }).expect(200);
+    }
   });
 });
 

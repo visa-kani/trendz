@@ -106,11 +106,14 @@ export async function orderEventNotifications(db: Db, orderId: string, event: Or
       if (phone) await push(createNotification(db, { channel: "SMS", template: "SHIPPING", to: phone, userId: order.userId, idempotencyKey: key("sms"), variables: { order: order.orderNumber, status: "out for delivery", url } }));
       await inApp(`Order ${order.orderNumber} is out for delivery`, "It will reach you today.");
       break;
-    case "delivered":
-      if (email) await push(createNotification(db, { channel: "EMAIL", template: "order.delivered", to: email, userId: order.userId, idempotencyKey: key("email"), data: { orderNumber: order.orderNumber } }));
+    case "delivered": {
+      // Registered customers are invited to review what they received (the order page has the buttons).
+      const invite = !!order.userId && (await getSetting("reviews")).enabled;
+      if (email) await push(createNotification(db, { channel: "EMAIL", template: "order.delivered", to: email, userId: order.userId, idempotencyKey: key("email"), data: { orderNumber: order.orderNumber, reviewUrl: invite ? url : null } }));
       if (phone) await push(createNotification(db, { channel: "SMS", template: "SHIPPING", to: phone, userId: order.userId, idempotencyKey: key("sms"), variables: { order: order.orderNumber, status: "delivered", url } }));
-      await inApp(`Order ${order.orderNumber} delivered`, "Enjoy your purchase!");
+      await inApp(`Order ${order.orderNumber} delivered`, invite ? "Enjoy your purchase! Tell us how you like it: rate and review your items." : "Enjoy your purchase!");
       break;
+    }
     case "cancelled":
       if (email) {
         await push(createNotification(db, { channel: "EMAIL", template: "order.cancelled", to: email, userId: order.userId, idempotencyKey: key("email"), data: { orderNumber: order.orderNumber, reason: event.reason, refundNote: event.refundNote } }));

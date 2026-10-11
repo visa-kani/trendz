@@ -94,7 +94,7 @@ export default function ReturnDetailPage({ params }: { params: Promise<{ id: str
                   header: "Item",
                   cell: (i) => (
                     <div className="flex items-center gap-3">
-                      {i.orderItem.imageUrl ? <img src={i.orderItem.imageUrl} alt="" className="h-10 w-10 shrink-0 rounded-xl bg-offwhite object-cover" /> : <span className="h-10 w-10 shrink-0 rounded-xl bg-offwhite" />}
+                      {i.orderItem.imageUrl ? <img src={i.orderItem.imageUrl} alt="" loading="lazy" decoding="async" className="h-10 w-10 shrink-0 rounded-xl bg-offwhite object-cover" /> : <span className="h-10 w-10 shrink-0 rounded-xl bg-offwhite" />}
                       <div className="min-w-0">
                         <p className="font-medium">{i.orderItem.productName}</p>
                         <p className="text-xs text-ink/50">

@@ -8,17 +8,19 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { clsx } from "clsx";
 import { Info, Search, ShieldCheck, Trash2 } from "lucide-react";
-import { Badge, Button, Card, ConfirmDialog, Field, Input, Textarea } from "@/components/ui";
+import { Badge, Button, Card, ConfirmDialog, Field, Input } from "@/components/ui";
 import { useToast } from "@/components/ui/toast";
 import { api, errorMessage } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
 import { pluralize } from "@/lib/format";
 import { applyApiErrors, CUSTOMER_ROLE, groupByModule, moduleLabel, SUPER_ADMIN, type PermissionRow, type RoleView } from "./system-data";
+import { RichTextEditor } from "@/components/ui/rich-text-editor";
+import { withinChars } from "@/lib/rich-text";
 
 const schema = z.object({
   code: z.string().trim().regex(/^[A-Z][A-Z0-9_]{1,49}$/, "2–50 characters: UPPER_SNAKE_CASE, starting with a letter"),
   name: z.string().trim().min(2, "At least 2 characters").max(80),
-  description: z.string().trim().max(300, "At most 300 characters"),
+  description: z.string().refine(withinChars(300), "At most 300 characters"),
 });
 type Values = z.infer<typeof schema>;
 const FIELDS = ["code", "name", "description", "permissions"] as const;
@@ -176,7 +178,23 @@ export function RoleEditor({ role, catalog, canEdit }: { role: RoleView | null; 
               <Input id="name" placeholder="Warehouse staff" invalid={!!errors.name} {...register("name")} />
             </Field>
             <Field label="Description" htmlFor="description" error={errors.description?.message}>
-              <Textarea id="description" rows={3} className="min-h-0" placeholder="What people with this role do" invalid={!!errors.description} {...register("description")} />
+              <Controller
+                control={control}
+                name="description"
+                render={({ field }) => (
+                  <RichTextEditor
+                    id="description"
+                    variant="compact"
+                    aria-label="Description"
+                    placeholder="What people with this role do"
+                    value={field.value}
+                    onChange={field.onChange}
+                    onBlur={field.onBlur}
+                    invalid={!!errors.description}
+                    disabled={readOnly}
+                  />
+                )}
+              />
             </Field>
           </fieldset>
           <dl className="mt-5 space-y-2 border-t border-black/5 pt-4 text-sm">

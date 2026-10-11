@@ -1,11 +1,13 @@
 import { z } from "zod";
+import { richText } from "../../common/utils/html";
 import type { Category } from "@prisma/client";
 import { prisma, withTransaction } from "../../database/prisma";
 import { cached, invalidate } from "../../database/redis";
 import { badRequest, conflict, notFound } from "../../common/errors/app-error";
 import { slugSchemaPattern, uniqueSlug } from "../../common/utils/slug";
 import { audit, type AuditContext } from "../audit/audit.service";
-import { storage } from "../../integrations/r2/storage";
+import { storage } from "../../integrations/object-storage";
+import { checkAttachedImages } from "../media/upload-limit";
 
 export const MAX_CATEGORY_DEPTH = 3; // 0 = root, so up to 4 levels
 
@@ -13,7 +15,7 @@ export const categorySchema = z.object({
   name: z.string().trim().min(2).max(80),
   slug: z.string().trim().toLowerCase().regex(slugSchemaPattern, "Use lowercase letters, numbers and hyphens").max(80).optional(),
   parentId: z.uuid().nullable().optional(),
-  description: z.string().trim().max(2000).nullable().optional(),
+  description: richText(2000),
   imageKey: z.string().regex(/^public\/categories\/[\w.-]+$/, "Upload the image through /api/uploads/presign").nullable().optional(),
   sortOrder: z.number().int().min(0).max(10_000).optional(),
   isActive: z.boolean().optional(),
@@ -116,6 +118,7 @@ export async function createCategory(input: CategoryInput, ctx: AuditContext) {
   const parent = await resolveParent(input.parentId);
   if (input.slug && (await slugTaken()(input.slug))) throw conflict("This slug is already used by another category");
   const slug = input.slug ?? (await uniqueSlug(input.name, slugTaken()));
+  await checkAttachedImages([input.imageKey]);
   const category = await withTransaction(async (tx) => {
     const siblings = await tx.category.count({ where: { parentId: parent?.id ?? null } });
     const created = await tx.category.create({
@@ -147,6 +150,7 @@ export async function updateCategory(id: string, input: CategoryInput, ctx: Audi
   if (parent && (parent.id === id || parent.path.includes(`/${id}/`))) {
     throw badRequest("A category cannot be moved inside itself or one of its subcategories");
   }
+  await checkAttachedImages([input.imageKey], [before.imageKey]);
 
   const updated = await withTransaction(async (tx) => {
     if (parentChanged) {

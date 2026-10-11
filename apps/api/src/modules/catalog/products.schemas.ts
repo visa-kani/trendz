@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { richText } from "../../common/utils/html";
 import { slugSchemaPattern } from "../../common/utils/slug";
 
 export const skuSchema = z
@@ -33,7 +34,7 @@ export const productInputSchema = z
     slug: z.string().trim().toLowerCase().regex(slugSchemaPattern, "Use lowercase letters, numbers and hyphens").max(100).optional(),
     baseSku: skuSchema,
     description: z.string().max(20_000).nullable().optional(),
-    shortDescription: z.string().trim().max(500).nullable().optional(),
+    shortDescription: richText(500),
     categoryId: z.uuid(),
     brandId: z.uuid().nullable().optional(),
     productType: z.string().trim().max(60).nullable().optional(),

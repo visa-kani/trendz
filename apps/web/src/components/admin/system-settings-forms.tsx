@@ -6,6 +6,7 @@ import { Controller, get, useForm, type Control, type FieldErrors, type FieldVal
 import { z } from "zod";
 import { clsx } from "clsx";
 import {
+  Star,
   AlertTriangle,
   Barcode,
   Bell,
@@ -30,7 +31,7 @@ import { money, percent } from "@/lib/format";
 // Types
 // ---------------------------------------------------------------------------
 
-export type SettingKey = "store" | "pricing" | "shipping" | "checkout" | "returns" | "refunds" | "pos" | "coupons" | "invoice" | "barcodes" | "inventory" | "notifications";
+export type SettingKey = "store" | "pricing" | "shipping" | "checkout" | "returns" | "refunds" | "reviews" | "pos" | "coupons" | "invoice" | "barcodes" | "inventory" | "notifications";
 export type SettingsMap = Record<SettingKey, Record<string, unknown>>;
 export type StateOption = { name: string; code: string };
 
@@ -137,6 +138,7 @@ const schemas = {
   checkout: z.object({ reservationTtlMinutes: int(5, 24 * 60), allowGuestCheckout: z.boolean(), maxQuantityPerLine: int(1, 1000) }),
   returns: z.object({ windowDays: int(0, 365), autoRestockGood: z.boolean() }),
   refunds: z.object({ allowPartial: z.boolean() }),
+  reviews: z.object({ enabled: z.boolean(), requireApproval: z.boolean() }),
   pos: z.object({
     maxManualDiscountBps: bps,
     enabledPaymentMethods: z.array(z.enum(["CASH", "UPI_MANUAL", "CARD_MANUAL", "RAZORPAY"])).min(1, "Enable at least one payment method"),
@@ -295,6 +297,21 @@ export const SETTING_GROUPS: GroupDef[] = [
     sensitive: "Controls whether part of an order's payment can be refunded.",
     schema: schemas.refunds,
     sections: [{ fields: [{ kind: "switch", name: "allowPartial", label: "Allow partial refunds", hint: "Refund less than the full paid amount, e.g. for one item.", money: true }] }],
+  },
+  {
+    key: "reviews",
+    label: "Reviews",
+    description: "Ratings and reviews from customers who have received their order.",
+    icon: Star,
+    schema: schemas.reviews,
+    sections: [
+      {
+        fields: [
+          { kind: "switch", name: "enabled", label: "Let customers review products", hint: "A customer can rate a product once an order with it has been delivered. Off: reviews are neither taken nor shown." },
+          { kind: "switch", name: "requireApproval", label: "Approve reviews before they are shown", hint: "On: a review appears on the product page only after staff publish it in Admin → Reviews. Off: it appears as soon as the customer sends it." },
+        ],
+      },
+    ],
   },
   {
     key: "pos",

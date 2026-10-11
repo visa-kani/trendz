@@ -34,11 +34,12 @@ async function read<B extends Envelope<unknown>>(res: Response, path: string): P
 }
 
 /** Cache tag of a GET path, so its cached copy can be dropped on demand (see updateTag). */
-const apiTag = (path: string) => `api:${path.split("?")[0]}`;
+export const apiTag = (path: string) => `api:${path.split("?")[0]}`;
 export const STORE_CONFIG_TAG = apiTag("/store/config");
 
-export async function serverGet<T>(path: string, revalidate = 60): Promise<T> {
-  const res = await fetch(`${API}/api${path}`, { next: { revalidate, tags: [apiTag(path)] }, headers: HEADERS });
+/** `tags` are extra cache tags: content saved alongside the store config carries STORE_CONFIG_TAG, so one purge refreshes both. */
+export async function serverGet<T>(path: string, revalidate = 60, tags: string[] = []): Promise<T> {
+  const res = await fetch(`${API}/api${path}`, { next: { revalidate, tags: [apiTag(path), ...tags] }, headers: HEADERS });
   return (await read<Envelope<T>>(res, path)).data;
 }
 

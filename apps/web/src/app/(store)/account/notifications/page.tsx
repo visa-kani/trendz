@@ -9,6 +9,7 @@ import { AccountHeader, EmptyPanel, Panel, RowArrow, RowsSkeleton, StaggerList, 
 import { Pagination } from "@/components/ui";
 import { api } from "@/lib/api";
 import { dateTime } from "@/lib/format";
+import { useI18n } from "@/lib/i18n/client";
 
 interface Note {
   id: string;
@@ -24,18 +25,19 @@ const rowClass = "group flex w-full gap-4 px-5 py-4 text-left transition-colors 
 export default function NotificationsPage() {
   const [page, setPage] = useState(1);
   const qc = useQueryClient();
+  const { t, locale } = useI18n();
   const q = useQuery({ queryKey: ["notifications", page], queryFn: () => api.page<Note[]>("/account/notifications", { page, limit: 20 }) });
   const read = useMutation({ mutationFn: (id: string) => api.post(`/account/notifications/${id}/read`), onSuccess: () => qc.invalidateQueries({ queryKey: ["notifications"] }) });
 
   return (
     <div className="space-y-8">
-      <AccountHeader eyebrow="Inbox" title="Notifications" description="Order updates, refunds and account news — newest first." />
+      <AccountHeader eyebrow={t("Inbox")} title={t("Notifications")} description={t("Order updates, refunds and account news — newest first.")} />
       {!q.isLoading && !q.data?.data.length ? (
-        <EmptyPanel icon={<Bell size={28} strokeWidth={1.5} />} title="You're all caught up" body="New updates about your orders will show up here." />
+        <EmptyPanel icon={<Bell size={28} strokeWidth={1.5} />} title={t("You're all caught up")} body={t("New updates about your orders will show up here.")} />
       ) : (
         <Panel padded={false}>
           {q.isLoading ? (
-            <RowsSkeleton thumb={false} rows={4} label="Loading notifications" />
+            <RowsSkeleton thumb={false} rows={4} label={t("Loading notifications")} />
           ) : (
             <StaggerList key={page} className="divide-y divide-black/5 py-1">
               {q.data?.data.map((n) => {
@@ -55,10 +57,10 @@ export default function NotificationsPage() {
                     <div className="min-w-0 flex-1">
                       <p className={clsx("text-sm", unread ? "font-semibold" : "text-ink/75")}>
                         {n.title}
-                        {unread && <span className="sr-only"> (unread)</span>}
+                        {unread && <span className="sr-only"> {t("(unread)")}</span>}
                       </p>
                       {n.body && <p className="mt-0.5 text-sm text-ink/60">{n.body}</p>}
-                      <p className="mt-1.5 text-xs text-ink/40">{dateTime(n.createdAt)}</p>
+                      <p className="mt-1.5 text-xs text-ink/40">{dateTime(n.createdAt, locale)}</p>
                     </div>
                     {n.payload?.link && <RowArrow className="mt-0.5 hidden sm:grid" />}
                   </>

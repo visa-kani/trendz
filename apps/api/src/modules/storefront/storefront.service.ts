@@ -1,3 +1,4 @@
+import { richTextToPlain } from "../../common/utils/html";
 import { Prisma } from "@prisma/client";
 import { z } from "zod";
 import { prisma } from "../../database/prisma";
@@ -247,7 +248,7 @@ export async function productDetail(slug: string) {
       tags: p.tags,
       mrp: p.mrp,
       sellingPrice: p.sellingPrice,
-      seo: { title: p.seoTitle ?? p.name, description: p.seoDescription ?? p.shortDescription ?? null, keywords: p.seoKeywords },
+      seo: { title: p.seoTitle ?? p.name, description: p.seoDescription ?? richTextToPlain(p.shortDescription), keywords: p.seoKeywords },
       options: p.options.map((o) => ({ name: o.name, values: o.values.map((v) => v.value) })),
       images: p.images.map(imageView),
       variants: p.variants.map((v) => ({

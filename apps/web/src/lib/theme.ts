@@ -213,6 +213,39 @@ export function applyAppearance(input: Partial<Appearance> | null | undefined) {
   const vars = themeVars(input);
   const root = document.documentElement;
   for (const [name, value] of Object.entries(vars)) root.style.setProperty(name, value);
+  // The mode as an attribute too, for CSS that depends on it (the storefront's light / dark toggle icon).
+  root.dataset.mode = vars["color-scheme"];
   document.querySelector('meta[name="theme-color"]')?.setAttribute("content", vars["--color-offwhite"]!);
+}
+
+// ---------------------------------------------------------------------------
+// The shopper's own light / dark choice (storefront only)
+// ---------------------------------------------------------------------------
+
+/** localStorage key that holds "light" or "dark" once a shopper has used the header toggle. */
+export const SHOPPER_MODE_KEY = "trendz_theme";
+
+const STAFF_PATH = /^\/(admin|pos)(\/|$)/;
+
+/** The admin console and the billing counter always use the saved mode; every other page is the storefront. */
+export const isStorefrontPath = (pathname: string) => !STAFF_PATH.test(pathname);
+
+/**
+ * Script for the very top of <body>. On a storefront page it applies the
+ * shopper's stored choice before the first paint, so someone who prefers the
+ * other mode never sees a flash of the saved one. Only the other mode's
+ * variables are sent: the saved mode is already on <html>.
+ */
+export function shopperModeScript(input: Partial<Appearance> | null | undefined): string {
+  const saved = normaliseAppearance(input);
+  const other: ThemeMode = saved.mode === "dark" ? "light" : "dark";
+  // "<" is escaped so the JSON can never close the <script> element.
+  const vars = JSON.stringify(themeVars({ ...saved, mode: other })).replace(/</g, "\\u003c");
+  return (
+    `(function(){try{if(${STAFF_PATH}.test(location.pathname))return;` +
+    `if(localStorage.getItem(${JSON.stringify(SHOPPER_MODE_KEY)})!==${JSON.stringify(other)})return;` +
+    `var v=${vars},r=document.documentElement;for(var k in v)r.style.setProperty(k,v[k]);r.dataset.mode=${JSON.stringify(other)};` +
+    `var m=document.querySelector('meta[name="theme-color"]');if(m)m.content=v["--color-offwhite"]}catch(e){}})()`
+  );
 }
 

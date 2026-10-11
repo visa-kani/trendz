@@ -8,22 +8,24 @@ import { CtaLink } from "@/components/store/checkout-ui";
 import { ErrorState, Pagination } from "@/components/ui";
 import { api } from "@/lib/api";
 import { date } from "@/lib/format";
+import { useI18n } from "@/lib/i18n/client";
 import type { OrderListItem } from "@/lib/types";
 
 export default function MyOrdersPage() {
+  const { t, locale } = useI18n();
   const [page, setPage] = useState(1);
   const q = useQuery({ queryKey: ["my-orders", page], queryFn: () => api.page<OrderListItem[]>("/account/orders", { page, limit: 10 }) });
   const empty = !q.isLoading && !q.error && !q.data?.data.length;
 
   return (
     <div className="space-y-8">
-      <AccountHeader eyebrow="Orders" title="Your orders" description="Every order you've placed, newest first. Open one to track it, pay, return or download the invoice." />
+      <AccountHeader eyebrow={t("Orders")} title={t("Your orders")} description={t("Every order you've placed, newest first. Open one to track it, pay, return or download the invoice.")} />
       {empty ? (
-        <EmptyPanel icon={<Package size={28} strokeWidth={1.5} />} title="No orders yet" body="Your first order will show up here." action={<CtaLink href="/products">Start shopping</CtaLink>} />
+        <EmptyPanel icon={<Package size={28} strokeWidth={1.5} />} title={t("No orders yet")} body={t("Your first order will show up here.")} action={<CtaLink href="/products">{t("Start shopping")}</CtaLink>} />
       ) : (
         <Panel padded={false}>
           {q.isLoading ? (
-            <RowsSkeleton rows={4} label="Loading your orders" />
+            <RowsSkeleton rows={4} label={t("Loading your orders")} />
           ) : q.error ? (
             <ErrorState error={q.error} retry={() => q.refetch()} />
           ) : (
@@ -34,8 +36,7 @@ export default function MyOrdersPage() {
                     order={o}
                     meta={
                       <>
-                        {date(o.placedAt)} · {o.items[0]?.productName}
-                        {o._count.items > 1 ? ` + ${o._count.items - 1} more` : ""}
+                        {date(o.placedAt, locale)} · {o._count.items > 1 ? t("{name} + {n} more", { name: o.items[0]?.productName ?? "", n: o._count.items - 1 }) : o.items[0]?.productName}
                       </>
                     }
                   />

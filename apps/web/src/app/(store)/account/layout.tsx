@@ -5,18 +5,21 @@ import { usePathname } from "next/navigation";
 import { useEffect, useRef } from "react";
 import { m } from "motion/react";
 import { clsx } from "clsx";
-import { Bell, Heart, LayoutDashboard, LogOut, MapPin, Package, RotateCcw, Shield, UserCog } from "lucide-react";
+import { Star, Bell, Heart, LayoutDashboard, LogOut, MapPin, Package, RotateCcw, Shield, UserCog } from "lucide-react";
 import { RequireAuth } from "@/components/require-auth";
 import { useAuth } from "@/lib/auth";
+import { msg } from "@/lib/i18n";
+import { useI18n } from "@/lib/i18n/client";
 
 const NAV = [
-  { href: "/account", label: "Overview", icon: LayoutDashboard, exact: true },
-  { href: "/account/orders", label: "Orders", icon: Package },
-  { href: "/account/returns", label: "Returns & refunds", icon: RotateCcw },
-  { href: "/account/wishlist", label: "Wishlist", icon: Heart },
-  { href: "/account/addresses", label: "Addresses", icon: MapPin },
-  { href: "/account/notifications", label: "Notifications", icon: Bell },
-  { href: "/account/profile", label: "Profile & security", icon: UserCog },
+  { href: "/account", label: msg("Overview"), icon: LayoutDashboard, exact: true },
+  { href: "/account/orders", label: msg("Orders"), icon: Package },
+  { href: "/account/returns", label: msg("Returns & refunds"), icon: RotateCcw },
+  { href: "/account/reviews", label: msg("Reviews"), icon: Star },
+  { href: "/account/wishlist", label: msg("Wishlist"), icon: Heart },
+  { href: "/account/addresses", label: msg("Addresses"), icon: MapPin },
+  { href: "/account/notifications", label: msg("Notifications"), icon: Bell },
+  { href: "/account/profile", label: msg("Profile & security"), icon: UserCog },
 ];
 
 const itemClass =
@@ -25,6 +28,7 @@ const itemClass =
 export default function AccountLayout({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const { user, logout } = useAuth();
+  const { t } = useI18n();
   const navRef = useRef<HTMLElement>(null);
   const name = user?.name ?? user?.email ?? user?.phone;
   const initial = (name ?? "T").trim().charAt(0).toUpperCase();
@@ -48,14 +52,14 @@ export default function AccountLayout({ children }: { children: React.ReactNode 
                 <span className="absolute -bottom-0.5 -right-0.5 h-3.5 w-3.5 rounded-full border-2 border-offwhite bg-success" />
               </span>
               <div className="min-w-0">
-                <p className="text-xs text-ink/50">Signed in as</p>
+                <p className="text-xs text-ink/50">{t("Signed in as")}</p>
                 <p className="truncate font-semibold">{name}</p>
               </div>
             </div>
 
             <nav
               ref={navRef}
-              aria-label="Account"
+              aria-label={t("Account")}
               className="no-scrollbar relative -mx-4 mt-6 flex gap-1 overflow-x-auto px-4 pb-1 sm:-mx-6 sm:px-6 lg:mx-0 lg:flex-col lg:overflow-visible lg:px-0 lg:pb-0"
             >
               {NAV.map(({ href, label, icon: Icon, exact }, i) => {
@@ -71,7 +75,7 @@ export default function AccountLayout({ children }: { children: React.ReactNode 
                           transition={{ type: "spring", stiffness: 400, damping: 34 }}
                         />
                       )}
-                      <Icon size={16} strokeWidth={1.75} /> {label}
+                      <Icon size={16} strokeWidth={1.75} /> {t(label)}
                     </Link>
                   </div>
                 );
@@ -79,11 +83,11 @@ export default function AccountLayout({ children }: { children: React.ReactNode 
               <span aria-hidden="true" className="mx-2 my-2 hidden h-px bg-black/[0.06] lg:block" />
               {user?.isStaff && (
                 <Link href="/admin" className={clsx(itemClass, "text-ink/60 hover:bg-black/[0.03] hover:text-ink")}>
-                  <Shield size={16} strokeWidth={1.75} /> Admin panel
+                  <Shield size={16} strokeWidth={1.75} /> {t("Admin panel")}
                 </Link>
               )}
               <button type="button" onClick={() => void logout()} className={clsx(itemClass, "text-left text-ink/60 hover:bg-danger/[0.06] hover:text-danger")}>
-                <LogOut size={16} strokeWidth={1.75} /> Sign out
+                <LogOut size={16} strokeWidth={1.75} /> {t("Sign out")}
               </button>
             </nav>
           </aside>

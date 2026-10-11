@@ -1,6 +1,9 @@
+"use client";
+
 import Link from "next/link";
 import { clsx } from "clsx";
 import { ChevronRight } from "lucide-react";
+import { useI18n } from "@/lib/i18n/client";
 
 export interface Crumb {
   name: string;
@@ -9,8 +12,9 @@ export interface Crumb {
 
 /** Breadcrumb trail; the last item is the current page (not a link). */
 export function Breadcrumbs({ items, className }: { items: Crumb[]; className?: string }) {
+  const { t } = useI18n();
   return (
-    <nav aria-label="Breadcrumb" className={clsx("text-xs text-ink/45", className)}>
+    <nav aria-label={t("Breadcrumb")} className={clsx("text-xs text-ink/45", className)}>
       <ol className="flex flex-wrap items-center gap-x-1.5 gap-y-1">
         {items.map((c, i) => {
           const last = i === items.length - 1;

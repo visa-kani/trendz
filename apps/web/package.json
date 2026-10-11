@@ -8,7 +8,8 @@
     "build:webpack": "next build --webpack",
     "start": "next start --port 3100",
     "typecheck": "tsc --noEmit",
-    "lint": "eslint src"
+    "lint": "eslint src",
+    "i18n:check": "node --no-warnings scripts/i18n-check.mjs"
   },
   "devDependencies": {
     "@tailwindcss/postcss": "^4.3.3",
@@ -32,6 +33,8 @@
     "react": "^19.3.0",
     "react-dom": "^19.3.0",
     "react-hook-form": "^7.89.0",
+    "react-quill-new": "^3.8.3",
+    "react-select": "^5.10.2",
     "recharts": "^3.10.1",
     "server-only": "^0.0.1",
     "zod": "^4.6.5"

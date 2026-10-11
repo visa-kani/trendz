@@ -9,6 +9,7 @@ import { useToast } from "@/components/ui/toast";
 import { errorMessage } from "@/lib/api";
 import { useCart, useRemoveCartItem, useUpdateCartItem } from "@/lib/cart";
 import { money } from "@/lib/format";
+import { useI18n } from "@/lib/i18n/client";
 import type { Cart } from "@/lib/types";
 import { EASE_OUT } from "./motion";
 
@@ -41,6 +42,7 @@ export function CartDrawerProvider({ children }: { children: ReactNode }) {
 
 function CartDrawer({ onClose }: { onClose: () => void }) {
   const { data: cart, isLoading } = useCart();
+  const { t } = useI18n();
   const closeButton = useRef<HTMLButtonElement>(null);
 
   useEffect(() => {
@@ -61,7 +63,7 @@ function CartDrawer({ onClose }: { onClose: () => void }) {
       <m.aside
         role="dialog"
         aria-modal="true"
-        aria-label="Your bag"
+        aria-label={t("Your bag")}
         className="absolute inset-y-0 right-0 flex w-full max-w-md flex-col bg-offwhite shadow-neu-lg"
         initial={{ x: "100%" }}
         animate={{ x: 0 }}
@@ -70,14 +72,14 @@ function CartDrawer({ onClose }: { onClose: () => void }) {
       >
         <header className="flex items-center justify-between border-b border-black/5 px-6 py-5">
           <p className="text-lg font-bold tracking-tight">
-            Your bag{" "}
+            {t("Your bag")}{" "}
             {!!cart?.itemCount && (
               <m.span key={cart.itemCount} initial={{ opacity: 0, y: -6 }} animate={{ opacity: 1, y: 0 }} className="inline-block text-ink/40">
                 ({cart.itemCount})
               </m.span>
             )}
           </p>
-          <button ref={closeButton} onClick={onClose} aria-label="Close bag" className="grid h-10 w-10 place-items-center rounded-full transition hover:rotate-90 hover:bg-black/5">
+          <button ref={closeButton} onClick={onClose} aria-label={t("Close bag")} className="grid h-10 w-10 place-items-center rounded-full transition hover:rotate-90 hover:bg-black/5">
             <X size={20} />
           </button>
         </header>
@@ -108,17 +110,17 @@ function CartDrawer({ onClose }: { onClose: () => void }) {
             </ul>
             <footer className="border-t border-black/5 bg-white/70 px-6 py-5 backdrop-blur">
               <div className="flex items-baseline justify-between">
-                <span className="text-sm text-ink/60">Subtotal</span>
+                <span className="text-sm text-ink/60">{t("Subtotal")}</span>
                 <span className="text-xl font-bold tabular-nums">{money(cart.items.reduce((s, i) => s + i.lineTotal, 0))}</span>
               </div>
-              {cart.savings > 0 && <p className="mt-1 text-right text-xs font-medium text-success">You save {money(cart.savings)}</p>}
-              <p className="mt-1 text-xs text-ink/45">{cart.pricesIncludeTax ? "Prices include GST. " : ""}Shipping is calculated at checkout.</p>
+              {cart.savings > 0 && <p className="mt-1 text-right text-xs font-medium text-success">{t("You save {amount}", { amount: money(cart.savings) })}</p>}
+              <p className="mt-1 text-xs text-ink/45">{cart.pricesIncludeTax ? `${t("Prices include GST.")} ` : ""}{t("Shipping is calculated at checkout.")}</p>
               <div className="mt-4 grid grid-cols-2 gap-3">
                 <Link href="/cart" onClick={onClose} className="flex h-12 items-center justify-center rounded-full border border-ink/15 text-sm font-semibold transition hover:border-ink">
-                  View bag
+                  {t("View bag")}
                 </Link>
                 <Link href="/checkout" onClick={onClose} className="group flex h-12 items-center justify-center gap-2 rounded-full bg-ink text-sm font-semibold text-white transition hover:bg-ink/90">
-                  Checkout
+                  {t("Checkout")}
                   <span className="transition-transform group-hover:translate-x-1">→</span>
                 </Link>
               </div>
@@ -131,6 +133,7 @@ function CartDrawer({ onClose }: { onClose: () => void }) {
 }
 
 function FreeShippingMeter({ cart }: { cart: Cart }) {
+  const { t, tr } = useI18n();
   const threshold = cart.shipping.freeShippingThreshold;
   if (!threshold) return null;
   const left = cart.shipping.amountToFreeShipping;
@@ -140,11 +143,9 @@ function FreeShippingMeter({ cart }: { cart: Cart }) {
       <p className="flex items-center gap-2 text-xs font-medium text-ink/70">
         <Truck size={14} />
         {left > 0 ? (
-          <span>
-            Add <strong className="text-ink">{money(left)}</strong> more for free shipping
-          </span>
+          <span>{tr("Add {amount} more for free shipping", { amount: <strong className="text-ink">{money(left)}</strong> })}</span>
         ) : (
-          <span className="text-success">You&apos;ve unlocked free shipping</span>
+          <span className="text-success">{t("You've unlocked free shipping")}</span>
         )}
       </p>
       <div className="mt-2 h-1.5 overflow-hidden rounded-full bg-black/[0.06]">
@@ -158,6 +159,7 @@ function DrawerLine({ item, onNavigate }: { item: Cart["items"][number]; onNavig
   const update = useUpdateCartItem();
   const remove = useRemoveCartItem();
   const toast = useToast();
+  const { t } = useI18n();
   const busy = update.isPending || remove.isPending;
   const setQty = (quantity: number) => update.mutate({ itemId: item.itemId, quantity }, { onError: (e) => toast(errorMessage(e), "error") });
 
@@ -171,7 +173,7 @@ function DrawerLine({ item, onNavigate }: { item: Cart["items"][number]; onNavig
       className={clsx("flex gap-4 overflow-hidden border-b border-black/5 py-5", busy && "opacity-60")}
     >
       <Link href={`/products/${item.slug}`} onClick={onNavigate} className="block h-28 w-22 shrink-0 overflow-hidden rounded-2xl bg-white">
-        {item.imageUrl ? <img src={item.imageUrl} alt="" className="h-full w-full object-cover transition duration-500 hover:scale-105" /> : <span className="block h-full w-full bg-mist" />}
+        {item.imageUrl ? <img src={item.imageUrl} alt="" loading="lazy" decoding="async" className="h-full w-full object-cover transition duration-500 hover:scale-105" /> : <span className="block h-full w-full bg-mist" />}
       </Link>
       <div className="flex min-w-0 flex-1 flex-col">
         <div className="flex justify-between gap-3">
@@ -181,14 +183,14 @@ function DrawerLine({ item, onNavigate }: { item: Cart["items"][number]; onNavig
             </Link>
             <p className="mt-0.5 text-xs text-ink/50">{item.variantTitle}</p>
           </div>
-          <button aria-label={`Remove ${item.name}`} disabled={busy} onClick={() => remove.mutate(item.itemId, { onError: (e) => toast(errorMessage(e), "error") })} className="h-8 w-8 shrink-0 rounded-full text-ink/40 transition hover:bg-black/5 hover:text-danger">
+          <button aria-label={t("Remove {name}", { name: item.name })} disabled={busy} onClick={() => remove.mutate(item.itemId, { onError: (e) => toast(errorMessage(e), "error") })} className="h-8 w-8 shrink-0 rounded-full text-ink/40 transition hover:bg-black/5 hover:text-danger">
             <Trash2 size={15} className="mx-auto" />
           </button>
         </div>
         {item.issue && <p className="mt-1 text-xs font-medium text-danger">{item.issue}</p>}
         <div className="mt-auto flex items-center justify-between pt-3">
           <div className="flex items-center rounded-full border border-black/10 bg-white">
-            <button aria-label="Decrease quantity" disabled={busy || item.quantity <= 1} onClick={() => setQty(item.quantity - 1)} className="grid h-8 w-8 place-items-center text-ink/60 hover:text-ink disabled:opacity-30">
+            <button aria-label={t("Decrease quantity")} disabled={busy || item.quantity <= 1} onClick={() => setQty(item.quantity - 1)} className="grid h-8 w-8 place-items-center text-ink/60 hover:text-ink disabled:opacity-30">
               <Minus size={13} />
             </button>
             <span className="relative w-7 overflow-hidden text-center text-sm font-semibold tabular-nums">
@@ -198,7 +200,7 @@ function DrawerLine({ item, onNavigate }: { item: Cart["items"][number]; onNavig
                 </m.span>
               </AnimatePresence>
             </span>
-            <button aria-label="Increase quantity" disabled={busy || item.quantity >= item.maxQuantity} onClick={() => setQty(item.quantity + 1)} className="grid h-8 w-8 place-items-center text-ink/60 hover:text-ink disabled:opacity-30">
+            <button aria-label={t("Increase quantity")} disabled={busy || item.quantity >= item.maxQuantity} onClick={() => setQty(item.quantity + 1)} className="grid h-8 w-8 place-items-center text-ink/60 hover:text-ink disabled:opacity-30">
               <Plus size={13} />
             </button>
           </div>
@@ -213,6 +215,7 @@ function DrawerLine({ item, onNavigate }: { item: Cart["items"][number]; onNavig
 }
 
 function EmptyBag({ onClose }: { onClose: () => void }) {
+  const { t } = useI18n();
   return (
     <div className="flex flex-1 flex-col items-center justify-center gap-4 px-8 text-center">
       <m.span
@@ -224,11 +227,11 @@ function EmptyBag({ onClose }: { onClose: () => void }) {
         <ShoppingBag size={30} strokeWidth={1.5} />
       </m.span>
       <div>
-        <p className="text-lg font-bold">Your bag is empty</p>
-        <p className="mt-1 text-sm text-ink/55">Find something you love and it will show up here.</p>
+        <p className="text-lg font-bold">{t("Your bag is empty")}</p>
+        <p className="mt-1 text-sm text-ink/55">{t("Find something you love and it will show up here.")}</p>
       </div>
       <Link href="/products" onClick={onClose} className="mt-2 rounded-full bg-ink px-6 py-3 text-sm font-semibold text-white transition hover:scale-[1.03]">
-        Start shopping
+        {t("Start shopping")}
       </Link>
     </div>
   );

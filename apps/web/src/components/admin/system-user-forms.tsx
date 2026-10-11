@@ -13,6 +13,7 @@ import { api, errorMessage } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
 import { pluralize } from "@/lib/format";
 import { applyApiErrors, CUSTOMER_ROLE, SUPER_ADMIN, useRoles, useWarehouseOptions, userName, type AdminUser, type RoleView } from "./system-data";
+import { plainText } from "@/lib/rich-text";
 
 // ---------------------------------------------------------------------------
 // Role picker
@@ -61,7 +62,7 @@ export function RolePicker({
                 {r.code === SUPER_ADMIN && <Badge tone="dark">Full access</Badge>}
               </span>
               <span className="block text-xs text-ink/50">
-                {r.description ? `${r.description} · ` : ""}
+                {r.description ? `${plainText(r.description)} · ` : ""}
                 {perms}
               </span>
               {locked && (
